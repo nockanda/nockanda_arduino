@@ -1,0 +1,153 @@
+#include <Arduino.h>
+
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
+
+#include <ArduinoJson.h>
+
+#include <WebSocketsClient.h>
+#include <SocketIOclient.h>
+
+#include <Hash.h>
+
+ESP8266WiFiMulti WiFiMulti;
+SocketIOclient socketIO;
+
+#define USE_SERIAL Serial
+
+#define relay D5
+
+String my_id = "서보모터";
+
+void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length) {
+    switch(type) {
+        case sIOtype_DISCONNECT:
+            USE_SERIAL.printf("[IOc] Disconnected!\n");
+            break;
+        case sIOtype_CONNECT:
+            USE_SERIAL.printf("[IOc] Connected to url: %s\n", payload);
+
+            // join default namespace (no auto join in Socket.IO V3)
+            socketIO.send(sIOtype_CONNECT, "/");
+            break;
+        case sIOtype_EVENT:
+        {
+            USE_SERIAL.printf("[IOc] get event: %s\n", payload);
+            //메시지수신부
+            //JSON으로 날라오는 메시지를 object로 변환해야한다!
+            //지금 수신한 메시지가 서버에서 온것인가?
+            StaticJsonDocument<128> doc;
+            deserializeJson(doc, payload);
+            String event = doc[0]; // "server_msg"
+            String device_id = doc[1]["device_id"]; // "서보모터"
+            int cmd = doc[1]["cmd"]; // 1
+
+            if(event == "server_msg"){
+              //서버에서 온 메시지가!
+              if(device_id == my_id){
+                //나한테 온 메시지네?
+                if(cmd == 0){
+                  //DC모터 OFF
+                  digitalWrite(relay,LOW);
+                }else if(cmd == 1){
+                  //DC모터 ON
+                  digitalWrite(relay,HIGH);
+                }
+              }
+            }
+            break;
+        }
+        case sIOtype_ACK:
+            USE_SERIAL.printf("[IOc] get ack: %u\n", length);
+            hexdump(payload, length);
+            break;
+        case sIOtype_ERROR:
+            USE_SERIAL.printf("[IOc] get error: %u\n", length);
+            hexdump(payload, length);
+            break;
+        case sIOtype_BINARY_EVENT:
+            USE_SERIAL.printf("[IOc] get binary: %u\n", length);
+            hexdump(payload, length);
+            break;
+        case sIOtype_BINARY_ACK:
+            USE_SERIAL.printf("[IOc] get binary ack: %u\n", length);
+            hexdump(payload, length);
+            break;
+    }
+}
+
+void setup() {
+    // USE_SERIAL.begin(921600);
+    USE_SERIAL.begin(115200);
+    pinMode(relay,OUTPUT);
+ 
+    //Serial.setDebugOutput(true);
+    USE_SERIAL.setDebugOutput(true);
+
+    USE_SERIAL.println();
+    USE_SERIAL.println();
+    USE_SERIAL.println();
+
+      for(uint8_t t = 4; t > 0; t--) {
+          USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
+          USE_SERIAL.flush();
+          delay(1000);
+      }
+
+    // disable AP
+    if(WiFi.getMode() & WIFI_AP) {
+        WiFi.softAPdisconnect(true);
+    }
+
+    //와이파이공유기정보
+    WiFiMulti.addAP("popcorn", "11213144");
+
+    //WiFi.disconnect();
+    while(WiFiMulti.run() != WL_CONNECTED) {
+        delay(100);
+    }
+
+    String ip = WiFi.localIP().toString();
+    USE_SERIAL.printf("[SETUP] WiFi Connected %s\n", ip.c_str());
+
+    // server address, port and URL
+    socketIO.begin("192.168.0.8", 60000, "/socket.io/?EIO=4");
+
+    // event handler
+    socketIO.onEvent(socketIOEvent);
+}
+
+unsigned long messageTimestamp = 0;
+void loop() {
+    socketIO.loop();
+
+    /*
+    uint64_t now = millis();
+
+    if(now - messageTimestamp > 2000) {
+        messageTimestamp = now;
+
+        // creat JSON message for Socket.IO (event)
+        DynamicJsonDocument doc(1024);
+        JsonArray array = doc.to<JsonArray>();
+
+        // add evnet name
+        // Hint: socket.on('event_name', ....
+        array.add("event_name");
+
+        // add payload (parameters) for the event
+        JsonObject param1 = array.createNestedObject();
+        param1["now"] = (uint32_t) now;
+
+        // JSON to String (serializion)
+        String output;
+        serializeJson(doc, output);
+
+        // Send event
+        socketIO.sendEVENT(output);
+
+        // Print JSON for debugging
+        USE_SERIAL.println(output);
+    }
+    */
+}

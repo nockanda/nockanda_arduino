@@ -1,0 +1,42 @@
+#include "HX711.h"
+
+const int LOADCELL_DOUT_PIN = D3;
+const int LOADCELL_SCK_PIN = D4;
+
+
+HX711 scale;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+
+  scale.set_scale(-7000);
+  scale.tare();  
+
+  Serial.println("5초안에 2kg짜리 물건을 올려두세요!");
+  delay(5000);
+  Serial.println(scale.get_units()*0.453592, 1);
+
+  float factor = -7000;
+
+  while(true){
+    scale.set_scale(-10800);
+    float weight = scale.get_units()*-0.453592;
+
+    Serial.println(weight);
+    //측정한 값이 내가 원하는 값에 도달하면 캘리브레이션이 완료!
+    if(weight <= 2.0){
+      break;
+    }else{
+      factor -= 100;
+    }
+  }
+  Serial.print("보정값=");
+  Serial.println(factor);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}

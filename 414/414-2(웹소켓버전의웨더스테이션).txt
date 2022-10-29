@@ -1,0 +1,336 @@
+
+#include <Arduino.h>
+
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
+#include <WebSocketsServer.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+#include <Hash.h>
+#include <SoftwareSerial.h>
+SoftwareSerial wheather_station(D3,D4); //D3:우노의1번핀, D4:우노의 2번핀
+
+#define USE_SERIAL Serial
+
+ESP8266WiFiMulti WiFiMulti;
+
+//웹서버의 포트는 기본 포트인 80번을 사용한다!
+ESP8266WebServer server(80);
+//웹서버와 웹클라이언트가 뒷구멍으로 주고받는 데이터는 웹소켓에서 81번을 쓴다!
+WebSocketsServer webSocket = WebSocketsServer(81);
+
+String response = "\
+<html>\
+<head>\
+<meta name=\"viewport\" content=\"width=device-width\">\
+<meta charset=\"utf-8\">\
+<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js\"></script>\
+<script type=\"text/javascript\" charset=\"utf-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js\"></script>\
+<script>\
+  var connection = new WebSocket('ws://'+location.hostname+':81/', ['arduino']);\
+  connection.onopen = function () {\
+  };\
+  connection.onerror = function (error) {\
+     console.log('WebSocket Error ', error);\
+  };\
+  connection.onmessage = function (e) {\
+     console.log('Server: ', e.data);\
+     var data = JSON.parse(e.data);\
+     set_graph(data);\
+     document.getElementById('data1').innerText = data.wind_direct;\
+     document.getElementById('data2').innerText = data.wind_speed;\
+     document.getElementById('data3').innerText = data.rain_amout;\
+     document.getElementById('data4').innerText = data.temp;\
+     document.getElementById('data5').innerText = data.humi;\
+     document.getElementById('data1').style.fontsize=10;\
+     document.getElementById('data2').style.fontsize=10;\
+     document.getElementById('data3').style.fontsize=10;\
+     document.getElementById('data4').style.fontsize=10;\
+     document.getElementById('data5').style.fontsize=10;\
+  };\
+  function send_msg(){\
+     connection.send('녹칸다 포에버!!!');\
+  }\
+</script>\
+<style>\
+body { background: #fff; }\
+.blueone {\
+  border-collapse: collapse;\
+}  \
+.blueone th {\
+  padding: 10px;\
+  color: #168;\
+  border-bottom: 3px solid #168;\
+  text-align: left;\
+}\
+.blueone td {\
+  color: #669;\
+  padding: 10px;\
+  border-bottom: 1px solid #ddd;\
+}\
+.blueone tr:hover td {\
+  color: #004;\
+}\
+</style>\
+</head>\
+<body>\
+<table border=1 width=720 class=\"blueone\">\
+  <tr><th colspan=3 align=center><h1>녹칸다의 웨더스테이션!</h1></th></tr>\
+  <tr align=center>\
+     <td width=120><font size=5>풍향(도)</font></td>\
+     <td width=100 id=data1>-</td>\
+     <td>\
+<div style=\"width:500px;\">\
+<canvas id=\"line1\"></canvas>\
+</div>\
+     </td>\
+  </tr>\
+  <tr align=center>\
+     <td><font size=5>풍속(m/s)</font></td>\
+     <td id=data2>-</td>\
+     <td>\
+<div style=\"width:500px;\">\
+<canvas id=\"line2\"></canvas>\
+</div>\
+     </td>\
+  </tr>\
+  <tr align=center>\
+     <td><font size=5>누적강우량(mm)</font><br><input type=button value=초기화 onclick='rain_clear()'></td>\
+     <td id=data3>-</td>\
+     <td>\
+<div style=\"width:500px;\">\
+<canvas id=\"line3\"></canvas>\
+</div>\
+     </td>\
+  </tr>\
+  <tr align=center>\
+     <td><font size=5>온도(℃)</font></td>\
+     <td id=data4>-</td>\
+     <td>\
+<div style=\"width:500px;\">\
+<canvas id=\"line4\"></canvas>\
+</div>\
+     </td>\
+  </tr>\
+  <tr align=center>\
+     <td><font size=5>습도(%)</font></td>\
+     <td id=data5>-</td>\
+     <td>\
+<div style=\"width:500px;\">\
+<canvas id=\"line5\"></canvas>\
+</div>\
+     </td>\
+  </tr>\
+</table>\
+<script>\
+var ctx = document.getElementById('line1').getContext('2d');\
+var chart = new Chart(ctx, {\
+  type: 'line',\
+  data: {\
+    labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+    datasets: [\
+        {\
+          label: '풍향(도)',\
+          backgroundColor: 'transparent',\
+          borderColor: \"blue\",\
+          data: [0, 0, 0, 0, 0, 0, 0]\
+        }\
+                                         ]\
+  },\
+  options: {}\
+});\
+var ctx2 = document.getElementById('line2').getContext('2d');\
+var chart2 = new Chart(ctx2, {\
+  type: 'line',\
+  data: {\
+    labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+    datasets: [\
+        {\
+          label: '풍속(m/s)',\
+          backgroundColor: 'transparent',\
+          borderColor: \"red\",\
+          data: [0, 0, 0, 0, 0, 0, 0]\
+        }\
+                                         ]\
+  },\
+  options: {}\
+});\
+var ctx3 = document.getElementById('line3').getContext('2d');\
+var chart3 = new Chart(ctx3, {\
+  type: 'line',\
+  data: {\
+    labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+    datasets: [\
+        {\
+          label: '누적강우량(mm)',\
+          backgroundColor: 'transparent',\
+          borderColor: \"green\",\
+          data: [0, 0, 0, 0, 0, 0, 0]\
+        }\
+                                         ]\
+  },\
+  options: {}\
+});\
+var ctx4 = document.getElementById('line4').getContext('2d');\
+var chart4 = new Chart(ctx4, {\
+  type: 'line',\
+  data: {\
+    labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+    datasets: [\
+        {\
+          label: '온도(℃)',\
+          backgroundColor: 'transparent',\
+          borderColor: \"red\",\
+          data: [0, 0, 0, 0, 0, 0, 0]\
+        }\
+                                         ]\
+  },\
+  options: {}\
+});\
+var ctx5 = document.getElementById('line5').getContext('2d');\
+var chart5 = new Chart(ctx5, {\
+  type: 'line',\
+  data: {\
+    labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+    datasets: [\
+        {\
+          label: '습도(%)',\
+          backgroundColor: 'transparent',\
+          borderColor: \"blue\",\
+          data: [0, 0, 0, 0, 0, 0, 0]\
+        }\
+                                         ]\
+  },\
+  options: {}\
+});\
+function set_graph(input){\
+  chart.data.datasets[0].data.shift();\
+  chart.data.datasets[0].data.push(input.wind_direct);\
+  chart.update();\
+  chart2.data.datasets[0].data.shift();\
+  chart2.data.datasets[0].data.push(input.wind_speed);\
+  chart2.update();\
+  chart3.data.datasets[0].data.shift();\
+  chart3.data.datasets[0].data.push(input.rain_amout);\
+  chart3.update();\
+  chart4.data.datasets[0].data.shift();\
+  chart4.data.datasets[0].data.push(input.temp);\
+  chart4.update();\
+  chart5.data.datasets[0].data.shift();\
+  chart5.data.datasets[0].data.push(input.humi);\
+  chart5.update();\
+}\
+function rain_clear(){\
+  connection.send('0');\
+}\
+</script>\
+</body>\
+</html>";
+
+
+//클라이언트에서 서버쪽으로 값이 전송되었을때 뭘할거냐?
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+
+    switch(type) {
+        case WStype_DISCONNECTED:
+            USE_SERIAL.printf("[%u] Disconnected!\n", num);
+            break;
+        case WStype_CONNECTED: {
+            IPAddress ip = webSocket.remoteIP(num);
+            USE_SERIAL.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+
+            //num = 소켓번호(클라이언트번호)
+            //webSocket.sendTXT(num, "Connected");
+        }
+            break;
+        case WStype_TEXT:
+        //메시지 수신부
+            USE_SERIAL.printf("[%u] get Text: %s\n", num, payload);
+            //payload[0] == '0'
+            //아두이노 우노쪽으로 1바이트만큼 데이터를 쓰는데
+            //그때 보내는 1바이트가 웹소켓 클라이언트에서 받은 '0'을 보낸다!
+            wheather_station.write(payload[0]);
+            break;
+    }
+
+}
+
+void setup() {
+    //USE_SERIAL.begin(921600);
+    USE_SERIAL.begin(115200);
+    wheather_station.begin(9600);
+    
+    //USE_SERIAL.setDebugOutput(true);
+
+    USE_SERIAL.println();
+    USE_SERIAL.println();
+    USE_SERIAL.println();
+
+    for(uint8_t t = 4; t > 0; t--) {
+        USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
+        USE_SERIAL.flush();
+        delay(1000);
+    }
+
+    //자기자신의 IP공유기 ID비밀번호 집어넣는곳!
+    WiFiMulti.addAP("popcorn", "11213144");
+
+    while(WiFiMulti.run() != WL_CONNECTED) {
+        delay(100);
+    }
+
+    //IP공유기로부터 할당받은 IP주소를 여기서 출력한다!
+    USE_SERIAL.println("IP address: ");
+    USE_SERIAL.println(WiFi.localIP());
+  
+    //웹소켓 서버를 연다
+    webSocket.begin();
+    webSocket.onEvent(webSocketEvent);
+
+    //윈도우10, 안드로이드 안됨..의미없는 기능
+    if(MDNS.begin("esp8266")) {
+        USE_SERIAL.println("MDNS responder started");
+    }
+
+    //웹서버의 index.html
+    //웹서버가 클라이언트에게 response해주는 부분!
+
+    server.on("/", []() {
+        server.send(200, "text/html", response);
+    });
+
+    server.begin();
+
+    // Add service to MDNS
+    MDNS.addService("http", "tcp", 80);
+    MDNS.addService("ws", "tcp", 81);
+}
+
+unsigned long last_10sec = 0;
+unsigned int counter = 0;
+
+void loop() {
+    unsigned long t = millis();
+    webSocket.loop(); //이거 있어야한다!
+    server.handleClient(); //이거도 있어야한다!
+
+    //1.아두이노 우노에서 데이터를 전송받는다(기상데이터)
+    //2.전송받은 데이터를 그대로 연결된 모든 웹소켓 클라이언트에게 전송한다!
+    if(wheather_station.available()){
+      //기상관측소에서 뭔가 값을 전송했다!
+      String data = wheather_station.readStringUntil(0x0a);
+      //Serial.println(data);
+      webSocket.broadcastTXT(data); //연결된 모든 클라이언트에게 전송한다!
+    }
+    //delay(~~~~) 절때 쓰면 안됨!
+    /*
+    //10초간격으로 뭔가 하겠다~
+    if((t - last_10sec) > 1000) {
+      last_10sec = millis();
+      String msg = "현재 사물인터넷보드의 시간="+String(millis());
+      webSocket.broadcastTXT(msg); //모든클라이언트에게 메시지 전송!
+        
+    }
+    */
+}
+

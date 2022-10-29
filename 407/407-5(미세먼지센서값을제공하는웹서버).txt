@@ -1,0 +1,299 @@
+
+#include <Arduino.h>
+
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
+#include <WebSocketsServer.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+#include <Hash.h>
+#include "PMS.h"
+#include <SoftwareSerial.h>
+SoftwareSerial nockanda(D3,D4); //tx=D3, rx=D4
+PMS pms(nockanda);
+PMS::DATA data;
+
+#define USE_SERIAL Serial
+
+ESP8266WiFiMulti WiFiMulti;
+
+//웹서버의 포트는 기본 포트인 80번을 사용한다!
+ESP8266WebServer server(80);
+//웹서버와 웹클라이언트가 뒷구멍으로 주고받는 데이터는 웹소켓에서 81번을 쓴다!
+WebSocketsServer webSocket = WebSocketsServer(81);
+
+String response = "\
+<html>\
+<head>\
+<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js\"></script>\
+<script type=\"text/javascript\" charset=\"utf-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js\"></script>\
+<meta name=\"viewport\" content=\"width=device-width\">\
+<meta charset=\"utf-8\">\
+<script>\
+  var connection = new WebSocket('ws://'+location.hostname+':81/', ['arduino']);\
+  connection.onopen = function () {\
+     connection.send('Connect ' + new Date());\
+  };\
+  connection.onerror = function (error) {\
+     console.log('WebSocket Error ', error);\
+  };\
+  connection.onmessage = function (e) {\
+     console.log('Server: ', e.data);\
+     var mydata = JSON.parse(e.data);\
+     var dust = mydata.PM25;\
+     if(dust > 200) dust = 200;\
+     dust = dust / 200;\
+     chart.data.datasets[0].data[0] = dust;\
+     chart.data.datasets[0].data[1] = 1-dust;\
+     if(mydata.PM25 > 150){\
+        chart.data.datasets[0].backgroundColor[0] = 'red';\
+        chart.data.datasets[0].hoverBackgroundColor[0] = 'red';\
+     }else if(mydata.PM25 > 80){\
+        chart.data.datasets[0].backgroundColor[0] = 'orange';\
+        chart.data.datasets[0].hoverBackgroundColor[0] = 'orange';\
+     }else if(mydata.PM25 > 30){\
+        chart.data.datasets[0].backgroundColor[0] = 'green';\
+        chart.data.datasets[0].hoverBackgroundColor[0] = 'green';\
+     }else{\
+        chart.data.datasets[0].backgroundColor[0] = 'blue';\
+        chart.data.datasets[0].hoverBackgroundColor[0] = 'blue';\
+     }\
+     document.getElementById(\"cap1\").innerHTML = mydata.PM25 + \"ug/m3\";\
+     chart.update();\
+     chart2.data.datasets[0].data.shift();\
+     chart2.data.datasets[0].data.push(mydata.PM10);\
+     chart2.data.datasets[1].data.shift();\
+     chart2.data.datasets[1].data.push(mydata.PM25);\
+     chart2.data.datasets[2].data.shift();\
+     chart2.data.datasets[2].data.push(mydata.PM100);\
+     chart2.update();\
+  };\
+  function send_msg(){\
+     connection.send('녹칸다 포에버!!!');\
+  }\
+</script>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:-4px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:500px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 500px;\
+}\
+</style>\
+</head>\
+<body>\
+녹칸다의 미세먼지센서 예제입니다!<BR>\
+<table border=0>\
+<tr id=\"c_head\"><th>미세먼지농도</th></tr>\
+<tr><td><table border=0>\
+<td bgcolor=\"blue\"><font color=white>아주좋음<BR>(0~30)</font></td>\
+<td bgcolor=\"green\"><font color=white>좋음<BR>(31~80)</font></td>\
+<td bgcolor=\"orange\"><font color=white>나쁨<BR>(81~150)</font></td>\
+<td bgcolor=\"red\"><font color=white>아주나쁨<BR>(151~)</font></td></table></td></tr>\
+<tr id=\"c_head\"><th>\
+    <div style=\"position:relative;width:500px; height:300px;\">\
+      <canvas id=\"myChart\"></canvas>\
+      <div id=\"cap1\" style=\"position:absolute;top:150px;left:0px;text-align:center;width:100%;font-size:50px;font-family:Arial, sans-serif;\">\
+      -'C\
+      </div>\
+    </div>\
+</th></tr><tr><td>\
+<div style=\"width:500px;\">\
+<canvas id=\"myChart2\"></canvas>\
+</div>\
+</td></tr></table>\
+<script>\
+var input_value = 0;\
+var graph_value;\
+if(input_value > 200) graph_value = 200;\
+else graph_value = input_value;\
+var num = graph_value/200; \
+var color;\
+if(input_value < 30) color = 'blue';\
+else if(input_value < 80) color = 'green';\
+else if(input_value < 150) color = 'orange';\
+else if(input_value > 151) color ='red';\
+var data = { labels: ['dust value'], datasets: [ { data: [num, 1-num], backgroundColor: [color], hoverBackgroundColor: [ color ] }] }; \
+var ctx = document.getElementById('myChart').getContext('2d');\
+var chart = new Chart(ctx, {\
+type: 'doughnut',\
+data: data,\
+options: { \
+   responsive: true, \
+   legend: { display: false }, \
+   elements: { center: { text: Math.round(num*100), fontStyle: 'Helvetica', sidePadding: 15 } }, \
+   maintainAspectRatio : false, \
+   cutoutPercentage:70, \
+   rotation: 1 * Math.PI,\ 
+   circumference: 1 * Math.PI } \
+});\
+var ctx2 = document.getElementById('myChart2').getContext('2d');\
+var chart2 = new Chart(ctx2, {\
+type: 'line',\
+data: {\
+labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+datasets: [\
+      {\
+        label: 'PM1.0',\
+        backgroundColor: 'transparent',\
+        borderColor: 'red',\
+        data: [0, 0, 0, 0, 0, 0, 0]\
+      },\
+      {\
+        label: 'PM2.5',\
+        backgroundColor: 'transparent',\
+        borderColor: 'blue',\
+        data: [0, 0, 0, 0, 0, 0, 0]\
+      },\
+      {\
+        label: 'PM10.0',\
+        backgroundColor: 'transparent',\
+        borderColor: 'green',\
+        data: [0, 0, 0, 0, 0, 0, 0]\
+      }\
+]\
+},\
+options: {}\
+});\
+</script>\
+</body>\
+</html>";
+
+
+//클라이언트에서 서버쪽으로 값이 전송되었을때 뭘할거냐?
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+
+    switch(type) {
+        case WStype_DISCONNECTED:
+            USE_SERIAL.printf("[%u] Disconnected!\n", num);
+            break;
+        case WStype_CONNECTED: {
+            IPAddress ip = webSocket.remoteIP(num);
+            USE_SERIAL.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+
+            //num = 소켓번호(클라이언트번호)
+            //webSocket.sendTXT(num, "Connected");
+        }
+            break;
+        case WStype_TEXT:
+        //메시지 수신부
+            USE_SERIAL.printf("[%u] get Text: %s\n", num, payload);
+
+
+            break;
+    }
+
+}
+
+void setup() {
+    //USE_SERIAL.begin(921600);
+    USE_SERIAL.begin(115200);
+    //USE_SERIAL.setDebugOutput(true);
+    nockanda.begin(9600);  //미세먼지-아두이노간
+    pms.passiveMode();    // Switch to passive mode
+  
+    USE_SERIAL.println();
+    USE_SERIAL.println();
+    USE_SERIAL.println();
+
+    for(uint8_t t = 4; t > 0; t--) {
+        USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
+        USE_SERIAL.flush();
+        delay(1000);
+    }
+
+    //자기자신의 IP공유기 ID비밀번호 집어넣는곳!
+    WiFiMulti.addAP("popcorn", "11213144");
+
+    while(WiFiMulti.run() != WL_CONNECTED) {
+        delay(100);
+    }
+
+    //IP공유기로부터 할당받은 IP주소를 여기서 출력한다!
+    USE_SERIAL.println("IP address: ");
+    USE_SERIAL.println(WiFi.localIP());
+  
+    //웹소켓 서버를 연다
+    webSocket.begin();
+    webSocket.onEvent(webSocketEvent);
+
+    //윈도우10, 안드로이드 안됨..의미없는 기능
+    if(MDNS.begin("esp8266")) {
+        USE_SERIAL.println("MDNS responder started");
+    }
+
+    //웹서버의 index.html
+    //웹서버가 클라이언트에게 response해주는 부분!
+
+    server.on("/", []() {
+        server.send(200, "text/html", response);
+    });
+
+    server.begin();
+
+    // Add service to MDNS
+    MDNS.addService("http", "tcp", 80);
+    MDNS.addService("ws", "tcp", 81);
+}
+
+unsigned long last_10sec = 0;
+unsigned int counter = 0;
+
+void loop() {
+    unsigned long t = millis();
+    webSocket.loop(); //이거 있어야한다!
+    server.handleClient(); //이거도 있어야한다!
+
+    //delay(~~~~) 절때 쓰면 안됨!
+
+    //1초간격으로 뭔가 하겠다~
+    if((t - last_10sec) > 1000) {
+      last_10sec = millis();
+
+      pms.requestRead();
+    
+      if (pms.readUntil(data))
+      {
+        //Serial.println(data.PM_AE_UG_1_0);    
+        //Serial.println(data.PM_AE_UG_2_5);
+        //Serial.println(data.PM_AE_UG_10_0);
+      }
+      String msg = "{\"PM10\":"+String(data.PM_AE_UG_1_0)+",\"PM25\":"+String(data.PM_AE_UG_2_5)+",\"PM100\":"+String(data.PM_AE_UG_10_0)+"}";
+      webSocket.broadcastTXT(msg); //모든클라이언트에게 메시지 전송!
+        
+    }
+}
+

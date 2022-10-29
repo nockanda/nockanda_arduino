@@ -1,0 +1,22 @@
+#include "HX711.h"
+
+
+// HX711 circuit wiring
+const int LOADCELL_DOUT_PIN = D3;
+const int LOADCELL_SCK_PIN = D4;
+
+
+HX711 scale;
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("HX711 Demo");
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+  scale.set_scale(-10800);
+  scale.tare();		
+}
+
+void loop() {
+  Serial.println(scale.get_units()*-0.453592, 1);
+  delay(1000);
+}

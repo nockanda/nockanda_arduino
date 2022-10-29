@@ -1,0 +1,348 @@
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include <Arduino.h>
+#include <WebSocketsServer.h>
+#include <ESP8266WebServer.h>
+#include <Hash.h>
+#include <ArduinoJson.h>
+
+const char* ssid = "popcorn";
+const char* password = "11213144";
+const char* mqtt_server = "broker.mqtt-dashboard.com"; //MQTT서버주소
+
+//웹서버의 포트는 기본 포트인 80번을 사용한다!
+ESP8266WebServer server(80);
+//웹서버와 웹클라이언트가 뒷구멍으로 주고받는 데이터는 웹소켓에서 81번을 쓴다!
+WebSocketsServer webSocket = WebSocketsServer(81);
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+unsigned long lastMsg = 0;
+#define MSG_BUFFER_SIZE  (50)
+char msg[MSG_BUFFER_SIZE];
+int value = 0;
+
+void setup_wifi() {
+
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  randomSeed(micros());
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+//MQTT메시지가 수집이 되는 지점(단 TOPIC을 구독등록을 해놓아야한다)
+void callback(char* topic, byte* payload, unsigned int length) {
+  String mytopic = String(topic);
+  /*
+  Serial.print("Message arrived [");
+  Serial.print(mytopic);
+  Serial.print("] ");
+  */
+  String mypayload="";
+  for (int i = 0; i < length; i++) {
+    mypayload+=(char)payload[i];
+  }
+  webSocket.broadcastTXT(mypayload);
+}
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      client.publish("outTopic", "hello world");
+      // ... and resubscribe
+      client.subscribe("nockanda/device1/pub");
+      client.subscribe("nockanda/device2/pub");
+      client.subscribe("nockanda/device3/pub");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+
+
+//웹서버가 웹클라이언트에게 전송하는 홈페이지!
+//홈페이지에는 웹소켓클라이언트코드가 함께 첨부되서 전송된다!
+//웹클라이언트가 이 코드를 받게된다면 자바스크립트로 구현된 웹소켓 클라이언트가 서버와 접속한다!
+String response = "\
+<html>\
+<head>\
+<meta name=\"viewport\" content=\"width=device-width\">\
+<meta charset=\"utf-8\">\
+<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js\"></script>\
+<script type=\"text/javascript\" charset=\"utf-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js\"></script>\
+<script>\
+  var connection = new WebSocket('ws://'+location.hostname+':81/', ['arduino']);\
+  connection.onopen = function () {\
+     connection.send('Connect ' + new Date());\
+  };\
+  connection.onerror = function (error) {\
+     console.log('WebSocket Error ', error);\
+  };\
+  connection.onmessage = function (e) {\
+     console.log('Server: ', e.data);\
+     var data = JSON.parse(e.data);\
+     if(data.id == 1){\
+        chart.data.datasets[0].data.shift();\
+        chart.data.datasets[0].data.push(data.h);\
+        chart.data.datasets[1].data.shift();\
+        chart.data.datasets[1].data.push(data.t);\
+        chart.update();\
+     }else if(data.id == 2){\\
+        chart2.data.datasets[0].data.shift();\
+        chart2.data.datasets[0].data.push(data.h);\
+        chart2.data.datasets[1].data.shift();\
+        chart2.data.datasets[1].data.push(data.t);\
+        chart2.update();\
+     }else if(data.id == 3){\
+        chart3.data.datasets[0].data.shift();\
+        chart3.data.datasets[0].data.push(data.h);\
+        chart3.data.datasets[1].data.shift();\
+        chart3.data.datasets[1].data.push(data.t);\
+        chart3.update();\
+     }\
+  };\
+  function send_msg(){\
+     connection.send('녹칸다 포에버!!!');\
+  }\
+  function led_control(id,color,state){\
+    var data = {\
+          d:id,\
+          l:color,\
+          s:state\
+    };\
+    connection.send(JSON.stringify(data));\
+  }\
+</script>\
+</head>\
+<body>\
+<table border = 1 width=700>\
+  <tr><th colspan=2><h1>디바이스 1번 데이터</h1></th></tr>\
+  <tr>\
+      <td width=500>\
+        <div style=\"width:500px;\">\
+          <canvas id=\"line1\"></canvas>\
+        </div>\
+      </td>\
+      <td>\
+       <table border=0 width=100% height=200>\
+         <tr>\
+             <td><button onclick='led_control(1,0,0)'>녹색LED끄기</button></td>\
+             <td><button onclick='led_control(1,0,1)'>녹색LED켜기</button></td>\
+         </tr>\
+         <tr>\
+             <td><button onclick='led_control(1,1,0)'>적색LED끄기</button></td>\
+             <td><button onclick='led_control(1,1,1)'>적색LED켜기</button></td>\
+         </tr>\
+       </table>\
+      </td>\
+  </tr>\
+  <tr><th colspan=2><h1>디바이스 2번 데이터</h1></th></tr>\
+  <tr>\
+      <td>\
+        <div style=\"width:500px;\">\
+          <canvas id=\"line2\"></canvas>\
+        </div>\
+      </td>\
+      <td>\
+       <table border=0 width=100% height=200>\
+         <tr>\
+             <td><button onclick='led_control(2,0,0)'>녹색LED끄기</button></td>\
+             <td><button onclick='led_control(2,0,1)'>녹색LED켜기</button></td>\
+         </tr>\
+         <tr>\
+             <td><button onclick='led_control(2,1,0)'>적색LED끄기</button></td>\
+             <td><button onclick='led_control(2,1,1)'>적색LED켜기</button></td>\
+         </tr>\
+       </table>\
+      </td>\
+  </tr>\
+  <tr><th colspan=2><h1>디바이스 3번 데이터</h1></th></tr>\
+  <tr>\
+      <td>\
+        <div style=\"width:500px;\">\
+          <canvas id=\"line3\"></canvas>\
+        </div>\
+      </td>\
+      <td>\
+       <table border=0 width=100% height=200>\
+         <tr>\
+             <td><button onclick='led_control(3,0,0)'>녹색LED끄기</button></td>\
+             <td><button onclick='led_control(3,0,1)'>녹색LED켜기</button></td>\
+         </tr>\
+         <tr>\
+             <td><button onclick='led_control(3,1,0)'>적색LED끄기</button></td>\
+             <td><button onclick='led_control(3,1,1)'>적색LED켜기</button></td>\
+         </tr>\
+       </table>\
+      </td>\
+  </tr>\
+</table>\
+<script>\
+var ctx = document.getElementById('line1').getContext('2d');\
+var chart = new Chart(ctx, {\
+  type: 'line',\
+  data: {\
+    labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+    datasets: [\
+        {\
+          label: 'Humidity',\
+          backgroundColor: 'transparent',\
+          borderColor: \"blue\",\
+          data: [0, 0, 0, 0, 0, 0, 0]\
+        },\
+        {\
+          label: 'Temperature',\
+          backgroundColor: 'transparent',\
+          borderColor: \"red\",\
+          data: [0, 0, 0, 0, 0, 0, 0]\
+        }\
+    ]\
+  },\
+  options: {}\
+});\
+var ctx2 = document.getElementById('line2').getContext('2d');\
+var chart2 = new Chart(ctx2, {\
+  type: 'line',\
+  data: {\
+    labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+    datasets: [\
+        {\
+          label: 'Humidity',\
+          backgroundColor: 'transparent',\
+          borderColor: \"blue\",\
+          data: [0, 0, 0, 0, 0, 0, 0]\
+        },\
+        {\
+          label: 'Temperature',\
+          backgroundColor: 'transparent',\
+          borderColor: \"red\",\
+          data: [0, 0, 0, 0, 0, 0, 0]\
+        }\
+    ]\
+  },\
+  options: {}\
+});\
+var ctx3 = document.getElementById('line3').getContext('2d');\
+var chart3 = new Chart(ctx3, {\
+  type: 'line',\
+  data: {\
+    labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+    datasets: [\
+        {\
+          label: 'Humidity',\
+          backgroundColor: 'transparent',\
+          borderColor: \"blue\",\
+          data: [0, 0, 0, 0, 0, 0, 0]\
+        },\
+        {\
+          label: 'Temperature',\
+          backgroundColor: 'transparent',\
+          borderColor: \"red\",\
+          data: [0, 0, 0, 0, 0, 0, 0]\
+        }\
+    ]\
+  },\
+  options: {}\
+});\
+</script>\
+</body>\
+</html>";
+
+
+//클라이언트에서 서버쪽으로 값이 전송되었을때 뭘할거냐?
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+
+    switch(type) {
+        case WStype_DISCONNECTED:
+            Serial.printf("[%u] Disconnected!\n", num);
+            break;
+        case WStype_CONNECTED: {
+            IPAddress ip = webSocket.remoteIP(num);
+            Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+
+            //num = 소켓번호(클라이언트번호)
+            //webSocket.sendTXT(num, "Connected");
+        }
+            break;
+        case WStype_TEXT:
+        //메시지 수신부
+            //Serial.printf("[%u] get Text: %s\n", num, payload);
+            //MQTT로 메시지를 보낸다!
+
+            String data = "";
+            for(int i = 0;i<length;i++){
+              data += (char)payload[i];
+            }
+            //JSON을 parse한다!
+            StaticJsonDocument<64> doc;
+            deserializeJson(doc, data);
+            int d = doc["d"]; //디바이스ID
+            if(d == 1){
+              client.publish("nockanda/devce1/sub", data.c_str());  
+            }else if(d == 2){
+              client.publish("nockanda/devce2/sub", data.c_str());
+            }else if(d == 3){
+              client.publish("nockanda/devce3/sub", data.c_str());
+            }
+            break;
+    }
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  //인터넷공유기와 연결하는 작업
+  setup_wifi();
+  //MQTT클라이언트로 작동!
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+  
+  //웹소켓 서버를 연다
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
+
+  //웹서버
+  server.on("/", []() {
+      server.send(200, "text/html", response);
+  });
+
+  server.begin();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  webSocket.loop(); //이거 있어야한다!
+  server.handleClient(); //이거도 있어야한다!
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+}

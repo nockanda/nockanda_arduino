@@ -1,0 +1,109 @@
+//풍향센서
+float direct[] = {3.84,1.98,2.25,0.41,0.45,0.32,0.90,0.62,1.40,1.19,3.08,2.93,4.62,4.04,4.33,3.43};
+
+//풍속센서
+const byte anemo_pin = 2;
+volatile int anemo_count = 0;
+volatile unsigned long anemo_t = 0;
+unsigned long nockanda_time = 0;
+
+//우량센서(측우기)
+const byte rain_pin = 3;
+volatile int rain_count = 0;
+volatile unsigned long rain_time = 0;
+
+//온습도(dht-11)
+#include "DHT.h"
+#define DHTPIN 4
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  //풍속
+  pinMode(anemo_pin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(anemo_pin), anemo_counter, FALLING);
+  //우량
+  pinMode(rain_pin, INPUT_PULLUP); //rainfall
+  attachInterrupt(digitalPinToInterrupt(rain_pin), rain_counter, FALLING);
+  //온습도
+  dht.begin();
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  //아두이노 우노쪽 수신부 구현
+  if(Serial.available()){
+    //IoT보드에서 우노쪽으로 뭔가~ 전송한경우
+    char c = Serial.read(); //1byte 읽는다!
+    //iot보드가 MQTT로 강수량을 초기화하는 값을 수신하게되면
+    //iot보드쪽에서 우노쪽으로 값이 전달되고 강수량값을 초기화한다!
+    rain_count = 0;
+  }
+
+  //1000ms에 한번씩 모든 센서의 값을 읽어온다!
+  if(millis() - nockanda_time > 1000){
+    nockanda_time = millis();
+
+    //풍향센서 부분
+    int vane_raw_data = analogRead(A0);
+    float vane_volt = 5 * vane_raw_data/1023.0;
+
+    float degree = 0;
+    for(int i =0;i<16;i++){
+      if(i == 3 || i == 4){
+        if(abs(direct[i] - vane_volt) < 0.02){
+           degree = i * 22.5;
+           //Serial.println(degree);
+           break;
+        }
+      }else{
+        if(abs(direct[i] - vane_volt) < 0.05){
+           degree = i * 22.5;
+           //Serial.println(degree);
+           break;
+        }
+      }
+    }
+
+    
+    //km/h => m/s*1000/3600
+    //풍속센서 
+    float wind_speed = anemo_count*2.4*1000/3600;
+    anemo_count = 0;
+
+    //우량값
+    float rain_amount = rain_count*0.2794;
+
+    //온도와 습도
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+
+   
+    String json = "{\"wind_direct\":"+String(degree)+",\"wind_speed\":"+String(wind_speed)+",\"rain_amout\":"+String(rain_amount)+",\"humi\":"+String(h)+",\"temp\":"+String(t)+"}";
+    Serial.println(json);
+  }
+
+}
+
+void anemo_counter() {
+  //1초 = 1000ms  (=66.66m/s)
+  if(millis() - anemo_t > 10){
+    anemo_t = millis();
+    //인터발 간격으로 한번씩 실행이 되는 부분
+    anemo_count++;
+  }
+}
+
+void rain_counter() {
+  //채터링 
+  if(millis() - rain_time > 10){
+    rain_time = millis();
+    rain_count++;
+  }
+}

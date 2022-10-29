@@ -1,0 +1,21 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial SMART_FARM(D3,D4);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);//결과를 PC에 출력하기위한 통신라인
+  SMART_FARM.begin(9600); //아두이노 우노
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    char c = Serial.read();
+    SMART_FARM.write(c); //T, F, C
+  }
+  if(SMART_FARM.available()){
+    String data = SMART_FARM.readStringUntil('\n'); //println
+    Serial.println(data);
+  }
+}

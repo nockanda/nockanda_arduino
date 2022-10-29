@@ -1,0 +1,35 @@
+#define DIR 2
+#define STEP 3
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//결과를 시리얼모니터에서 볼거야~
+  pinMode(DIR,OUTPUT);
+  pinMode(STEP,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //DIR이 high인 방향으로 1회전
+  digitalWrite(DIR,HIGH);
+
+  for(int i = 0;i<200;i++){
+    //요거 한개당 1.8도임!
+    digitalWrite(STEP,HIGH);
+    delayMicroseconds(1000);
+    digitalWrite(STEP,LOW);
+    delayMicroseconds(1000);
+  }
+  delay(1000);
+  //DIR이 low인 방향으로 1회전
+  digitalWrite(DIR,LOW);
+  
+  for(int i = 0;i<200;i++){
+    //요거 한개당 1.8도임!
+    digitalWrite(STEP,HIGH);
+    delayMicroseconds(1000);
+    digitalWrite(STEP,LOW);
+    delayMicroseconds(1000);
+  }
+  delay(1000);
+}

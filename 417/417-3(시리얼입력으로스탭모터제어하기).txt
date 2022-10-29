@@ -1,0 +1,41 @@
+#define DIR 2
+#define STEP 3
+
+int speed = 1000;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//결과를 시리얼모니터에서 볼거야~
+  pinMode(DIR,OUTPUT);
+  pinMode(STEP,OUTPUT);
+}
+
+//메인스레드
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    //PC의 시리얼모니터에서 입력한값을 수신하겠다!
+    char c = Serial.read();// 1개 문자를 입력받겠다!
+    if(c == 'F'){
+      //정방향
+      digitalWrite(DIR,HIGH);
+    }else if(c == 'B'){
+      //역방향
+      digitalWrite(DIR,LOW);
+    }else if(c == '+'){
+      //속도 증가
+      speed -= 200;
+      if(speed < 500) speed = 500;
+    }else if(c == '-'){
+      //속도 감소
+      speed += 200;
+      if(speed > 1800) speed = 1800;
+    }
+  }
+
+  //스탭모터가 특정한 방향으로 무한히 회전한다!
+  digitalWrite(STEP,HIGH);
+  delayMicroseconds(speed);
+  digitalWrite(STEP,LOW);
+  delayMicroseconds(speed);
+}

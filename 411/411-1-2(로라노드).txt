@@ -1,0 +1,115 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+
+#define led1 3
+#define led2 4
+
+//920.9Mhz
+const long frequency = 9209E5;
+
+void setup() {
+  Serial.begin(9600);                   // initialize serial
+
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  
+  if (!LoRa.begin(frequency)) {
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+  Serial.println();
+  Serial.println("LoRa Simple Node");
+  Serial.println("Only receive messages from gateways");
+  Serial.println("Tx: invertIQ disable");
+  Serial.println("Rx: invertIQ enable");
+  Serial.println();
+
+  LoRa.onReceive(onReceive);
+  LoRa.onTxDone(onTxDone);
+  LoRa_rxMode();
+}
+
+void loop() {
+  /*
+  //node쪽은 1초에 한번 뭔가 전송하려고 한다~
+  if (runEvery(2000)) { // repeat every 1000 millis
+
+    String message = "HeLoRa World! ";
+    message += "I'm a Node! ";
+    message += millis();
+
+    LoRa_sendMessage(message); // send a message
+
+    Serial.println("Send Message!");
+  }
+  */
+}
+
+void LoRa_rxMode(){
+  LoRa.enableInvertIQ();                // active invert I and Q signals
+  LoRa.receive();                       // set receive mode
+}
+
+void LoRa_txMode(){
+  LoRa.idle();                          // set standby mode
+  LoRa.disableInvertIQ();               // normal mode
+}
+
+void LoRa_sendMessage(String message) {
+  LoRa_txMode();                        // set tx mode
+  LoRa.beginPacket();                   // start packet
+  LoRa.print(message);                  // add payload
+  LoRa.endPacket(true);                 // finish packet and send it
+}
+
+void onReceive(int packetSize) {
+  String message = "";
+
+  while (LoRa.available()) {
+    message += (char)LoRa.read();
+  }
+
+  // 10 11 21 22
+  if(message[0] == '1'){
+    //LED1
+    if(message[1] == '0'){
+      //OFF
+      digitalWrite(led1,LOW);
+    }else if(message[1] == '1'){
+      //ON
+      digitalWrite(led1,HIGH);
+    }
+  }else if(message[0] == '2'){
+    //LED2
+    if(message[1] == '0'){
+      //OFF
+      digitalWrite(led2,LOW);
+    }else if(message[1] == '1'){
+      //ON
+      digitalWrite(led2,HIGH);
+    }
+  }
+
+  Serial.print("Node Receive: ");
+  Serial.println(message);
+  LoRa_sendMessage(message); //게이트웨이로 반송!
+}
+
+void onTxDone() {
+  Serial.println("TxDone");
+  LoRa_rxMode();
+}
+
+boolean runEvery(unsigned long interval)
+{
+  static unsigned long previousMillis = 0;
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval)
+  {
+    previousMillis = currentMillis;
+    return true;
+  }
+  return false;
+}

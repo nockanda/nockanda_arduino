@@ -1,0 +1,41 @@
+#define DIR 2
+#define STEP 3
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//결과를 시리얼모니터에서 볼거야~
+  pinMode(DIR,OUTPUT);
+  pinMode(STEP,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    //PC의 시리얼모니터에서 입력한값을 수신하겠다!
+    char c = Serial.read();// 1개 문자를 입력받겠다!
+    Serial.println("유저가 명령을 전송했다!!!!!!");
+  }
+  //DIR이 high인 방향으로 1회전
+  Serial.println("HIGH방향으로 회전을 시작합니다!");
+  digitalWrite(DIR,HIGH);
+  for(int i = 0;i<1600;i++){
+    digitalWrite(STEP,HIGH);
+    delayMicroseconds(1000);
+    digitalWrite(STEP,LOW);
+    delayMicroseconds(1000);
+  }
+  Serial.println("HIGH방향으로 회전을 종료합니다!");
+  delay(1000);
+  Serial.println("LOW방향으로 회전을 시작합니다!");
+  digitalWrite(DIR,LOW);
+  for(int i = 0;i<1600;i++){
+    //요거 한개당 1.8도임!
+    //1.8도당 800ms => 
+    digitalWrite(STEP,HIGH);
+    delayMicroseconds(1000);
+    digitalWrite(STEP,LOW);
+    delayMicroseconds(1000);
+  }
+  Serial.println("LOW방향으로 회전을 종료합니다!");
+  delay(1000);
+}
