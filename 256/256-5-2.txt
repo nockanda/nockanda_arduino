@@ -1,0 +1,56 @@
+/*
+  예제 255-5-2 RF통신 슬레이브코드!
+ */
+#include <SPI.h>
+#include "RF24.h"
+#include <Stepper.h>
+
+const int stepsPerRevolution = 2048;
+                                  //IN4 IN2 IN3 IN1
+                                  // 4   6   5   7
+Stepper myStepper(stepsPerRevolution, 4, 6, 5, 7);
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  myStepper.setSpeed(15);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.startListening(); //기본 : 수신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    //char text[30];
+    int recv;
+    radio.read(&recv,sizeof(recv));
+
+    Serial.println(recv);
+    //0~2048
+    myStepper.step(recv);
+
+    //마스터에게 응답할 준비
+    //송신모드
+    sendmode();
+    char text2[] = "OK!!";
+    radio.write(text2,sizeof(text2));
+
+    //보낼거 다보내고..수신모드
+    receivemode();
+  }
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}

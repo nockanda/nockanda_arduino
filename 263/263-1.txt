@@ -1,0 +1,222 @@
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+#include <EEPROM.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2);//1602
+
+#define buzzer D5
+#define relay D6
+#define door D7
+
+const char* ssid = "~~~~~~";
+const char* password = "~~~~~~~";
+const char* mqtt_server = "broker.mqtt-dashboard.com";
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+unsigned long lastMsg = 0;
+#define MSG_BUFFER_SIZE  (50)
+char msg[MSG_BUFFER_SIZE];
+int value = 0;
+
+String pw = "123456";
+
+void setup_wifi() {
+
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  randomSeed(micros());
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  //LCD화면에 WIFI공유기와의 연결여부를 출력한다!
+  lcd.setCursor(0,0);
+  lcd.print("NOCKANDA GG!");
+  lcd.setCursor(0,1);
+  lcd.print("MQTT IOT GG");
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+
+  String mypayload;
+  for (int i = 0; i < length; i++) {
+    mypayload += (char)payload[i];
+  }
+  String mytopic = topic;
+
+  Serial.print(mytopic);
+  Serial.print(" : ");
+  Serial.println(mypayload);
+
+  if(mytopic == "nockanda/login"){
+    //시스템 비밀번호와 유저가 MQTT로 전송한 비밀번호를 비교한다!
+    if(pw == mypayload){
+      //비밀번호가 일치
+      Serial.println("비밀번호가 일치합니다..!");
+      
+      if(digitalRead(relay) == LOW){
+        //금고의 잠금이 설정되어있는 상황일때만 해제한다!
+        client.publish("nockanda/notice", "금고의 잠금을 해제합니다!");
+        digitalWrite(relay,HIGH);
+        //도미솔도
+        tone(buzzer, 2093); //도
+        delay(200);
+        tone(buzzer, 1319); //미
+        delay(200);
+        tone(buzzer, 1568); //솔
+        delay(200);
+        tone(buzzer, 2093); //도
+        delay(200);
+        noTone(buzzer);
+      }
+      
+    }else{
+      //비밀번호가 틀린
+      client.publish("nockanda/notice", "비밀번호가 틀렸습니다!");
+      Serial.println("비밀번호가 틀렸습니다..!");
+
+      //솔-솔-
+      tone(buzzer, 1568); //솔
+      delay(200);
+      noTone(buzzer);
+      delay(200);
+      tone(buzzer, 1568); //솔
+      delay(200);
+      noTone(buzzer);
+    }
+  }else if(mytopic == "nockanda/set"){
+    //무슨값이든 이 토픽으로 값을 날린 경우 잠금을 설정한다!
+    if(digitalRead(relay) == HIGH){
+      client.publish("nockanda/notice", "금고의 잠금을 설정합니다!");
+      digitalWrite(relay,LOW);
+    }
+  }else if(mytopic == "nockanda/change"){
+    //원래비밀번호,바꿀비밀번호 = mypayload
+    int comma = mypayload.indexOf(','); //콤마가 있는 위치를 반환
+    String pw1 = mypayload.substring(0,comma);
+    String pw2 = mypayload.substring(comma+1,mypayload.length()+1);
+    //Serial.println("원래비밀번호 = " + pw1);
+    //Serial.println("바꿀비밀번호 = " + pw2);
+    if(pw1 == pw){
+      //비밀번호가 일치하는 경우
+      client.publish("nockanda/notice", "비밀번호를 변경했습니다!");
+      pw = pw2;
+
+      //바꾼비밀번호를 EEPROM에 집어넣는다!
+      EEPROM.begin(512);
+      EEPROM.write(0, pw.length());
+      for(int i = 0 ;i<pw.length();i++){
+        EEPROM.write(i+1, pw[i]);
+      }
+      EEPROM.end();
+    }else{
+      //비밀번호가 일치하지 않는 경우
+      client.publish("nockanda/notice", "비밀번호가 일치하지 않습니다!");
+    }
+  }
+}
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      client.publish("outTopic", "hello world");
+      // ... and resubscribe
+      
+      client.subscribe("nockanda/login");
+      client.subscribe("nockanda/change");
+      client.subscribe("nockanda/set");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(door,INPUT_PULLUP);
+  pinMode(relay,OUTPUT);
+  lcd.init();
+  lcd.backlight();
+
+  //EEPROM에서 초기비밀번호를 읽어온다!
+  pw = "";
+  EEPROM.begin(512);
+  byte len = EEPROM.read(0); //6
+  for(int i = 0;i<len;i++){
+    //Serial.println((char)EEPROM.read(i+1));
+    pw += (char)EEPROM.read(i+1);
+  }
+  EEPROM.end();
+  
+  setup_wifi();
+
+  Serial.println("초기비밀번호="+pw);
+  
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+}
+
+void loop() {
+
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+
+  unsigned long now = millis();
+  if (now - lastMsg > 1000) {
+    lastMsg = now;
+    ++value;
+
+    if(digitalRead(door) == LOW){
+      //도어센서의 2개조각이 붙었다! = 문이 닫혀있다
+      //Serial.println("문이 닫혀있다!");
+      client.publish("nockanda/door", "닫힘");
+    }else{
+      //문이 열려있다!
+      //Serial.println("문이 열려있다!");
+      client.publish("nockanda/door", "열림");
+    }
+
+    if(digitalRead(relay) == LOW){
+      //잠금
+      client.publish("nockanda/lock", "잠금");
+    }else{
+      //해제
+      client.publish("nockanda/lock", "해제");
+    }
+    //snprintf (msg, MSG_BUFFER_SIZE, "hello world #%ld", value);
+    //Serial.print("Publish message: ");
+    //Serial.println(msg);
+    //client.publish("nockanda/out", text);
+  }
+}

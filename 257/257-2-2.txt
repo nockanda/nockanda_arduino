@@ -1,0 +1,65 @@
+/*
+  예제 254-1-2 RF통신 슬레이브코드!
+ */
+#include <SPI.h>
+#include "RF24.h"
+
+#define IN3 7 //디지털출력
+#define IN4 6 //디지털출력
+#define ENB 5 //아날로그출력
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  pinMode(IN3,OUTPUT);
+  pinMode(IN4,OUTPUT);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.startListening(); //기본 : 수신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    //char text[30];
+    byte recv[2];
+    radio.read(recv,sizeof(recv));
+
+    Serial.println(recv[0]);
+
+    if(recv[0] == 0){
+      //정방향
+      digitalWrite(IN3,HIGH);
+      digitalWrite(IN4,LOW);
+    }else if(recv[0] == 1){
+      //역방향
+      digitalWrite(IN3,LOW);
+      digitalWrite(IN4,HIGH);
+    }
+
+    analogWrite(ENB,recv[1]);
+
+    //마스터에게 응답할 준비
+    //송신모드
+    sendmode();
+    char text2[] = "OK!!";
+    radio.write(text2,sizeof(text2));
+
+    //보낼거 다보내고..수신모드
+    receivemode();
+  }
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}

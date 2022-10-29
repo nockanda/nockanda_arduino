@@ -1,0 +1,284 @@
+#include <Keypad.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+#include <EEPROM.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2); //1602
+
+#define buzzer 5
+#define relay 4
+#define door 3
+
+const byte ROWS = 4;
+const byte COLS = 4;
+
+//금고의 비밀번호는 6자리이다!
+char pw[] = {'1','2','3','4','5','6'};
+String user_pw = "";
+
+char hexaKeys[ROWS][COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+byte rowPins[ROWS] = {13, 12, 11, 10};
+byte colPins[COLS] = {9, 8, 7, 6};
+
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+
+byte err_count = 0;
+unsigned long t = 0; //비밀번호 에러카운트 확인용 시계
+unsigned long t2 = 0; //자동잠금 확인용 시계
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신
+  pinMode(relay,OUTPUT);
+  pinMode(door,INPUT_PULLUP); //문이 닫히면 LOW 열리면 HIGH
+  digitalWrite(relay,LOW); //잠금장치 설정
+  lcd.init();
+  lcd.backlight();
+
+  lcd.setCursor(0,0); //0~15/0~1
+  lcd.print("INPUT PASSWORD!");
+
+  //초기패스워드를 EEPROM에서 읽어온다!
+  Serial.println("초기패스워드");
+  for(int i = 0;i<6;i++){
+    pw[i] = EEPROM.read(i);
+    Serial.println(pw[i]);
+  }
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(err_count > 0){
+    //일단 에러가 누적이 되어있는 상태!
+    if(millis() - t > 20000){
+      Serial.println("마지막 에러가 발생한지 20초가 경과해서 에러카운트를 초기화합니다!");
+      err_count = 0;
+    }
+  }
+
+  bool door_state = digitalRead(door); //도어센서
+  bool relay_state = digitalRead(relay); //잠금장치
+
+  if(relay_state == HIGH && door_state == LOW){
+    //잠금이 해제가 되어있는 상태
+    //문이 닫혀있는 상태
+    //시간이 10초이상 경과하면 문을 다시 잠그겠다!
+    if(millis() - t2 > 10000){
+      Serial.println("문이 10초간 닫혀있어서 자동으로 잠금을 설정하겠습니다!");
+      digitalWrite(relay,LOW);
+    }
+  }else if(relay_state == HIGH && door_state == HIGH){
+    //잠금이 해제되고 문이 열려있는 경우
+    //이때는 스탑워치를 계속 갱신해줘야한다!
+    t2 = millis();
+  }
+  
+  char customKey = customKeypad.getKey();
+
+  //뭔지는 모르겠지만 4x4키패드에서 뭔가 눌러졌다면~
+  if(customKey){
+    tone(buzzer,2093);
+    delay(100);
+    noTone(buzzer);
+  }
+  
+  if (customKey >= '0' && customKey <= '9'){
+    if(user_pw.length() < 6){
+      //비밀번호 길이를 6개로 맞추기 위해서!
+      user_pw = user_pw + customKey;
+    }
+    String star = "";
+    for(int i = 0;i<user_pw.length();i++){
+      //현재 입력되어있는 비밀번호 갯수만큼 루프가 회전한다!
+      star += '*';
+    }
+ 
+    lcd.clear();
+    lcd.setCursor(0,0); //0~15/0~1
+    lcd.print("INPUT PASSWORD!");
+    lcd.setCursor(0,1); //0~15/0~1
+    lcd.print(star);
+    
+    Serial.print(user_pw);
+    Serial.print("/");
+    Serial.println(user_pw.length());
+    //Serial.println(customKey);
+  }else if(customKey == '#'){
+    if(user_pw.length() == 6){
+      //비밀번호 인증을 시도한다
+      if(pw[0] == user_pw[0] && pw[1] == user_pw[1] && pw[2] == user_pw[2] && pw[3] == user_pw[3] && pw[4] == user_pw[4] && pw[5] == user_pw[5]){
+        //인증에 성공
+        Serial.println("인증에 성공했다");
+
+        //스탑워치작동
+        t2 = millis();
+    
+        //LCD화면에 결과를 출력한다
+        lcd.clear();
+        lcd.setCursor(0,0); //0~15/0~1
+        lcd.print("NOCKANDA!");
+        lcd.setCursor(0,1); //0~15/0~1
+        lcd.print("UNLOCK!");
+
+        //솔레노이드스위치의 잠금이 해제된다
+        digitalWrite(relay,HIGH); //잠금이 해제
+    
+        //도미솔도 부저음 재생
+        tone(buzzer,2093); //도
+        delay(200);
+        tone(buzzer,1319); //미
+        delay(200);
+        tone(buzzer,1568); //솔
+        delay(200);
+        tone(buzzer,2093); //도
+        delay(200);
+        noTone(buzzer);
+        user_pw = "";
+      }else{
+        //인증에 실패
+        Serial.println("인증에 실패했다");
+
+        //에러카운트 누적
+        t = millis();
+        err_count++;
+
+        if(err_count >= 3){
+          //3회 연속으로 비밀번호를 틀린경우!
+          //1분동안 시스템을 멈춰
+          lcd.clear();
+          lcd.setCursor(0,0); //0~15/0~1
+          lcd.print("ERROR COUNT!");
+          lcd.setCursor(0,1); //0~15/0~1
+          lcd.print("60seconds stop!!");
+          Serial.println("에러카운트 3회 누적!");
+          Serial.println("60초간 휴식!");
+          delay(10000);
+          user_pw = "";
+          err_count = 0;
+          return;
+        }
+     
+        //LCD화면에 결과를 출력한다
+        lcd.clear();
+        lcd.setCursor(0,0); //0~15/0~1
+        lcd.print("NOCKANDA!");
+        lcd.setCursor(0,1); //0~15/0~1
+        lcd.print("NONO!");
+        
+        tone(buzzer,2093); //도
+        delay(200);
+        tone(buzzer,2093); //도
+        delay(200);
+        noTone(buzzer);
+        user_pw = "";
+      }
+    }
+    //Serial.println("샵버튼을 눌렀다");
+  }else if(customKey == 'A'){
+    //백스페이스 기능
+    if(user_pw.length() > 0){
+      user_pw.remove(user_pw.length()-1);
+    }
+    String star = "";
+    for(int i = 0;i<user_pw.length();i++){
+      //현재 입력되어있는 비밀번호 갯수만큼 루프가 회전한다!
+      star += '*';
+    }
+    lcd.clear();
+    lcd.setCursor(0,0); //0~15/0~1
+    lcd.print("INPUT PASSWORD!");
+    lcd.setCursor(0,1); //0~15/0~1
+    lcd.print(star);
+    
+    Serial.print(user_pw);
+    Serial.print("/");
+    Serial.println(user_pw.length());
+  }else if(customKey == 'B'){
+    user_pw = "";
+    Serial.println("비밀번호 클리어");
+  }else if(customKey == 'C'){
+    //만약 잠금이 해제된 경우라면 잠근다!
+    if(digitalRead(relay) == HIGH){
+      digitalWrite(relay,LOW);
+
+      //LCD화면에 결과를 출력한다
+      lcd.clear();
+      lcd.setCursor(0,0); //0~15/0~1
+      lcd.print("NOCKANDA!");
+      lcd.setCursor(0,1); //0~15/0~1
+      lcd.print("LOCK!");
+    }
+  }else if(customKey == '*'){
+    //비밀번호 변경모드
+    if(user_pw.length() == 6){
+      //비밀번호 인증을 시도한다
+      if(pw[0] == user_pw[0] && pw[1] == user_pw[1] && pw[2] == user_pw[2] && pw[3] == user_pw[3] && pw[4] == user_pw[4] && pw[5] == user_pw[5]){
+        //인증에 성공
+        //새로운 비밀번호 6자리를 입력해야한다!
+        Serial.println("비밀번호 변경모드입니다");
+        user_pw = "";
+
+        //무한루프
+        while(true){
+          char key = customKeypad.getKey();
+          //새로운 비밀번호 6자리
+          if(key){
+            tone(buzzer,2093);
+            delay(100);
+            noTone(buzzer);
+          }
+          if(key >='0' && key <= '9'){
+            user_pw += key;
+
+            String star = "";
+            for(int i = 0;i<user_pw.length();i++){
+              //현재 입력되어있는 비밀번호 갯수만큼 루프가 회전한다!
+              star += '*';
+            }
+            lcd.clear();
+            lcd.setCursor(0,0); //0~15/0~1
+            lcd.print("CHANGE PASSWORD!");
+            lcd.setCursor(0,1); //0~15/0~1
+            lcd.print(star);
+            
+            Serial.println(user_pw);
+          }
+          if(key == '*'){
+            if(user_pw.length() == 6){
+              for(int i = 0;i<6;i++){
+                pw[i] = user_pw[i];
+                //EEPROM에 기록
+                EEPROM.write(i, user_pw[i]);
+              }
+              
+              lcd.clear();
+              lcd.setCursor(0,0); //0~15/0~1
+              lcd.print("CHANGE PASSWORD!");
+              lcd.setCursor(0,1); //0~15/0~1
+              lcd.print("OK");
+              
+              Serial.println("비밀번호가 변경되었습니다");
+              user_pw = "";
+              break;
+            }else{
+              Serial.println("입력 규칙에 오류가 있습니다");
+              lcd.clear();
+              lcd.setCursor(0,0); //0~15/0~1
+              lcd.print("CHANGE PASSWORD!");
+              lcd.setCursor(0,1); //0~15/0~1
+              lcd.print("ERROR!");
+              user_pw = "";
+            }
+            
+          }
+        }
+      }
+    }
+  }
+}

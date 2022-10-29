@@ -1,0 +1,120 @@
+/*
+  예제 257-3-1 RF통신 마스터코드!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK 6
+#define DIO 7
+
+
+#define button1 2
+#define button2 3
+#define led1 4 //녹색
+#define led2 5 //적색
+
+TM1637Display display(CLK, DIO);
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+byte direct = 0; //0:정방향, 1:역방향
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  display.setBrightness(0x0f); //밝기지정
+  display.showNumberDec(0, false);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.stopListening(); //기본 : 송신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(button1) == LOW){
+    //정방향 버튼
+    direct = 0;
+  }
+  if(digitalRead(button2) == LOW){
+    //역방향 버튼
+    direct = 1;
+  }
+
+  int power = analogRead(A0); // 0~1023 -> 0~255
+  
+  //송신모드
+  sendmode();
+  //char text[] = "NOCKANDA!!";
+  byte data[2];
+  data[0] = direct;
+  data[1] = (byte)map(power,0,1023,0,255);
+  radio.write(data,sizeof(data));
+
+  Serial.print("Request = ");
+  if(data[0] == 0){
+    Serial.print("정방향");
+  }else{
+    Serial.print("역방향");
+  }
+  Serial.print(", POWER = ");
+  Serial.println(data[1]);
+
+
+  //수신모드
+  receivemode();
+
+  bool is_timeout = false;
+  unsigned long t = millis();
+  while(true){
+    if(radio.available()) break;
+    if(millis() - t > 3000){
+      is_timeout = true;
+      break;
+    }
+  }
+
+  if(is_timeout){
+    Serial.println("슬레이브가 출타했다!");
+    digitalWrite(led1,HIGH);
+    digitalWrite(led2,HIGH);
+  }else{
+    byte recv[2];
+    radio.read(recv,sizeof(recv));
+
+    Serial.print("Response = ");
+    Serial.print(recv[0]);
+    Serial.print(",");
+    Serial.println(recv[1]);
+
+    //recv[0] , 0:정방향, 1:역방향
+    //recv[1] , 0~255
+    if(recv[0] == 0){
+      //정방향(녹색)
+      digitalWrite(led1,HIGH);
+      digitalWrite(led2,LOW);
+    }else if(recv[0] == 1){
+      //역방향(적색)
+      digitalWrite(led1,LOW);
+      digitalWrite(led2,HIGH);
+    }
+    display.showNumberDec(recv[1], false);
+  }
+  delay(100);
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}

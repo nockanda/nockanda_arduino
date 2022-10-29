@@ -1,0 +1,106 @@
+#include <SoftwareSerial.h>
+
+#define relay 4
+#define buzzer 5
+#define door 6
+
+//비밀번호가 6자리긴한데 영어와 숫자와 특수문자를 섞을수있다!
+char pw[] = {'h','e','l','l','o','1'};
+
+SoftwareSerial HC06(2, 3); // RX, TX
+
+unsigned long t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신
+  HC06.begin(9600); //아두이노-BT모듈간 통신
+  pinMode(relay,OUTPUT);
+  pinMode(door,INPUT_PULLUP); //LOW 닫힘/ HIGH/ 열린
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //만약 잠금이 해제된 상태에서
+  //금고의 문이 닫힌상태가 일정시간 유지가 된다면
+  //금고의 문을 자동으로 잠그겠다!
+  if(digitalRead(relay) == HIGH && digitalRead(door) == LOW){
+    //조건만족하는 경우
+    if(millis() - t > 10000){
+      //잠금을 다시 설정하겠다!
+      Serial.println("10초가 지나서 잠금을 다시 자동으로 설정합니다!");
+      HC06.println("10초가 지나서 잠금을 다시 자동으로 설정합니다!");
+      digitalWrite(relay,LOW);
+      tone(buzzer, 1568); //솔
+      delay(300);
+      noTone(buzzer);
+    }
+  }else{
+    //조건을 만족하지 않는 경우
+    t = millis();
+  }
+  
+  if(HC06.available()){
+    //블루투스모듈쪽으로 뭔가 수신된값이 존재한다!
+    String command = HC06.readStringUntil(0x0d);
+    Serial.println(command);
+    
+    if(command.length() == 6){
+      //비밀번호 검증작업
+      if(pw[0] == command[0] && pw[1] == command[1] && pw[2] == command[2] && pw[3] == command[3] && pw[4] == command[4] && pw[5] == command[5]){
+        //비밀번호가 일치함
+        Serial.println("비밀번호가 일치합니다!");
+        HC06.println("비밀번호가 일치합니다!");
+
+        //잠금장치가 해제
+        digitalWrite(relay,HIGH);
+
+        //도미솔도
+        tone(buzzer, 2093); //도
+        delay(300);
+        tone(buzzer, 1319); //미
+        delay(300);
+        tone(buzzer, 1568); //솔
+        delay(300);
+        tone(buzzer, 2093); //도
+        delay(300);
+        noTone(buzzer);
+      }else{
+        //비밀번호 틀린
+        Serial.println("비밀번호가 일치하지 않습니다!");
+        HC06.println("비밀번호가 일치하지 않습니다!");
+
+        //솔-솔-
+        tone(buzzer, 1568); //솔
+        delay(300);
+        noTone(buzzer);
+        delay(300);
+        tone(buzzer, 1568); //솔
+        delay(300);
+        noTone(buzzer);
+      }
+    }else if(command.length() == 1){
+      if(command == "#"){
+        //다시 잠금을 한다!
+        HC06.println("문을 잠그겠습니다!");
+        digitalWrite(relay,LOW);
+        tone(buzzer, 1568); //솔
+        delay(300);
+        noTone(buzzer);
+      }
+    }else{
+      //비밀번호 길이가 6보다 작거나 클경우
+      Serial.println("비밀번호 길이가 안맞습니다!");
+      HC06.println("비밀번호 길이가 안맞습니다!");
+      //솔-솔-
+      tone(buzzer, 1568); //솔
+      delay(300);
+      noTone(buzzer);
+      delay(300);
+      tone(buzzer, 1568); //솔
+      delay(300);
+      noTone(buzzer);
+    }
+    
+  }
+}

@@ -1,0 +1,73 @@
+/*
+  예제 255-6-2 RF통신 슬레이브코드!
+ */
+#include <SPI.h>
+#include "RF24.h"
+#include <SoftwareSerial.h>
+#include <MHZ19.h>
+
+SoftwareSerial ss(2,3);
+MHZ19 mhz(&ss);
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  ss.begin(9600);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.startListening(); //기본 : 수신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    char text[30];
+    radio.read(text,sizeof(text));
+
+    Serial.println(text);
+
+    String data = text;
+    if(data.indexOf("CO2") != -1){
+      //Co2값 측정
+
+      MHZ19_RESULT response = mhz.retrieveData();
+      if (response == MHZ19_RESULT_OK)
+      {
+        int co2[2];
+        co2[0] = mhz.getCO2();
+        co2[1] = mhz.getTemperature();
+        //마스터에게 응답할 준비
+        //송신모드
+        sendmode();
+        //char text2[] = "SUBCRIBE!!";
+        radio.write(co2,sizeof(co2));
+
+        //보낼거 다보내고..수신모드
+        receivemode();
+      }
+      else
+      {
+        Serial.print(F("Error, code: "));
+        Serial.println(response);
+      }
+      
+      
+    }
+
+    
+  }
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}

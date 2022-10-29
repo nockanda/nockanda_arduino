@@ -1,0 +1,249 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+#include <EEPROM.h>
+
+#ifndef STASSID
+#define STASSID "~~~~~~"
+#define STAPSK  "~~~~~~"
+#endif
+
+#define buzzer D5
+#define relay D6
+
+const char* ssid     = STASSID;
+const char* password = STAPSK;
+
+String user_pw = "123456";
+
+LiquidCrystal_I2C lcd(0x27,16,2);
+ESP8266WebServer server(80);
+
+const int led = LED_BUILTIN;
+
+void handleRoot() {
+  String state;
+  if(digitalRead(relay) == LOW){
+    //잠금
+    state = "잠금";
+  }else{
+    //열림
+    state = "해제";
+  }
+  
+  String postForms = "<html>\
+  <head>\
+    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\
+    <title>녹칸다의 IoT 금고!</title>\
+  </head>\
+  <body>\
+    <center>\
+    <h1>녹칸다의 IoT금고!</h1><br>\
+    <h1>현재 금고의 상태 : "+ 
+    state
+    +"</h1><br>\
+    <form method=\"post\" enctype=\"application/x-www-form-urlencoded\" action=\"/login/\">\
+      비밀번호를 입력 : \
+      <input type=\"text\" name=\"pw\" value=\"\">\
+      <input type=\"submit\" value=\"로그인!\">\
+    </form>\
+    <form method=\"post\" enctype=\"application/x-www-form-urlencoded\" action=\"/change/\">\
+      현재 비밀번호 : \
+      <input type=\"text\" name=\"pw1\" value=\"\"><BR>\
+      바꿀 비밀번호 : \
+      <input type=\"text\" name=\"pw2\" value=\"\">\
+      <input type=\"submit\" value=\"수정!\">\
+    </form>\
+    </center>\
+  </body>\
+</html>";
+  
+  digitalWrite(led, 1);
+  server.send(200, "text/html", postForms);
+  digitalWrite(led, 0);
+}
+
+
+void handleForm() {
+  if (server.method() != HTTP_POST) {
+    digitalWrite(led, 1);
+    server.send(405, "text/plain", "Method Not Allowed");
+    digitalWrite(led, 0);
+  } else {
+    digitalWrite(led, 1);
+
+    //server.argName(i)
+    //server.arg(i)
+
+    String output = "<html><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />";
+
+    if(server.argName(0) == "pw"){
+      if(server.arg(0) == user_pw){
+        //비밀번호가 일치하는 경우
+        output += "<h1>비밀번호가 일치합니다!</h1><BR>";
+        Serial.println("비밀번호가 일치합니다!");
+
+        //금고가 잠겨있으면 열고 열려있으면 잠그겠다!
+        if(digitalRead(relay) == LOW){
+          //잠금이 해제가 되어있는 상태
+          output += "<h1>금고의 잠금을 해제했습니다!</h1><BR>";    
+          digitalWrite(relay,HIGH);
+        }else{
+          //잠겨있는 상태
+          output += "<h1>금고를 다시 잠그겠습니다!</h1><BR>";
+          digitalWrite(relay,LOW);
+        }
+
+        //메인페이지로 가는 링크를 하나 만들어보자!
+        output += "<a href=http://"+WiFi.localIP().toString()+">[메인페이지로 이동]</a>";
+        output += "</html>";
+        server.send(200, "text/html", output);
+
+        //도미솔도
+        tone(buzzer,2093); //도
+        delay(200);
+        tone(buzzer,1319); //미
+        delay(200);
+        tone(buzzer,1568); //솔
+        delay(200);
+        tone(buzzer,2093); //도
+        delay(200);
+        noTone(buzzer);
+      }else{
+        output += "<h1>비밀번호가 일치하지 않습니다!</h1>";
+        Serial.println("비밀번호가 일치하지 않습니다!");
+        output += "</html>";
+        server.send(200, "text/html", output);
+
+        //솔-솔-
+        tone(buzzer,1568); //솔
+        delay(200);
+        noTone(buzzer);
+        delay(200);
+        tone(buzzer,1568); //솔
+        delay(200);
+        noTone(buzzer);
+      }
+    }
+
+    
+    digitalWrite(led, 0);
+  }
+}
+
+void handleForm2() {
+  //비밀번호를 바꿔보자!
+  Serial.print(server.argName(0));
+  Serial.print("/");
+  Serial.println(server.arg(0));
+
+  Serial.print(server.argName(1));
+  Serial.print("/");
+  Serial.println(server.arg(1));
+
+  String output = "<html><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />";
+
+  if(server.arg(0) == user_pw){
+    //현재 비밀번호가 일치하는 경우
+    //새로운 비밀번호로 덮어쓴다!
+    user_pw = server.arg(1);
+    
+    //EEPROM에 새로운 비밀번호를 쓴다!
+    EEPROM.begin(512); //EEPROM 열고
+    EEPROM.write(0,user_pw.length());
+    //두번째 주소부터 비밀번호가 들어간다!
+    //초기비밀번호는 123456이다!
+    for(int i = 0;i<user_pw.length();i++){
+      EEPROM.write(i+1,user_pw[i]);
+    }
+    EEPROM.end(); //EEPROM닫고
+    
+    output += "비밀번호가 성공적으로 변경되었습니다!";
+  }else{
+    output += "현재 비밀번호가 틀렸습니다!";
+  }
+  output += "<a href=http://"+WiFi.localIP().toString()+">[메인페이지로 이동]</a>";
+  output += "</html>";
+  
+  server.send(200, "text/html", output);
+}
+
+void handleNotFound() {
+  digitalWrite(led, 1);
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i = 0; i < server.args(); i++) {
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+  }
+  server.send(404, "text/plain", message);
+  digitalWrite(led, 0);
+}
+
+void setup(void) {
+  pinMode(led, OUTPUT);
+  digitalWrite(led, 0);
+  Serial.begin(115200);
+  pinMode(relay,OUTPUT);
+  digitalWrite(relay,LOW);
+
+  lcd.init();
+  lcd.backlight();
+
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  if (MDNS.begin("esp8266")) {
+    Serial.println("MDNS responder started");
+  }
+
+  server.on("/", handleRoot);
+
+  server.on("/login/", handleForm);
+  server.on("/change/", handleForm2);
+  server.onNotFound(handleNotFound);
+
+  server.begin();
+  Serial.println("HTTP server started");
+
+  
+  //초기비밀번호 셋업
+  EEPROM.begin(512);
+  byte len = EEPROM.read(0); //비밀번호의 길이
+  user_pw = "";
+  for(int i = 0;i<len;i++){
+     user_pw += (char)EEPROM.read(i+1);
+  }
+  EEPROM.end();
+  Serial.println("초기비밀번호");
+  Serial.println(user_pw);
+
+  //LCD화면에 IP주소를 출력한다!
+  lcd.setCursor(0,0); //16(0~15), 2(0~1)
+  lcd.print("IP ADDRESS:");
+  lcd.setCursor(0,1); //16(0~15), 2(0~1)
+  lcd.print(WiFi.localIP().toString());
+}
+
+void loop(void) {
+  server.handleClient();
+}

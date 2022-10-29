@@ -1,0 +1,25 @@
+#include <EEPROM.h>
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  //아두이노에 초기 RFID태그를 입력하는 코드
+  //RFID태그는 4바이트의 ID를 가지고있다!
+  //D4 6D A2 2A
+  EEPROM.write(0, 0xD4);
+  EEPROM.write(1, 0x6D);
+  EEPROM.write(2, 0xA2);
+  EEPROM.write(3, 0x2A);
+
+  Serial.println("값이 제대로 적재되었는지 확인해보자!");
+
+  Serial.println(EEPROM.read(0),HEX);
+  Serial.println(EEPROM.read(1),HEX);
+  Serial.println(EEPROM.read(2),HEX);
+  Serial.println(EEPROM.read(3),HEX);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}

@@ -1,0 +1,58 @@
+/*
+  예제 253-2-1 2.4G RF모듈(nRF24L01)을 이용한 리시버예제!
+ */
+#include <SPI.h>
+#include "RF24.h"
+#include <Servo.h>
+
+Servo servo1; //송신기1 제어
+Servo servo2; //송신기2 제어
+
+int degree1=0;
+int degree2=0;
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address1[6] = "00001";
+uint8_t address2[6] = "10002";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  servo1.attach(5);
+  servo2.attach(6);
+  servo1.write(0);
+  servo2.write(0);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address1);
+  radio.openReadingPipe(1, address2);
+  radio.startListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  byte pipe;
+  if (radio.available(&pipe)){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    //각도를 올리는 명령 'U'
+    //각도를 내리는 명령 'D'
+    byte recv; //0~180
+    radio.read(&recv,sizeof(recv));
+
+    Serial.print(pipe);
+    Serial.print(",");
+    Serial.println(recv);
+    if(pipe == 0){
+      //송신기1
+      if(recv >=0 && recv<=180){
+        servo1.write(recv);
+      }
+    }else if(pipe == 1){
+      //송신기2
+      if(recv >=0 && recv<=180){
+        servo2.write(recv);
+      }
+    }
+  }
+}

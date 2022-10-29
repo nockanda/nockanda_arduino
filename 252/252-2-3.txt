@@ -1,0 +1,55 @@
+/*
+  예제 252-2-3 2.4G RF모듈(nRF24L01)을 이용한 트랜스미터 예제!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+#include <MQUnifiedsensor.h>
+
+//Definitions
+#define placa "Arduino UNO"
+#define Voltage_Resolution 5
+#define pin A0 //Analog input 0 of your arduino
+#define type "MQ-6" //MQ6
+#define ADC_Bit_Resolution 10 // For arduino UNO/MEGA/NANO
+#define RatioMQ6CleanAir 10   //RS / R0 = 10 ppm 
+//#define calibration_button 13 //Pin to calibrate your sensor
+
+//Declare Sensor
+MQUnifiedsensor MQ6(placa, Voltage_Resolution, ADC_Bit_Resolution, pin, type);
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address1[6] = "00001";
+uint8_t address2[6] = "10002";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  MQ6.setRegressionMethod(1);
+  MQ6.setA(2127.2); MQ6.setB(-2.526);
+  MQ6.init(); 
+  Serial.print("Calibrating please wait.");
+  float calcR0 = 0;
+  for(int i = 1; i<=10; i ++)
+  {
+    MQ6.update(); // Update data, the arduino will be read the voltage on the analog pin
+    calcR0 += MQ6.calibrate(RatioMQ6CleanAir);
+    Serial.print(".");
+  }
+  MQ6.setR0(calcR0/10);
+  Serial.println("  done!.");
+  
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address2);
+  radio.stopListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  MQ6.update();
+  float data = MQ6.readSensor();
+  radio.write(&data,sizeof(data));
+  delay(100);
+}

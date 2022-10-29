@@ -1,0 +1,219 @@
+#include <SPI.h>
+#include <MFRC522.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+#include <EEPROM.h>
+
+#define relay 2
+#define buzzer 3
+#define door 4
+#define button 5
+
+#define SS_PIN 10
+#define RST_PIN 9
+
+LiquidCrystal_I2C lcd(0x27,16,2); //1602
+MFRC522 rfid(SS_PIN, RST_PIN);
+
+//D4 6D A2 2A
+byte pw[] = {0xD4, 0x6D, 0xA2, 0x2A};
+bool lock_state = true; //잠금이 설정된경우
+
+unsigned long t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신
+  pinMode(relay,OUTPUT);
+  pinMode(door,INPUT_PULLUP); //문닫힘:LOW, 문열림:HIGH
+  pinMode(button,INPUT_PULLUP); //버튼이 눌려졌으면:LOW, 안눌려졌으면:HIGH
+  
+  SPI.begin(); // Init SPI bus
+  rfid.PCD_Init(); // Init MFRC522 
+
+  lcd.init();
+  lcd.backlight();
+
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("NOCAKNDA!!");
+  lcd.setCursor(0,1);
+  lcd.print("RFID GG!");
+
+  Serial.println("값이 제대로 적재되었는지 확인해보자!");
+
+  for(int i = 0;i<4;i++){
+    pw[i] = EEPROM.read(i);
+    Serial.println(pw[i],HEX);
+  }
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  
+  if(digitalRead(relay) == HIGH && 
+     digitalRead(door) == HIGH &&
+     digitalRead(button) == LOW){
+    
+     //잠금장치가 해제된 상태
+     //도어가 열린상태
+     //태그를 바꾸는 버튼을 눌렀다면~
+     Serial.println("RFID태그 변경모드입니다!");
+     Serial.println("RFID태그를 태깅해주세요!");
+     tone(buzzer,2093); //도
+     delay(300);
+     noTone(buzzer);
+     lcd.clear();
+     lcd.setCursor(0,0);
+     lcd.print("TAG NEW ");
+     lcd.setCursor(0,1);
+     lcd.print("RFID CARD!");
+     while(true){
+        if(change_rfid()) break;
+     }
+     Serial.println("RFID태그가 변경되었습니다!");
+     lcd.clear();
+     lcd.setCursor(0,0);
+     lcd.print("RFID TAG");
+     lcd.setCursor(0,1);
+     lcd.print("OK");
+     tone(buzzer,2093); //도
+     delay(300);
+     noTone(buzzer);
+  }
+  
+
+  if(digitalRead(relay) == HIGH && digitalRead(door) == LOW){
+    //잠금장치가 해제되어있는상태
+    //금고의 문이 닫혀있는 상태
+    //10초가 경과하게 되면 자동으로 문을 잠궈준다!
+    if(millis() - t > 10000){
+      digitalWrite(relay,LOW);
+
+      t = millis();
+      
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("NOCKANDA!!");
+      lcd.setCursor(0,1);
+      lcd.print("GG LOCK!!");
+      lock_state = true;
+
+      tone(buzzer,2093); //도
+      delay(300);
+      tone(buzzer,1319); //미
+      delay(300);
+      tone(buzzer,1568); //솔
+      delay(300);
+      tone(buzzer,2093); //도
+      delay(300);
+      noTone(buzzer);
+    }
+  }else{
+    t = millis();
+  }
+  
+  if ( ! rfid.PICC_IsNewCardPresent())
+    return;
+  // Verify if the NUID has been readed
+  if ( ! rfid.PICC_ReadCardSerial())
+    return;
+
+  if(pw[0] == rfid.uid.uidByte[0] &&
+     pw[1] == rfid.uid.uidByte[1] &&
+     pw[2] == rfid.uid.uidByte[2] &&
+     pw[3] == rfid.uid.uidByte[3]){
+      //태깅된 RFID태그가 마스터카드이다!
+      
+    Serial.println("금고의 문을 연다!!");
+
+    //솔레노이드 스위치를 작동시킨다!
+    //만약 잠금이 설정되어있으면 잠금을 해제한다!
+    //만약 잠금이 해제되어있으면 잠금을 설정한다!
+    
+    if(lock_state == true){
+      //잠금이 설정된경우
+      t = millis();
+      
+      digitalWrite(relay,HIGH);
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("NOCKANDA!!");
+      lcd.setCursor(0,1);
+      lcd.print("GG UNLOCK!!");
+      lock_state = false;
+    }else if(lock_state == false){
+      //잠금이 해제된경우
+      digitalWrite(relay,LOW);
+      
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("NOCKANDA!!");
+      lcd.setCursor(0,1);
+      lcd.print("GG LOCK!!");
+      lock_state = true;
+    }
+
+    //부저에 도미솔도 음이 재생된다!
+    tone(buzzer,2093); //도
+    delay(300);
+    tone(buzzer,1319); //미
+    delay(300);
+    tone(buzzer,1568); //솔
+    delay(300);
+    tone(buzzer,2093); //도
+    delay(300);
+    noTone(buzzer);
+  }else{
+    //마스터 카드가 아니다!
+    Serial.println("권한이 없는 카드이다!!");
+
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("RFID TAG IS");
+    lcd.setCursor(0,1);
+    lcd.print("NOT AVAILABLE!");
+
+    //부저에 솔-솔- 음이 재생된다!
+    tone(buzzer,1568); //솔
+    delay(300);
+    noTone(buzzer);
+    delay(300);
+    tone(buzzer,1568); //솔
+    delay(300);
+    noTone(buzzer);
+  }
+  
+
+  // Halt PICC
+  rfid.PICC_HaltA();
+  // Stop encryption on PCD
+  rfid.PCD_StopCrypto1();
+}
+
+bool change_rfid(){
+  if ( ! rfid.PICC_IsNewCardPresent())
+    return false;
+  // Verify if the NUID has been readed
+  if ( ! rfid.PICC_ReadCardSerial())
+    return false;
+
+  Serial.print(rfid.uid.uidByte[0],HEX);
+  Serial.print(rfid.uid.uidByte[1],HEX);
+  Serial.print(rfid.uid.uidByte[2],HEX);
+  Serial.println(rfid.uid.uidByte[3],HEX);
+
+  for(int i=0;i<4;i++){
+    pw[i] = rfid.uid.uidByte[i];
+    EEPROM.write(i,rfid.uid.uidByte[i]);
+  }
+
+  // Halt PICC
+  rfid.PICC_HaltA();
+  // Stop encryption on PCD
+  rfid.PCD_StopCrypto1();
+
+  return true;
+}

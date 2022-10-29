@@ -1,0 +1,112 @@
+/*
+  예제 256-2-1 RF통신 마스터코드!
+  마스터아두이노에 버튼2개가 연결되었다!
+  각도를 올리는 버튼을 누르면 '+'이 전송되고
+  각도를 내리는 버튼을 누르면 '-'이 전송된다(request)
+  슬레이브는 서보모터의 각도를 제어한다음 현재 설정되어있는 각도값을 response한다!
+  
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+
+#define upbutton 2
+#define dnbutton 3
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  pinMode(upbutton,INPUT_PULLUP);
+  pinMode(dnbutton,INPUT_PULLUP);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.stopListening(); //기본 : 송신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(upbutton) == LOW){
+    //업버튼이 눌려진것
+    //송신모드
+    sendmode();
+    char data = '+';
+    radio.write(&data,sizeof(data));
+
+    Serial.print("Request = ");
+    Serial.println(data);
+
+
+    //수신모드
+    receivemode();
+
+    bool is_timeout = false;
+    unsigned long t = millis();
+    while(true){
+      if(radio.available()) break;
+      if(millis() - t > 3000){
+        is_timeout = true;
+        break;
+      }
+    }
+
+    if(is_timeout){
+      Serial.println("슬레이브가 출타했다!");
+    }else{
+      byte recv;
+      radio.read(&recv,sizeof(recv));
+
+      Serial.print("Response = ");
+      Serial.println(recv);
+    }
+    delay(10);
+  }
+  if(digitalRead(dnbutton) == LOW){
+    //다운버튼이 눌려진것
+    //송신모드
+    sendmode();
+    char data = '-';
+    radio.write(&data,sizeof(data));
+
+    Serial.print("Request = ");
+    Serial.println(data);
+
+
+    //수신모드
+    receivemode();
+
+    bool is_timeout = false;
+    unsigned long t = millis();
+    while(true){
+      if(radio.available()) break;
+      if(millis() - t > 3000){
+        is_timeout = true;
+        break;
+      }
+    }
+
+    if(is_timeout){
+      Serial.println("슬레이브가 출타했다!");
+    }else{
+      byte recv;
+      radio.read(&recv,sizeof(recv));
+
+      Serial.print("Response = ");
+      Serial.println(recv);
+    }
+    delay(10);
+  }
+  
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}

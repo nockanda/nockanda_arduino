@@ -1,0 +1,40 @@
+
+#define LED 2
+#define BUTTON 3
+
+bool pre_button_state = HIGH;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(LED,OUTPUT);
+  pinMode(BUTTON,INPUT_PULLUP);
+}
+
+void loop() {
+  //버튼코드(엣지를 검출하자)
+  bool now_button_state = digitalRead(BUTTON); //LOW 눌려진, HIGH 안눌려진
+
+  if(pre_button_state == HIGH && now_button_state == LOW){
+    //폴링엣지(버튼을 누른지점)
+    Serial.println("1");
+  }else if(pre_button_state == LOW && now_button_state == HIGH){
+    //라이징엣지(눌렀다가 뗌)
+    Serial.println("0");
+  }
+  
+
+  pre_button_state =now_button_state;
+
+
+  //노드레드쪽에서 아두이노로 보낸값이 존재할때만 실행됨
+  if(Serial.available()){
+    //readline
+    char c = Serial.read();
+    if(c == '0'){
+      digitalWrite(LED,LOW);
+    }else if(c == '1'){
+      digitalWrite(LED,HIGH);
+    }
+  }
+}

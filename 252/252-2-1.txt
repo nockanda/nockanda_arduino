@@ -1,0 +1,62 @@
+/*
+  예제 252-2-1 2.4G RF모듈(nRF24L01)을 이용한 리시버예제!
+ */
+#include <SPI.h>
+#include "RF24.h"
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2); //1602
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address1[6] = "00001";
+uint8_t address2[6] = "10002";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  lcd.init();
+  lcd.backlight();
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address1);
+  radio.openReadingPipe(1, address2);
+  radio.startListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  byte pipe;
+  if (radio.available(&pipe)){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    float recv;
+    radio.read(&recv,sizeof(recv));
+    if(pipe == 0){
+      //트랜스미터1
+      Serial.print("MQ-3:");
+      Serial.print(recv);
+      Serial.println("PPM");
+
+      String line = "MQ-3:" + String(recv) + "PPM";
+      while(line.length() < 16){
+        line += " ";
+      }
+      
+      lcd.setCursor(0,0);
+      lcd.print(line);
+    }else if(pipe == 1){
+      //트랜스미터2
+      Serial.print("\t\t\t\tMQ-6:");
+      Serial.print(recv);
+      Serial.println("PPM");
+
+      String line = "MQ-6:" + String(recv) + "PPM";
+      while(line.length() < 16){
+        line += " ";
+      }
+      lcd.setCursor(0,1);
+      lcd.print(line);
+    }
+  }
+}

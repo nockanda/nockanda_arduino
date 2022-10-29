@@ -1,0 +1,92 @@
+/*
+  예제 254-5-1 RF통신 마스터코드!
+  마스터에 버튼1개를 연결한다!
+  버튼을 누르면 '1'이 전송되고 버튼을 안누르면 '0'이 전송된다!(request)
+  슬레이브는 명령을 잘 수신했으면 "OK!!"를 전송한다!(response)
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+
+#define button 2
+#define green 3 //LED
+#define red 4 //LED
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  pinMode(button,INPUT_PULLUP);
+  pinMode(green,OUTPUT);
+  pinMode(red,OUTPUT);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.stopListening(); //기본 : 송신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  char state;
+  //뭘 전송할거냐?
+  if(digitalRead(button) == LOW){
+    //버튼이 눌려진것(풀업)
+    state = '1';
+  }else{
+    //버튼이 안눌려진것!
+    state = '0';
+  }
+  
+    
+    //송신모드
+    sendmode();
+    //char text[] = "NOCKANDA!!";
+    radio.write(&state,sizeof(state));
+
+    Serial.print("Request = ");
+    Serial.println(state);
+
+
+    //수신모드
+    receivemode();
+
+    bool is_timeout = false;
+    unsigned long t = millis();
+    while(true){
+      if(radio.available()) break;
+      if(millis() - t > 3000){
+        is_timeout = true;
+        break;
+      }
+    }
+
+    if(is_timeout){
+      //적색LED
+      digitalWrite(red,HIGH);
+      digitalWrite(green,LOW);
+      Serial.println("슬레이브가 출타했다!");
+    }else{
+      //녹색LED
+      digitalWrite(red,LOW);
+      digitalWrite(green,HIGH);
+      char text2[30];
+      radio.read(text2,sizeof(text2));
+
+      Serial.print("Response = ");
+      Serial.println(text2);
+    }
+    delay(100);
+
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}

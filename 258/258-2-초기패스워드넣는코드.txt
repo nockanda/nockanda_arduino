@@ -1,0 +1,21 @@
+#include <EEPROM.h>
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  Serial.println("초기패스워드를 집어넣습니다!");
+  for(int i = 0;i<6;i++){
+    EEPROM.write(i, '1'+i);
+  }
+  Serial.println("초기패스워드를 집어넣었습니다!");
+
+  for(int i =0;i<6;i++){
+    char c = EEPROM.read(i);
+    Serial.println(c);
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}
