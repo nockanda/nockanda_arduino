@@ -1,0 +1,33 @@
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+#include <ArduinoJson.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2); //2004
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  lcd.init();
+  lcd.backlight();
+
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+     String data = Serial.readStringUntil(0x0d);
+     StaticJsonDocument<96> doc;
+     deserializeJson(doc, data);
+
+     String line1 = doc["line1"]; // "123456789012345"
+     String line2 = doc["line2"]; // "123456789012345"
+
+     // {"line1":"123456789012345","line2":"123456789012345"}
+     lcd.clear();
+     lcd.setCursor(0,0);
+     lcd.print(line1);
+     lcd.setCursor(0,1);
+     lcd.print(line2);
+  }
+}

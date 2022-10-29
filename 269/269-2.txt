@@ -1,0 +1,25 @@
+#include <Servo.h>
+
+Servo myservo;
+int degree = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  myservo.attach(9);
+  myservo.write(degree);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    String data = Serial.readStringUntil(0x0d); //CR
+
+    degree = data.toInt();
+    degree = constrain(degree,0,180);
+
+    myservo.write(degree); //0~180
+
+    Serial.println(degree); //NODE-RED쪽으로 RESPONSE
+  }
+}

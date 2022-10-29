@@ -1,0 +1,38 @@
+#include <Stepper.h>
+
+                      //{1,2,3,4} = {7,6,5,4}
+                      //IN4, IN2, IN3 ,IN1
+Stepper myStepper(2048, 4, 6, 5, 7);
+
+int step_pos = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  myStepper.setSpeed(15);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    //PC에서 뭔가 전송한값이 존재한다면~
+    String data = Serial.readStringUntil(0x0d);
+    if(data == "+"){
+      myStepper.step(32);
+      step_pos += 32;
+    }else if(data == "-"){
+      myStepper.step(-32);
+      step_pos -= 32;
+    }
+
+    //각도 계산
+    if(step_pos >= 2048){
+      step_pos = step_pos - 2048;
+    }
+    if(step_pos <= -2048){
+      step_pos = step_pos + 2048;
+    }
+    float degree = 360*(step_pos/2048.0);
+    Serial.println(degree);
+  }
+}

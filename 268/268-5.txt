@@ -1,0 +1,75 @@
+#include <SPFD5408_Adafruit_GFX.h>    // Core graphics library
+#include <SPFD5408_Adafruit_TFTLCD.h> // Hardware-specific library
+#include <SPFD5408_TouchScreen.h>
+
+
+#define LCD_CS A3 
+#define LCD_CD A2 
+#define LCD_WR A1 
+#define LCD_RD A0 
+
+#define LCD_RESET A4 
+
+#define BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  tft.reset();
+  tft.begin(0x9341); // SDFP5408
+
+  tft.setRotation(3); //0, 1, 2, 3
+
+
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    String data = Serial.readStringUntil(0x0d);
+
+    // {"size":2,"color":"WHITE","text":"~~~~~~~~~~~~"}
+    String test_data = data;
+    
+    String p1 = "{\"size\":";
+    String p2 = ",\"color\":\"";
+    String p3 = "\",\"text\":\"";
+    String p4 = "\"}";
+
+    int size_pos_s = 8;
+    int size_pos_e = test_data.indexOf(p2);
+    int color_pos_s = size_pos_e + p2.length();
+    int color_pos_e = test_data.indexOf(p3);
+    int text_pos_s = color_pos_e + p3.length();
+    int text_pos_e = test_data.indexOf(p4);
+    String font_size = test_data.substring(size_pos_s,size_pos_e);
+    String color = test_data.substring(color_pos_s,color_pos_e);
+    String text = test_data.substring(text_pos_s,text_pos_e);
+    
+
+    tft.fillScreen(BLACK);
+    tft.setCursor(0, 0);
+    
+    if(color == "WHITE") tft.setTextColor(WHITE);
+    else if(color == "BLUE") tft.setTextColor(BLUE);
+    else if(color == "RED") tft.setTextColor(RED);
+    else if(color == "GREEN") tft.setTextColor(GREEN);
+    else if(color == "CYAN") tft.setTextColor(CYAN);
+    else if(color == "MAGENTA") tft.setTextColor(MAGENTA);
+    else if(color == "YELLOW") tft.setTextColor(YELLOW);
+    
+    tft.setTextSize(font_size.toInt());
+    tft.println(text);
+    
+  }
+}

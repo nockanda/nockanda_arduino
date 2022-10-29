@@ -1,0 +1,36 @@
+#include <Servo.h>
+#include <ArduinoJson.h>
+
+Servo myservo1;
+Servo myservo2;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  myservo1.attach(9);
+  myservo2.attach(10);
+  myservo1.write(0); //부팅시 0도
+  myservo2.write(0); //부팅시 0도
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    String data = Serial.readStringUntil(0x0d); //CR
+
+    // {"servo1":90,"servo2":180}
+    StaticJsonDocument<48> doc;
+    deserializeJson(doc, data);
+
+    int servo1 = doc["servo1"]; // 90
+    int servo2 = doc["servo2"]; // 180
+
+    servo1 = constrain(servo1,0,180);
+    servo2 = constrain(servo2,0,180);
+    myservo1.write(servo1);
+    myservo2.write(servo2);
+    
+    Serial.println("{\"servo1\":"+String(servo1)+",\"servo2\":"+String(servo2)+"}");
+    
+  }
+}

@@ -1,0 +1,25 @@
+#define relay 2
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(relay,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    String data = Serial.readStringUntil(0x0d);
+    //1이면 켜고
+    //0이면 끈다
+    if(data == "1"){
+      //켠다
+      digitalWrite(relay,HIGH);
+      Serial.println("DC모터가 작동중입니다!");
+    }else if(data =="0"){
+      //끈다
+      digitalWrite(relay,LOW);
+      Serial.println("DC모터의 작동을 멈추겠습니다!");
+    }
+  }
+}

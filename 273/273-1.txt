@@ -1,0 +1,30 @@
+#define button1 2
+#define button2 3
+#define button3 4
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+  pinMode(button3,INPUT_PULLUP);  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(button1) == LOW){
+    //버튼1이 눌려진것!
+    Serial.println('1');
+    delay(100);
+  }
+  if(digitalRead(button2) == LOW){
+    //버튼2이 눌려진것!
+    Serial.println('2');
+    delay(100);
+  }
+  if(digitalRead(button3) == LOW){
+    //버튼3이 눌려진것!
+    Serial.println('3');
+    delay(100);
+  }
+}

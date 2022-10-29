@@ -1,0 +1,17 @@
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int cds = analogRead(A0); //광전센서
+  int photen = analogRead(A1); //가변저항
+  int joy_x = analogRead(A2); //조이스틱 x축
+  int joy_y = analogRead(A3); //조이스틱 y축
+
+  //  {"cds":"512","photen":"811","joy_x":"123","joy_y":"456"}
+
+  Serial.println("{\"cds\":\""+String(cds)+"\",\"photen\":\""+String(photen)+"\",\"joy_x\":\""+String(joy_x)+"\",\"joy_y\":\""+String(joy_y)+"\"}");
+  delay(500);
+}

@@ -1,0 +1,64 @@
+#include <ArduinoJson.h>
+#include <SPFD5408_Adafruit_GFX.h>
+#include <SPFD5408_Adafruit_TFTLCD.h>
+#include <SPFD5408_TouchScreen.h>
+
+#define LCD_CS A3
+#define LCD_CD A2 
+#define LCD_WR A1 
+#define LCD_RD A0 
+#define LCD_RESET A4 
+
+#define  BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  tft.reset();
+  tft.begin(0x9341);
+  tft.setRotation(3);
+  tft.fillScreen(BLACK); //clear
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    tft.fillScreen(BLACK); //clear
+
+    //320 * 240
+    //0~80 80~160 160~240 240~320 (x)
+    //0~120 120~240(y)
+    
+    
+    
+    //String data = Serial.readStringUntil(0x0d);
+    String data = Serial.readStringUntil(0x0d);
+
+    
+    StaticJsonDocument<64> doc;
+
+    deserializeJson(doc, data);
+    
+    
+    String hour = doc["hour"]; // "9"
+    String wfKor = doc["wfKor"]; // "맑음"
+    String temp = doc["temp"]; // "19.0"
+
+    tft.setCursor(0, 0);
+    tft.setTextColor(WHITE);
+    tft.setTextSize(4);
+    tft.println("Hour : "+ hour);
+    tft.println("wfKor : "+wfKor);
+    tft.println("temp : " +temp);
+    
+  }
+}

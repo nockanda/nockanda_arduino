@@ -1,0 +1,114 @@
+#include <ArduinoJson.h>
+#include <EEPROM.h>
+#define relay 2
+#define buzzer 3
+
+String pw = ""; //초기 비밀번호
+//EEPROM에 비밀번호르 저장하는 방식
+//첫바이트는 비밀번호의 길이로 한다!
+//두번째바이트부터 비밀번호의 끝까지 EEPROM에 쓴다
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(relay,OUTPUT);
+
+  //EEPROM의 PW를 가져온다
+  byte pw_length = EEPROM.read(0); // 4
+  for(int i = 0;i<pw_length;i++){
+    pw += (char)EEPROM.read(i+1);
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    String data = Serial.readStringUntil(0x0d); //CR
+
+    //node-red  => 아두이노
+    //1. 비밀번호 체크/비밀번호 1개
+    // {"cmd":"check","pw1":"1234","pw2":"4567"}
+    //2. 비밀번호 변경/비밀번호 2개
+    // {"cmd":"change","pw1":"1234","pw2":"4567"}
+    //3. 강제잠금/파라미터없음
+    // {"cmd":"lock","pw1":"","pw2":""}
+
+    //파싱(deserialize)
+    StaticJsonDocument<64> doc;
+
+    deserializeJson(doc, data);
+    
+    
+    String cmd = doc["cmd"]; // "check"
+    String pw1 = doc["pw1"]; // "1234"
+    String pw2 = doc["pw2"]; // "4567"
+
+    //아두이노 => node-red 보내줄 내용?
+    //1. 응답결과를 msg로 response
+    //2. 릴레이 상태 response
+    //{"msg":"~~~~가 ~~~되었습니다","relay":"0"} //0이면 lock, 1이면 unlock
+
+    if(cmd == "check"){
+      //비밀번호 체크
+      if(pw1 == pw){
+        //비밀번호 일치
+        //금고의 잠금을 해제
+        digitalWrite(relay,HIGH); //잠금
+        bool state = digitalRead(relay);
+        //사운드 재생(도미솔도)
+
+        tone(buzzer,2093); //도
+        delay(100);
+        tone(buzzer,1319); //미
+        delay(100);
+        tone(buzzer,1568); //솔
+        delay(100);
+        tone(buzzer,2093); //도
+        delay(100);
+        noTone(buzzer);
+        
+        Serial.println("{\"msg\":\"비밀금고의 잠금이 해제되었습니다!\",\"relay\":\""+String(state)+"\"}");
+      }else{
+        //불일치
+        bool state = digitalRead(relay);
+        //사운드재생(솔-솔-)
+        tone(buzzer,1568); //솔
+        delay(100);
+        noTone(buzzer);
+        delay(100);
+        tone(buzzer,1568); //솔
+        delay(100);
+        noTone(buzzer);
+        Serial.println("{\"msg\":\"비밀금고가 틀렸습니다!\",\"relay\":\""+String(state)+"\"}");
+      }
+    }else if(cmd == "change"){
+      //비밀번호 변경
+      if(pw1 == pw){
+        //비밀번호 일치 => 변경절차
+        bool state = digitalRead(relay);
+        Serial.println("{\"msg\":\"비밀번호가 변경되었습니다!\",\"relay\":\""+String(state)+"\"}");
+        pw = pw2;
+
+        //바뀐비밀번호를 EEPROM에 기록해야한다
+        EEPROM.write(0, pw.length());
+        for(int i = 0;i<pw.length();i++){
+          EEPROM.write(i+1, pw[i]);
+        }
+      }else{
+        //불일치
+        bool state = digitalRead(relay);
+        Serial.println("{\"msg\":\"비밀금고가 틀렸습니다!\",\"relay\":\""+String(state)+"\"}");
+      }
+    }else if(cmd == "lock"){
+      //강제잠금
+      digitalWrite(relay,LOW); //잠금
+      bool state = digitalRead(relay);
+      //사운드재생(솔-)
+      tone(buzzer,1568); //솔
+      delay(100);
+      noTone(buzzer);
+      Serial.println("{\"msg\":\"비밀금고의 잠금이 설정되었습니다!\",\"relay\":\""+String(state)+"\"}");
+    }
+  }
+}

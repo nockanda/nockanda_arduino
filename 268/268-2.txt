@@ -1,0 +1,40 @@
+#include <Arduino.h>
+#include <TM1637Display.h>
+#include <ArduinoJson.h>
+
+#define CLK1 2
+#define DIO1 3
+#define CLK2 4
+#define DIO2 5
+
+TM1637Display display1(CLK1, DIO1);
+TM1637Display display2(CLK2, DIO2);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //node-red하고 통신할 통신라인!
+  display1.setBrightness(0x0f); //FND모듈의 밝기를 최대로 하라!
+  display2.setBrightness(0x0f); //FND모듈의 밝기를 최대로 하라!
+
+  display1.showNumberDec(0, false);
+  display2.showNumberDec(0, false);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    String data = Serial.readStringUntil(0x0d); //CR
+
+    //노드레드에서 날라온다고 가정
+    //  {"dsp1":1234}
+    //  {"dsp1":1234,"dsp2":6789}
+    //String data = "{\"dsp1\":\"1234\"}";
+  
+    StaticJsonDocument<32> doc;
+    deserializeJson(doc, data);
+    int dsp1 = doc["dsp1"]; // 1234
+    int dsp2 = doc["dsp2"]; // 6789
+    display1.showNumberDec(dsp1, false);
+    display2.showNumberDec(dsp2, false);
+  }
+}

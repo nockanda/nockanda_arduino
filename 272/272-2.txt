@@ -1,0 +1,23 @@
+#include <Wire.h>
+#include <Adafruit_BMP085.h>
+
+Adafruit_BMP085 bmp;
+  
+void setup() {
+  Serial.begin(115200);
+  bmp.begin();
+}
+  
+void loop() {
+  float data1 = bmp.readTemperature();
+  long data2 = bmp.readPressure();
+  float data3 = bmp.readAltitude();
+  long data4 = bmp.readSealevelPressure();
+  float data5 = bmp.readAltitude(101500);
+
+
+  // {"data1":123,"data2":123,"data3":123,"data4":123,"data5":123}
+  Serial.println("{\"data1\":"+String(data1)+",\"data2\":"+String(data2)+",\"data3\":"+String(data3)+",\"data4\":"+String(data4)+",\"data5\":"+String(data5)+"}");
+ 
+  delay(500);
+}

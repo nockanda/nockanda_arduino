@@ -1,0 +1,59 @@
+#include <ArduinoJson.h>
+
+#define IN3 7 //디지털제어
+#define IN4 6 //디지털제어
+#define ENB 5 //아날로그제어
+
+int power = 0;
+unsigned long t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(IN3,OUTPUT);
+  pinMode(IN4,OUTPUT);
+  //기본 정방향
+  digitalWrite(IN3,HIGH);
+  digitalWrite(IN4,LOW);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    String data = Serial.readStringUntil(0x0d);
+
+    //방향(정방향)  {"cmd":"d","para":"fw"}
+    //방향(역방향)  {"cmd":"d","para":"bw"}
+    //     {"cmd":"v","para":"255"}
+    //속도 {"cmd":"v","para":"255"}
+    StaticJsonDocument<48> doc;
+    deserializeJson(doc, data);
+    String cmd = doc["cmd"]; // "v"
+    String para = doc["para"]; // "255"
+
+    if(cmd == "d"){
+      //방향제어
+      if(para == "fw"){
+        //정방향
+        digitalWrite(IN3,HIGH);
+        digitalWrite(IN4,LOW);
+        // {"cmd":"d","msg":"정방향으로 방향 설정!"}
+        Serial.println("정방향으로 방향 설정!");
+      }else if(para == "bw"){
+        //역방향
+        digitalWrite(IN3,LOW);
+        digitalWrite(IN4,HIGH);
+        Serial.println("역방향으로 방향 설정!");
+      }
+    }else if(cmd == "v"){
+      //속도제어
+      //para.toInt();
+      power = para.toInt();
+      analogWrite(ENB,power);
+      Serial.println("속도를 "+para+"으로 설정!");
+    }
+  }
+
+
+ 
+}

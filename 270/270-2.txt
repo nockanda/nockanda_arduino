@@ -1,0 +1,26 @@
+#define mosfet 3
+
+int power = 0;
+unsigned long t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    String data = Serial.readStringUntil(0x0d);
+
+    power = data.toInt();
+    analogWrite(mosfet,power);
+  }
+
+  //0.5초에 한번 node-red쪽으로 power값을 보내줘야겠다..
+  unsigned long t2 = millis();
+  if(t2 - t > 500){
+    t = t2;
+    Serial.println(power);
+  }
+}

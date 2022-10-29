@@ -1,0 +1,60 @@
+#define R_LED 9
+#define G_LED 10
+#define B_LED 11
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    //node-red에서 뭔가 날라온 값이 있다면~
+    String data = Serial.readStringUntil(0x0a);  //'\n' == 0x0a
+ 
+    //  4cdc28
+    // 4c dc 28  : 2개씩 쪼갠다
+    // 4c : 반으로 쪼갠다
+    // '4' : '4'-'0' == 4
+    // 'c' : 'c'-'a' + 10 == 12
+
+    //data[0]
+    //data[1]
+    
+    //data[2]
+    //data[3]
+    
+    //data[4]
+    //data[5]
+    byte r = nockanda(data[0],data[1]);
+    byte g = nockanda(data[2],data[3]);
+    byte b = nockanda(data[4],data[5]);
+
+    
+    //RGB의 농도를 어떻게 조절하는 것이냐?
+    analogWrite(R_LED,r);
+    analogWrite(G_LED,g);
+    analogWrite(B_LED,b);
+    Serial.println(String(r)+","+String(g)+","+String(b));
+  }
+}
+
+byte nockanda(char input1, char input2){
+
+  int num1 = 0;
+  if(input1 >= '0' && input1 <= '9'){
+    num1 = input1 - '0';
+  }else if(input1 >= 'a' && input1 <= 'f'){
+    num1 = input1 - 'a' + 10;
+  }
+
+  int num2 = 0;
+  if(input2 >= '0' && input2 <= '9'){
+    num2 = input2 - '0';
+  }else if(input2 >= 'a' && input2 <= 'f'){
+    num2 = input2 - 'a' + 10;
+  }
+
+  return num1*16 + num2;
+}

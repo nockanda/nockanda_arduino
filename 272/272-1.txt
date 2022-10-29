@@ -1,0 +1,19 @@
+#include <Wire.h>
+#include <Adafruit_MLX90614.h>
+
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+
+void setup() {
+  Serial.begin(115200);
+  mlx.begin();  
+}
+
+void loop() {
+  float at = mlx.readAmbientTempC();
+  float ot = mlx.readObjectTempC();
+
+  // {"at":123,"ot":456}
+  
+  Serial.println("{\"at\":"+String(at)+",\"ot\":"+String(ot)+"}");
+  delay(500);
+}
