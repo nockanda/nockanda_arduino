@@ -1,0 +1,34 @@
+#include "dimmable_light.h"
+
+const int syncPin = D3;
+const int thyristorPin = D4;
+
+DimmableLight light(thyristorPin);
+
+// Delay between a brightness changement in millisecond
+int period = 50;
+
+void setup() {
+  Serial.begin(115200);
+  while(!Serial);
+  Serial.println();
+  Serial.println("Dimmable Light for Arduino: first example");
+  
+  Serial.print("Init the dimmable light class... ");
+  DimmableLight::setSyncPin(syncPin);
+  // VERY IMPORTANT: Call this method to start internal light routine
+  DimmableLight::begin();
+  Serial.println("Done!");
+}
+
+void loop() {
+  if(Serial.available()){
+    String data = Serial.readStringUntil('\r');
+    int value = data.toInt();
+    light.setBrightness(value); //0~254 
+  }
+}
+
+
+
+

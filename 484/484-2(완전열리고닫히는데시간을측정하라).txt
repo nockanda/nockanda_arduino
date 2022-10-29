@@ -1,0 +1,40 @@
+#define ch1 D6
+#define ch2 D7
+
+unsigned long t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(ch1,OUTPUT);
+  pinMode(ch2,OUTPUT);
+
+  //녹칸다의 릴레이는 로우레벨 트리거이다!
+  digitalWrite(ch1,HIGH); //OFF
+  digitalWrite(ch2,HIGH); //OFF
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    char c = Serial.read();
+    if(c == '+'){
+      //정방향(정면에서 봤을때 반시계방향)
+      //녹칸다꺼 기준 완전열리는데 26초
+      digitalWrite(ch1,LOW); //OFF
+      digitalWrite(ch2,HIGH); //OFF
+      t = millis();
+    }else if(c == '-'){
+      //역방향(정면에서 봤을때 시계방향)
+      //녹칸다꺼 기준 완전닫히는데 25초
+      digitalWrite(ch1,HIGH); //OFF
+      digitalWrite(ch2,LOW); //OFF
+      t = millis();
+    }else if(c == '*'){
+      digitalWrite(ch1,HIGH); //OFF
+      digitalWrite(ch2,HIGH); //OFF
+      Serial.print("작동 시간입니다=");
+      Serial.println(millis() - t);
+    }
+  }
+}

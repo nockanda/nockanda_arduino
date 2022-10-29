@@ -1,0 +1,75 @@
+#include <PID_v1.h>
+#include <RBDdimmer.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+#define ONE_WIRE_BUS 4 //터치!
+#define TEMPERATURE_PRECISION 12 //노터치!
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+DeviceAddress tempDeviceAddress;
+
+#define outputPin  3 
+#define zerocross  2
+
+//dimmerLamp dimmer(outputPin, zerocross);
+dimmerLamp dimmer(outputPin);
+
+//Setpoint : 목표치 온도
+//Input : 현재 측정한 온도(피드백)
+//Output : input의 결과를 반영하려면 전구의 밝기가 몇이어야 겠는가?
+double Setpoint, Input, Output;
+
+//Specify the links and initial tuning parameters
+double Kp=1, Ki=0, Kd=0;
+PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
+
+void setup()
+{
+  Serial.begin(9600);
+  dimmer.begin(NORMAL_MODE, OFF); //모드와 시작할때 상태가 무엇인가?
+  sensors.begin();
+  sensors.getAddress(tempDeviceAddress, 0);
+  sensors.setResolution(tempDeviceAddress, TEMPERATURE_PRECISION);
+  
+  //initialize the variables we're linked to
+  Input = get_temp();
+  Setpoint = 33;
+
+  //turn the PID on
+  myPID.SetMode(AUTOMATIC);
+  myPID.SetOutputLimits(0, 100); 
+}
+
+void loop()
+{
+  Input = get_temp(); //피드백
+  myPID.Compute();
+  
+  dimmer.setState(OFF);
+  if(Output < 20){
+    dimmer.setState(OFF); //얘는 무조건 끈다
+  }else{
+    //일단 켜고 파워를 세팅한다!
+    dimmer.setState(ON); 
+    dimmer.setPower(Output); 
+  }
+  Serial.print(Setpoint);
+  Serial.print(",");
+  Serial.println(Input);
+}
+
+float get_temp(){
+  sensors.requestTemperatures(); 
+  //Serial.println("DONE");
+  
+  float tempC = sensors.getTempCByIndex(0);
+
+  if(tempC == DEVICE_DISCONNECTED_C) 
+  {
+    tempC = -999;
+  }
+
+  return tempC;
+}

@@ -1,0 +1,44 @@
+A.그냥 기본코드만 올렸을때
+B.간단한 시리얼출력구문일때
+C.온습도센서 1개가 달려있고 2초마다 센서값을 측정할때
+D.인터넷공유기와 연결되어있을때
+E.웹서버로 작동중일때
+F.MQTT로 작동중일때
+G.DeepSleep이 걸렸을때
+
+1.아두이노 우노
+   A.10.0ma
+   B.10.9ma
+   C.13.0ma
+2.wemos d1r1
+   A.74.0ma
+   B.71.0ma
+   C.74.0ma
+   D.74.3ma
+   E.76.0ma
+   F.76.0ma
+   G.4.8ma
+3.wemos d1 mini ch340
+   A.89.0ma
+   B.86.0ma
+   C.90.0ma
+   D.89.0ma
+   E.90.7ma
+   F.90.3ma
+   G.17.1ma
+4.wemos d1 mini V3.0.0
+   A.75.3ma
+   B.71.4ma
+   C.78.0ma
+   D.74.3ma
+   E.75.4ma
+   F.75.0ma
+   G.2.7ma
+5.wemos d1 mini pro 4M
+   A.79.5ma
+   B.75.4ma
+   C.81.0ma
+   D.77.0ma
+   E.77.0ma
+   F.77.8ma
+   G.3.9ma

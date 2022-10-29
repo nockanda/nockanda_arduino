@@ -1,0 +1,45 @@
+#include <RBDdimmer.h>
+
+#define outputPin  3 
+#define zerocross  2
+
+#define btn1 4
+#define btn2 5
+
+//dimmerLamp dimmer(outputPin, zerocross);
+dimmerLamp dimmer(outputPin);
+
+int outVal = 20;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+  dimmer.begin(NORMAL_MODE, OFF); //모드와 시작할때 상태가 무엇인가?
+}
+
+
+void loop() {
+  if(digitalRead(btn1) == LOW){
+    outVal+= 10; 
+    if(outVal > 100) outVal = 100;
+    dimmer.setState(ON); 
+    dimmer.setPower(outVal);
+    Serial.print("현재 설정된 파워=");
+    Serial.println(dimmer.getPower());
+    delay(200);
+  }
+  if(digitalRead(btn2) == LOW){
+    outVal-= 10; 
+    if(outVal < 20){
+      outVal = 20;
+      dimmer.setState(OFF); 
+    }else{
+      dimmer.setState(ON); 
+      dimmer.setPower(outVal);
+    }
+    Serial.print("현재 설정된 파워=");
+    Serial.println(dimmer.getPower());
+    delay(200);
+  }
+}

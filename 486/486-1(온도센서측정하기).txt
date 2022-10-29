@@ -1,0 +1,37 @@
+
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+#define ONE_WIRE_BUS 4 //터치!
+#define TEMPERATURE_PRECISION 12 //노터치!
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+DeviceAddress tempDeviceAddress;
+void setup(void)
+{
+  Serial.begin(9600);
+  Serial.println("Dallas Temperature IC Control Library Demo");
+  sensors.begin();
+  sensors.getAddress(tempDeviceAddress, 0);
+  sensors.setResolution(tempDeviceAddress, TEMPERATURE_PRECISION);
+}
+void loop(void)
+{ 
+  
+  //Serial.print("Requesting temperatures...");
+  sensors.requestTemperatures(); 
+  //Serial.println("DONE");
+  
+  float tempC = sensors.getTempCByIndex(0);
+
+  if(tempC != DEVICE_DISCONNECTED_C) 
+  {
+    //Serial.print("Temperature for the device 1 (index 0) is: ");
+    Serial.println(tempC);
+  } 
+  else
+  {
+    Serial.println("-999");
+  }
+}

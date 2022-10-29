@@ -1,0 +1,51 @@
+
+const byte total_peer = 6;
+byte board[][6] = {
+  {0x34,0x94,0x54,0x62,0x6D,0x70}, //10
+  {0x40,0x91,0x51,0x4D,0xB5,0xCC}, //11
+  {0x40,0x91,0x51,0x4E,0x34,0x3F}, //12
+  {0x40,0x91,0x51,0x4D,0xDC,0x51}, //13
+  {0x34,0x94,0x54,0x61,0xE0,0xEF}, //14
+  {0x34,0x94,0x54,0x62,0x75,0x5B}  //15
+};
+
+byte suffle[total_peer];
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+
+  for(int i=0;i<total_peer;i++){
+    suffle[i] = i;
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //셔플배열의 인덱스를 랜덤하게 섞어라!
+  for(int i =0;i<total_peer;i++){
+    int rand_num = random(0,total_peer); //0~n-1
+    if(i != rand_num){
+      byte temp = suffle[i];
+      suffle[i] = suffle[rand_num];
+      suffle[rand_num] = temp;
+    }
+  }
+
+  for(int i = 0;i<total_peer;i++){
+    Serial.print(suffle[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+  
+  for(int i = 0;i<6;i++){
+    for(int j=0;j<6;j++){
+      Serial.print(board[suffle[i]][j],HEX);
+      Serial.print(",");
+    }
+    Serial.println();
+  }
+  Serial.println("-------------------");
+
+  delay(3000);
+}
