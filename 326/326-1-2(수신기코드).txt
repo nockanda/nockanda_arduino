@@ -1,0 +1,33 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial);
+
+  Serial.println("LoRa Receiver");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+  // try to parse packet
+  int packetSize = LoRa.parsePacket();
+  if (packetSize > 0) {
+    //수신된 데이터가 존재한다면~ 뭔가 하겠다~
+    Serial.print("Received packet '");
+
+    // read packet
+    //수신기에서 수신받은 데이터 전체를 PC로 출력한다~
+    while (LoRa.available()) {
+      Serial.print((char)LoRa.read());
+    }
+
+    // print RSSI of packet
+    Serial.print("' with RSSI ");
+    Serial.println(LoRa.packetRssi());
+  }
+}

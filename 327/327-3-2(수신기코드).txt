@@ -1,0 +1,41 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK 3
+#define DIO 4
+TM1637Display display(CLK, DIO);
+
+void setup() {
+  Serial.begin(9600);
+  display.setBrightness(0x0f);
+  display.showNumberDec(0, false);//부팅시 기본값 0
+  while (!Serial);
+
+  Serial.println("LoRa Receiver");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+  // try to parse packet
+  int packetSize = LoRa.parsePacket();
+  if (packetSize > 0) {
+    //수신된 데이터가 존재한다면~ 뭔가 하겠다~
+    Serial.print("Received packet '");
+
+    //2바이트 날라오는 값을 받아서 원래 숫자로 복구한다음 FND에 출력하기!
+    byte a = LoRa.read();
+    byte b = LoRa.read();
+
+    int number = a << 8 | b;
+    display.showNumberDec(number, false);
+    // print RSSI of packet
+    Serial.print("' with RSSI ");
+    Serial.println(LoRa.packetRssi());
+  }
+}

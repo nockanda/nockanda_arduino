@@ -1,0 +1,104 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+//습도꺼
+#define CLK1 3
+#define DIO1 4
+//온도꺼
+#define CLK2 5
+#define DIO2 6
+
+TM1637Display fnd1(CLK1, DIO1);
+TM1637Display fnd2(CLK2, DIO2);
+
+#define led1 A0 //화씨
+#define led2 A1 //도씨
+#define button1 7 //화씨전환버튼
+#define button2 8 //도씨전환버튼
+
+String outgoing;              // outgoing message
+long lastSendTime = 0;        // last send time
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기위한
+  fnd1.setBrightness(0x0f);
+  fnd2.setBrightness(0x0f);
+  fnd1.showNumberDec(0, false);
+  fnd2.showNumberDec(0, false);
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+  Serial.println("LoRa Duplex");
+
+  //920.9Mhz
+  if (!LoRa.begin(9209E5)) {             // initialize ratio at 915 MHz
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+}
+
+void loop() {
+  if(digitalRead(button1) == LOW){
+    //화씨
+    LoRa.beginPacket();
+    LoRa.write('F');
+    LoRa.endPacket();
+    delay(200);
+  }
+  if(digitalRead(button2) == LOW){
+    //도씨
+    LoRa.beginPacket();
+    LoRa.write('C');
+    LoRa.endPacket();
+    delay(200);
+  }
+  
+  // parse for a packet, and call onReceive with the result:
+  onReceive(LoRa.parsePacket());
+}
+
+
+void onReceive(int packetSize) {
+  if (packetSize == 0) return; //수신데이터가 없으면 아무일도 하지 않음!
+
+  //4바이트를 읽어온다
+  byte a = LoRa.read();
+  byte b = LoRa.read();
+  byte c = LoRa.read();
+  byte d = LoRa.read();
+  char e = LoRa.read();
+
+  //버퍼에 쓰레기값을 clear
+  while(LoRa.available()){
+    LoRa.read();
+  }
+
+  float humi = (a << 8 | b)/100.0;
+  float temp = (c<<8|d)/100.0;
+
+  fnd1.showNumberDec(humi*100, false);
+  fnd2.showNumberDec(temp*100, false);
+
+  if(e == 'C'){
+    //도씨를 담당하는 LED가 켜진다
+    digitalWrite(led1,LOW);
+    digitalWrite(led2,HIGH);
+  }else if(e == 'F'){
+    //화씨를 담당하는 LED가 켜진다
+    digitalWrite(led1,HIGH);
+    digitalWrite(led2,LOW);
+  }
+
+  Serial.print("습도값=");
+  Serial.print(humi);
+  Serial.print("%, 온도값=");
+  Serial.print(temp);
+  Serial.println(e);
+  
+}
+

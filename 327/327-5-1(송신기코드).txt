@@ -1,0 +1,27 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+int counter = 0;
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기 위해서
+  while (!Serial);
+
+  Serial.println("LoRa Sender");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+  //시리얼모니터에서 녹칸다가 입력한 text를 출력하라!
+  if(Serial.available()){
+    String text = Serial.readStringUntil(0x0d);
+    Serial.println(text);
+    LoRa.beginPacket();
+    LoRa.print(text);
+    LoRa.endPacket();
+  }
+}

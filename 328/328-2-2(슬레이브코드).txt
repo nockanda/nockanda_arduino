@@ -1,0 +1,68 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+
+String outgoing;              // outgoing message
+long lastSendTime = 0;        // last send time
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기위한
+  Serial.println("LoRa Duplex");
+
+  //920.9Mhz
+  if (!LoRa.begin(9209E5)) {             // initialize ratio at 915 MHz
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+}
+
+void loop() {
+  //마스터로 부터 받은 데이터가 있을경우에
+  //응답한다!
+  /*
+  if (millis() - lastSendTime > 2000) {
+    String message = "나는 보드 2번입니다!";   // send a message
+
+    //메시지 전송부분
+    LoRa.beginPacket();
+    LoRa.print(message);
+    LoRa.endPacket();
+
+    Serial.println("발신메시지: " + message);
+    lastSendTime = millis();  
+  }
+  */
+  // parse for a packet, and call onReceive with the result:
+  onReceive(LoRa.parsePacket());
+}
+
+
+void onReceive(int packetSize) {
+  if (packetSize == 0) return; //수신데이터가 없으면 아무일도 하지 않음!
+
+  String incoming = "";
+
+  //수신된 데이터 전체를 읽어서 incoming이라는 변수에 집어넣어라
+  while (LoRa.available()) {
+    incoming += (char)LoRa.read();
+  }
+  Serial.println("수신메시지: " + incoming);
+
+  if(incoming == "Request"){
+    //마스터에서 요청한부분!
+    Serial.println("마스터에게 응답해야겠다.,..");
+    
+    String message = "Im slave!";   // send a message
+
+    //메시지 전송부분
+    delay(100);
+    LoRa.beginPacket();
+    LoRa.write((byte)message.length());
+    LoRa.print(message);
+    LoRa.endPacket();
+    delay(100);
+    Serial.println("응답완료!");
+  }
+ 
+}

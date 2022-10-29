@@ -1,0 +1,35 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial);
+
+  Serial.println("LoRa Receiver");
+
+  if (!LoRa.begin(9233E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+  LoRa.setSyncWord(0xF3); 
+}
+
+void loop() {
+  // try to parse packet
+  int packetSize = LoRa.parsePacket();
+  if (packetSize > 0) {
+    //수신된 데이터가 존재한다면~ 뭔가 하겠다~
+    Serial.print("Received packet '");
+    Serial.println(packetSize);
+    // read packet
+
+    byte num1 = LoRa.read();
+    byte num2 = LoRa.read();
+    float number = (num1*256+num2)/100.0;
+    Serial.println(number);
+    
+    // print RSSI of packet
+    Serial.print("' with RSSI ");
+    Serial.println(LoRa.packetRssi());
+  }
+}

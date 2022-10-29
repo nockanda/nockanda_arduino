@@ -1,0 +1,61 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+#define LED1 3
+#define LED2 4
+#define LED3 5
+#define LED4 6
+
+byte slave1_id = 0xC1; //0x00~0xFF, 0~255
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(LED1,OUTPUT);
+  pinMode(LED2,OUTPUT);
+  pinMode(LED3,OUTPUT);
+  pinMode(LED4,OUTPUT);
+  while (!Serial);
+
+  Serial.println("LoRa Receiver");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+  // try to parse packet
+  int packetSize = LoRa.parsePacket();
+  if (packetSize > 0) {
+    //수신된 데이터가 존재한다면~ 뭔가 하겠다~
+    Serial.print("Received packet '");
+    Serial.println(packetSize);
+    // read packet
+
+    //수신부를 구현
+    byte id = LoRa.read();
+    char data = LoRa.read();
+
+    Serial.println(id,HEX);
+    Serial.println(data);
+ 
+    if(id != slave1_id) return;
+
+    //송신기에서 1을 받으면 1번LEd 제어
+    //2를 받으면 2번LEd 제어 ....
+    if(data == '1'){
+      digitalWrite(LED1,!digitalRead(LED1));
+    }else if(data == '2'){
+      digitalWrite(LED2,!digitalRead(LED2));
+    }else if(data == '3'){
+      digitalWrite(LED3,!digitalRead(LED3));
+    }else if(data == '4'){
+      digitalWrite(LED4,!digitalRead(LED4));
+    }
+    
+    // print RSSI of packet
+    Serial.print("' with RSSI ");
+    Serial.println(LoRa.packetRssi());
+  }
+}

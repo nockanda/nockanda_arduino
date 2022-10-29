@@ -1,0 +1,12 @@
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신라인
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //1초간격으로 메시지 보내기
+
+  Serial.println("나는 아두이노 메가입니다!");
+  delay(1000);
+}

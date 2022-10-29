@@ -1,0 +1,59 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+
+String outgoing;              // outgoing message
+long lastSendTime = 0;        // last send time
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기위한
+  Serial.println("LoRa Duplex");
+
+  //920.9Mhz
+  if (!LoRa.begin(9209E5)) {             // initialize ratio at 915 MHz
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+}
+
+void loop() {
+  //도씨와 화씨의 단위 변환
+  if(Serial.available()){
+    //유저가 뭔가 전송했다~
+    char c = Serial.read();
+    LoRa.beginPacket();
+    LoRa.write(c);
+    LoRa.endPacket();
+  }
+
+  // parse for a packet, and call onReceive with the result:
+  onReceive(LoRa.parsePacket());
+}
+
+
+void onReceive(int packetSize) {
+  if (packetSize == 0) return; //수신데이터가 없으면 아무일도 하지 않음!
+
+  //4바이트를 읽어온다
+  byte a = LoRa.read();
+  byte b = LoRa.read();
+  byte c = LoRa.read();
+  byte d = LoRa.read();
+  char e = LoRa.read();
+
+  //버퍼에 쓰레기값을 clear
+  while(LoRa.available()){
+    LoRa.read();
+  }
+
+  float humi = (a << 8 | b)/100.0;
+  float temp = (c<<8|d)/100.0;
+
+  Serial.print("습도값=");
+  Serial.print(humi);
+  Serial.print("%, 온도값=");
+  Serial.print(temp);
+  Serial.println(e);
+  
+}

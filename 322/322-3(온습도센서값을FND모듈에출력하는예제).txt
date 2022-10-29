@@ -1,0 +1,130 @@
+//MODBUS 온습도센서 SHT20에서 온도값 읽어오기
+#include <SoftwareSerial.h>
+
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK1 4
+#define DIO1 5
+#define CLK2 6
+#define DIO2 7
+TM1637Display display1(CLK1, DIO1);
+TM1637Display display2(CLK2, DIO2);
+/*
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define command1 0x01
+#define command2 0x02
+*/
+#define modepin 13 //통신의 송신과 수신을 변환하는 핀
+#define readmode LOW
+#define sendmode HIGH
+SoftwareSerial rs485(2, 3); // RX, TX
+
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+  //FND모듈의 밝기를 설정한다!
+  display1.setBrightness(0x0f);
+  display2.setBrightness(0x0f);
+  display1.showNumberDec(0, false);
+  display2.showNumberDec(0, false);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //SHT20의 온도값 요청하는 데이터를 만들어보자!
+  //byte request[] = {0x01,0x04,0x00,0x01,0x00,0x01,0x60,0x0A};
+  //온습도 동시에 request
+  byte request[] = {0x01, 0x04, 0x00, 0x01, 0x00, 0x02, 0x20, 0x0B};
+
+  //RS485 송신모드로 변경
+  digitalWrite(modepin,sendmode);
+  //데이터 전송~
+  rs485.write(request,8);
+  //다시 수신모드로 변경(슬레이브의 응답을 기다리는 상태)
+  digitalWrite(modepin,readmode);
+
+  //슬레이브의 응답을 기다려야 하는 상태
+  byte response[9];
+  if(rs485_receive(response) != -1){
+    //응답이 날라온 경우!
+    Serial.print("수신메시지:");
+    for(int i = 0;i<9;i++){
+      Serial.print(response[i]);
+      Serial.print(",");
+    }
+    Serial.println();
+    //온도response[3],response[4]
+    //습도response[5],response[6]
+    int temp = response[3]<<8 | response[4];
+    int humi = response[5]<<8 | response[6];
+    Serial.print("온도 측정값 =");
+    Serial.print(temp/10.0);
+    Serial.print("'C, 습도 측정값 =");
+    Serial.print(humi/10.0);
+    Serial.println("%");
+    display1.showNumberDec(temp*10, false);
+    display2.showNumberDec(humi*10, false);
+    
+  }else{
+    //타임아웃
+    Serial.println("SHT20 오프라인!");
+  }
+
+  delay(1000);
+}
+
+void rs485_send(byte id, byte command, byte message[]){
+  byte data[10];
+  data[0] = id;
+  data[1] = command;
+  for(int i =2;i<10;i++){
+    data[i] = message[i-2];
+  }
+  //단순 결과확인 출력문
+  Serial.print("(마스터)송신데이터=");
+  for(int i = 0;i<10;i++){
+    Serial.print(data[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+
+  //송신부분
+  digitalWrite(modepin,sendmode);
+  rs485.write(data,10);
+  digitalWrite(modepin,readmode);
+}
+
+int rs485_receive(byte recv[]){
+  //슬레이브1에서 날린 데이터가 존재할때까지 무한루프
+  unsigned long t = millis(); //루프진입직전의 시간
+  while(1){
+    if(millis() - t > 2000){
+      //루프안에서 누른 스톱워치하고 t하고의 시간차이가 2000ms 이상이면~
+      //Serial.println("오프라인");
+      return -1;
+      break;
+    }
+    if(rs485.available()){
+      //485모듈에서 아두이노쪽으로 수신한값이 존재한다면~
+      //데이터 읽기
+      rs485.readBytes(recv,9);
+      /*
+      Serial.print("(마스터)수신데이터=");
+      for(int i =0;i<10;i++){
+        Serial.print(recv[i],HEX);
+        Serial.print(",");
+      }
+      Serial.println();
+      */
+      return 0;
+      break;
+    }
+  }
+}

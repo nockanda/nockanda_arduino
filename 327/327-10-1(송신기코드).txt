@@ -1,0 +1,59 @@
+#include <SPI.h>
+#include <LoRa.h>
+#include "PMS.h"
+#include <SoftwareSerial.h>
+
+SoftwareSerial nockanda(3,4); //tx=3, rx=4
+PMS pms(nockanda);
+PMS::DATA data;
+int counter = 0;
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기 위해서
+  nockanda.begin(9600);
+  while (!Serial);
+
+  Serial.println("LoRa Sender");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+
+  //1.메시먼지센서(PMS7003)의 값을 읽는다!
+  //2.전송하는 데이터를 구성한다
+  //3.데이터를 LoRa로 전송한다!
+  if (pms.read(data))
+  {
+    Serial.print("PM 1.0 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_1_0);
+
+    Serial.print("PM 2.5 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_2_5);
+
+    Serial.print("PM 10.0 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_10_0);
+
+    Serial.println();
+
+    byte a = data.PM_AE_UG_1_0 >> 8;
+    byte b = data.PM_AE_UG_1_0 & 0xFF;
+    byte c = data.PM_AE_UG_2_5 >> 8;
+    byte d = data.PM_AE_UG_2_5 & 0xFF;
+    byte e = data.PM_AE_UG_10_0 >> 8;
+    byte f = data.PM_AE_UG_10_0 & 0xFF;
+    LoRa.beginPacket();
+    LoRa.write(a);
+    LoRa.write(b);
+    LoRa.write(c);
+    LoRa.write(d);
+    LoRa.write(e);
+    LoRa.write(f);
+    LoRa.endPacket();
+  }else{
+    
+  }
+}

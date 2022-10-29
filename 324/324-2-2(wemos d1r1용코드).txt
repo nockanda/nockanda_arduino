@@ -1,0 +1,17 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial uno(D3,D4);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-IoT보드간 통신라인
+  uno.begin(9600); //IoT보드-아두이노우노간 통신라인!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(uno.available()){
+    String data = uno.readStringUntil(0x0a);
+    Serial.println(data);
+  }
+}

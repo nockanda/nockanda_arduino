@@ -1,0 +1,43 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+#define LED 3
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(LED,OUTPUT);
+  while (!Serial);
+
+  Serial.println("LoRa Receiver");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+  // try to parse packet
+  int packetSize = LoRa.parsePacket();
+  if (packetSize > 0) {
+    //수신된 데이터가 존재한다면~ 뭔가 하겠다~
+    Serial.print("Received packet '");
+    Serial.println(packetSize);
+    // read packet
+
+    //수신부를 구현
+    char data = LoRa.read();
+    if(data == '1'){
+      //켜져있으면 끄고
+      //digitalRead(LED) //LED의 작동상태를 읽어오라
+      //꺼져있으면 켠다
+      
+      //digitalWrite(LED,????); LED의 작동상태를 세팅해라
+      digitalWrite(LED,!digitalRead(LED));
+    }
+    
+    // print RSSI of packet
+    Serial.print("' with RSSI ");
+    Serial.println(LoRa.packetRssi());
+  }
+}

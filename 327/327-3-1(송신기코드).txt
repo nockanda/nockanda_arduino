@@ -1,0 +1,27 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+int counter = 0;
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기 위해서
+  while (!Serial);
+
+  Serial.println("LoRa Sender");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+  byte a = counter >> 8;
+  byte b = counter & 0b11111111;
+  LoRa.beginPacket();
+  LoRa.write(a);
+  LoRa.write(b);
+  LoRa.endPacket();
+  counter++;
+  delay(5000);
+}

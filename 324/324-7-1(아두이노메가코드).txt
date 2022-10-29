@@ -1,0 +1,19 @@
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신라인
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //가상의 cds가 3개 있다!
+  //가상의 센서 데이터를 JSON형태로 보내보자!
+  //  {"cds1":123,"cds2":456,"cds3":789}
+  int cds1 = random(0,1024);
+  int cds2 = random(0,1024);
+  int cds3 = random(0,1024);
+
+  String data = "{\"cds1\":"+String(cds1)+",\"cds2\":"+String(cds2)+",\"cds3\":"+String(cds3)+"}";
+
+  Serial.println(data);
+  delay(1000);
+}

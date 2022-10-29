@@ -1,0 +1,36 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+int counter = 0;
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기 위해서
+  while (!Serial);
+
+  Serial.println("LoRa Sender");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+
+  //1.가변저항의 아날로그 값을 읽는다
+  //2.전송하는 데이터를 구성한다
+  //3.데이터를 LoRa로 전송한다!
+
+  int sensor = analogRead(A0); //0~1023
+  
+  byte a = sensor >> 8;
+  byte b = sensor & 0b11111111;
+
+  LoRa.beginPacket();
+  LoRa.write(a);
+  LoRa.write(b);
+  LoRa.endPacket();
+
+
+  delay(1000);
+}

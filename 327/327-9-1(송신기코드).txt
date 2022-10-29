@@ -1,0 +1,58 @@
+#include <SPI.h>
+#include <LoRa.h>
+#include <SoftwareSerial.h>
+#include <MHZ19.h>
+
+SoftwareSerial ss(3,4); //tx, rx
+MHZ19 mhz(&ss);
+
+int counter = 0;
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기 위해서
+  ss.begin(9600);
+  while (!Serial);
+
+  Serial.println("LoRa Sender");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+
+  //1.온습도 센서의 값을 읽는다!
+  //2.전송하는 데이터를 구성한다
+  //3.데이터를 LoRa로 전송한다!
+
+  MHZ19_RESULT response = mhz.retrieveData();
+  if (response == MHZ19_RESULT_OK)
+  {
+    int co2 = mhz.getCO2(); //2bytes
+    int temp = mhz.getTemperature();//2bytes
+
+    byte a = co2 >> 8;
+    byte b = co2 & 0xFF; //(0xFF == 0b11111111 == 255)
+    byte c = temp >> 8;
+    byte d = temp & 0xFF;
+
+    LoRa.beginPacket();
+    LoRa.write(a);
+    LoRa.write(b);
+    LoRa.write(c);
+    LoRa.write(d);
+    LoRa.endPacket();
+  }
+  else
+  {
+    Serial.print(F("Error, code: "));
+    Serial.println(response);
+  }
+
+  
+  
+
+  delay(1000);
+}

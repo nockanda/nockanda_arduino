@@ -1,0 +1,33 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+int counter = 0;
+float number = 22.68;
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기 위해서
+  while (!Serial);
+
+  Serial.println("LoRa Sender");
+
+  if (!LoRa.begin(9233E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+  LoRa.setSpreadingFactor(8);
+}
+
+void loop() {
+  Serial.print("Sending packet: ");
+  Serial.println(counter);
+
+  //수신기에게 2500을 보내고 싶다..(2 bytes)
+  byte high_byte = (int)(number*100)/256;
+  byte low_byte = (int)(number*100)%256;
+  LoRa.beginPacket();
+  LoRa.write(high_byte);
+  LoRa.write(low_byte);
+  LoRa.endPacket();
+  
+  delay(5000);
+}

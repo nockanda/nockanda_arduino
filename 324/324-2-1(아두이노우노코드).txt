@@ -1,0 +1,15 @@
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신라인
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //센서가 3개 있다고 가정
+  int sensor1 = random(0,1024);
+  int sensor2 = random(0,1024);
+  int sensor3 = random(0,1024);
+  //  "sensor1,sensor2,sensor3"
+  Serial.println(String(sensor1)+","+String(sensor2)+","+String(sensor3));
+  delay(1000);
+}

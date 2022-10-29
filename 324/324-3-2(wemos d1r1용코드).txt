@@ -1,0 +1,26 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial uno(D3,D4);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-IoT보드간 통신라인
+  uno.begin(9600); //IoT보드-아두이노우노간 통신라인!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //우노야 값좀 다오~
+  Serial.println("우노야 값좀 다오~");
+  uno.write('0');
+  //우노가 응답할때 까지 기다려야지~
+  while(true){
+    if(uno.available()) break;
+  }
+  Serial.println("수신값 도착");
+  //수신된값을 받으면 된다!
+  String data = uno.readStringUntil(0x0a);
+  Serial.println(data);
+
+  delay(1000);
+}

@@ -1,0 +1,20 @@
+#define LED 2
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신라인
+  pinMode(LED,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //사물인터넷보드에서 '0'을 받으면 LED OFF, '1'을 받으면 LED ON
+  if(Serial.available()){
+    char c = Serial.read();
+    if(c == '0'){
+      digitalWrite(LED,LOW);
+    }else if(c == '1'){
+      digitalWrite(LED,HIGH);
+    }
+  }
+}

@@ -1,0 +1,21 @@
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+
+  int number = 5000;
+
+  byte a = number >> 8;
+  byte b = number & 0b11111111;
+
+  Serial.println(number,BIN);
+  Serial.println(a,BIN);
+  Serial.println(b,BIN);
+
+  int output = a <<8 | b;
+  Serial.println(output);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}

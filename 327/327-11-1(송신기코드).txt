@@ -1,0 +1,55 @@
+#include <SPI.h>
+#include <LoRa.h>
+#include <MQUnifiedsensor.h>
+#define placa "Arduino UNO"
+#define Voltage_Resolution 5
+#define pin A0 //Analog input 0 of your arduino
+#define type "MQ-6" //MQ6
+#define ADC_Bit_Resolution 10 // For arduino UNO/MEGA/NANO
+#define RatioMQ6CleanAir 10   //RS / R0 = 10 ppm 
+MQUnifiedsensor MQ6(placa, Voltage_Resolution, ADC_Bit_Resolution, pin, type);
+int counter = 0;
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기 위해서
+  MQ6.setRegressionMethod(1); //_PPM =  a*ratio^b
+  MQ6.setA(2127.2); MQ6.setB(-2.526);
+  MQ6.init();  
+  Serial.print("Calibrating please wait.");
+  float calcR0 = 0;
+  for(int i = 1; i<=10; i ++)
+  {
+    MQ6.update(); // Update data, the arduino will be read the voltage on the analog pin
+    calcR0 += MQ6.calibrate(RatioMQ6CleanAir);
+    Serial.print(".");
+  }
+  MQ6.setR0(calcR0/10);
+  Serial.println("  done!.");
+  
+  while (!Serial);
+
+  Serial.println("LoRa Sender");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+
+  //1.가스센서(MQ6)의 값을 읽는다!
+  //2.전송하는 데이터를 구성한다
+  //3.데이터를 LoRa로 전송한다!
+  MQ6.update();
+  int sensor = MQ6.readSensor(); //값의 범위를 0~30000
+  if(sensor > 30000) sensor = 30000;
+
+  byte a = sensor >>8;
+  byte b = sensor & 0xFF;
+  LoRa.beginPacket();
+  LoRa.write(a);
+  LoRa.write(b);
+  LoRa.endPacket();
+  delay(1000);
+}

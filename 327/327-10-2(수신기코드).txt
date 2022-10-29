@@ -1,0 +1,45 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial);
+
+  Serial.println("LoRa Receiver");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+  // try to parse packet
+  int packetSize = LoRa.parsePacket();
+  if (packetSize > 0) {
+    //수신된 데이터가 존재한다면~ 뭔가 하겠다~
+
+    //1. 6바이트 값을 읽는다
+    //2. 원래 숫자를 계산한다
+    //3. 결과를 출력한다!
+    byte a = LoRa.read();
+    byte b = LoRa.read();
+    byte c = LoRa.read();
+    byte d = LoRa.read();
+    byte e = LoRa.read();
+    byte f = LoRa.read();
+
+    int pm1_1 = a << 8 | b;
+    int pm2_5 = c << 8 | d;
+    int pm10_0 = e << 8 | f;
+    
+    Serial.print("PM1.0=");
+    Serial.print(pm1_1);
+    Serial.print("ug/m3, PM2.5=");
+    Serial.print(pm2_5);
+    Serial.print("ug/m3, PM10.0=");
+    Serial.print(pm10_0);
+    Serial.println("ug/m3");
+
+  }
+}

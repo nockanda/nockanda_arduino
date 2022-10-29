@@ -1,0 +1,32 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+#define button 3
+
+int counter = 0;
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기 위해서
+  pinMode(button,INPUT_PULLUP);
+  while (!Serial);
+
+  Serial.println("LoRa Sender");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+  //버튼을 누르면 수신기쪽으로 '1'을 전송한다!
+  if(digitalRead(button) == LOW){
+    //풀업방식으로 연결했기 때문
+    LoRa.beginPacket();
+    LoRa.write('1');
+    LoRa.endPacket();
+
+    delay(300);
+  }
+  
+}

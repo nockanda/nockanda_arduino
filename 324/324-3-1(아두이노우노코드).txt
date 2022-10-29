@@ -1,0 +1,19 @@
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신라인
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //사물인터넷보드에서 '0'을 보내주면 센서값 3종을 응답한다!
+  if(Serial.available()){
+    char c = Serial.read();
+    if(c == '0'){
+      int sensor1 = random(0,1024);
+      int sensor2 = random(0,1024);
+      int sensor3 = random(0,1024);
+      //  "sensor1,sensor2,sensor3"
+      Serial.println(String(sensor1)+","+String(sensor2)+","+String(sensor3));
+    }
+  }
+}

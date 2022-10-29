@@ -1,0 +1,20 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial uno(D3,D4);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-IoT보드간 통신라인
+  uno.begin(9600); //IoT보드-아두이노우노간 통신라인!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //PC의 시리얼모니터에서 유저의 입력을 받는다!
+  //입력받은 내용을 그대로 우노쪽으로 전송한다!
+  //우노는 '0'을 받으면 LED를 OFF하고 '1'을 받으면 LED를 ON하도록 만든다!
+  if(Serial.available()){
+    char c = Serial.read();
+    uno.write(c);
+  }
+}

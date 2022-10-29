@@ -1,0 +1,32 @@
+#include <SoftwareSerial.h>
+#include <ArduinoJson.h>
+
+SoftwareSerial mega(D3,D4);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-IoT보드간 통신라인
+  mega.begin(9600); //IoT보드-아두이노우노간 통신라인!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(mega.available()){
+    String data = mega.readStringUntil(0x0a);
+    Serial.println(data);
+
+    StaticJsonDocument<96> doc;
+    
+    deserializeJson(doc, data);
+    
+    int cds1 = doc["cds1"]; // 123
+    int cds2 = doc["cds2"]; // 456
+    int cds3 = doc["cds3"]; // 789
+    Serial.print("CDS1=");
+    Serial.print(cds1);
+    Serial.print(", CDS2=");
+    Serial.print(cds2);
+    Serial.print(", CDS3=");
+    Serial.println(cds3);
+  }
+}

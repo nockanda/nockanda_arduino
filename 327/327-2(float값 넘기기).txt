@@ -1,0 +1,20 @@
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+
+  float number = 123.45;
+  //내가 원하는 유효한 소수점 범위를
+  int number2 = (int)(number*100);
+
+  byte a = number2 >> 8;
+  byte b = number2 & 0b11111111;
+
+  float output = (a<<8 | b)/100.0;
+
+  Serial.println(output);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}

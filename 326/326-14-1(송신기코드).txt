@@ -1,0 +1,40 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+int counter = 0;
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기 위해서
+  while (!Serial);
+
+  Serial.println("LoRa Sender");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+  Serial.print("Sending packet: ");
+  Serial.println(counter);
+
+  int sensor1 = random(0,1024); //0~1023 (2바이트)
+  int sensor2 = random(0,1024); //0~1023 (2바이트)
+  int sensor3 = random(0,1024); //0~1023 (2바이트)
+
+  
+
+  // send packet
+  LoRa.beginPacket();
+  LoRa.write(sensor1/256);
+  LoRa.write(sensor1%256);
+  LoRa.write(sensor2/256);
+  LoRa.write(sensor2%256);
+  LoRa.write(sensor3/256);
+  LoRa.write(sensor3%256);
+  LoRa.endPacket();
+
+
+  delay(5000);
+}

@@ -1,0 +1,63 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+#define button1 3
+#define button2 4
+#define button3 5
+#define button4 6
+
+byte slave1_id = 0xC1; //0x00~0xFF, 0~255
+
+int counter = 0;
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기 위해서
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+  pinMode(button3,INPUT_PULLUP);
+  pinMode(button4,INPUT_PULLUP);
+  while (!Serial);
+
+  Serial.println("LoRa Sender");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+  //버튼을 누르면 수신기쪽으로 '1'을 전송한다!
+  if(digitalRead(button1) == LOW){
+    //풀업방식으로 연결했기 때문
+    LoRa.beginPacket();
+    LoRa.write(slave1_id);
+    LoRa.write('1');
+    LoRa.endPacket();
+    delay(300);
+  }
+  if(digitalRead(button2) == LOW){
+    //풀업방식으로 연결했기 때문
+    LoRa.beginPacket();
+    LoRa.write(slave1_id);
+    LoRa.write('2');
+    LoRa.endPacket();
+    delay(300);
+  }
+  if(digitalRead(button3) == LOW){
+    //풀업방식으로 연결했기 때문
+    LoRa.beginPacket();
+    LoRa.write(slave1_id);
+    LoRa.write('3');
+    LoRa.endPacket();
+    delay(300);
+  }
+  if(digitalRead(button4) == LOW){
+    //풀업방식으로 연결했기 때문
+    LoRa.beginPacket();
+    LoRa.write(slave1_id);
+    LoRa.write('4');
+    LoRa.endPacket();
+    delay(300);
+  }
+}

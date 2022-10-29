@@ -1,0 +1,83 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+
+#include "DHT.h"
+#define DHTPIN 3
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+String outgoing;              // outgoing message
+long lastSendTime = 0;        // last send time
+
+bool mode = true; //true=도씨, false=화씨
+bool is_send = true;
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기위한
+  dht.begin();
+  Serial.println("LoRa Duplex");
+
+  //920.9Mhz
+  if (!LoRa.begin(9209E5)) {             // initialize ratio at 915 MHz
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+}
+
+void loop() {
+  if (is_send && millis() - lastSendTime > 2000) {
+    //String message = "나는 보드 2번입니다!";   // send a message
+
+    float h = dht.readHumidity();
+    float t = 0;
+    if(mode){
+      //도씨
+      t = dht.readTemperature();
+    }else{
+      //화씨
+      t = dht.readTemperature(true);
+    }
+    //소수점 2자리까지 유효숫자
+    //습도값 a,b
+    //온도값 c,d
+    byte a = (int)(h*100) >> 8; //상위8비트
+    byte b = (int)(h*100) & 0b11111111; //하위8비트
+    byte c = (int)(t*100) >> 8;
+    byte d = (int)(t*100) & 0xFF;
+    byte e = 0;
+    if(mode) e = 'C';
+    else e = 'F';
+
+    //메시지 전송부분
+    LoRa.beginPacket();
+    LoRa.write(a);
+    LoRa.write(b);
+    LoRa.write(c);
+    LoRa.write(d);
+    LoRa.write(e);
+    LoRa.endPacket();
+
+    Serial.println();
+    lastSendTime = millis();  
+  }
+
+  // parse for a packet, and call onReceive with the result:
+  onReceive(LoRa.parsePacket());
+}
+
+
+void onReceive(int packetSize) {
+  if (packetSize == 0) return; //수신데이터가 없으면 아무일도 하지 않음!
+
+  char c = LoRa.read();
+  if(c == 'C'){
+    mode = true;
+  }else if(c=='F'){
+    mode = false;
+  }else if(c=='S'){
+    is_send = true;
+  }else if(c=='E'){
+    is_send = false;
+  }
+}

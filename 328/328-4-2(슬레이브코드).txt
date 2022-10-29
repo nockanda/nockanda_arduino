@@ -1,0 +1,60 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+
+#define led 3
+
+String outgoing;              // outgoing message
+long lastSendTime = 0;        // last send time
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기위한
+  pinMode(led,OUTPUT);
+  Serial.println("LoRa Duplex");
+
+  //920.9Mhz
+  if (!LoRa.begin(9209E5)) {             // initialize ratio at 915 MHz
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+}
+
+void loop() {
+  if (millis() - lastSendTime > 2000) {
+    //String message = "나는 보드 2번입니다!";   // send a message
+
+    char c;
+    if(digitalRead(led) == LOW){
+      //LED가 꺼져있는 상태
+      c = '0';
+    }else{
+      //LED가 켜져있는 상태!
+      c = '1';
+    }
+    //메시지 전송부분
+    LoRa.beginPacket();
+    LoRa.write(c);
+    LoRa.endPacket();
+
+    Serial.println();
+    //Serial.println("발신메시지: " + message);
+    lastSendTime = millis();  
+  }
+
+  // parse for a packet, and call onReceive with the result:
+  onReceive(LoRa.parsePacket());
+}
+
+
+void onReceive(int packetSize) {
+  if (packetSize == 0) return; //수신데이터가 없으면 아무일도 하지 않음!
+
+  char c = LoRa.read();
+
+  //켜져있으면 끄고, 꺼져있으면 켠다
+  if(c == '0'){
+    //아~~ 마스터에서 버튼이 눌러졌구나~
+    digitalWrite(led,!digitalRead(led));
+  }
+}

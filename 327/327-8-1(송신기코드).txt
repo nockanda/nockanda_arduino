@@ -1,0 +1,55 @@
+#include <SPI.h>
+#include <LoRa.h>
+#include "DHT.h"
+
+
+int counter = 0;
+#define DHTPIN 3
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(9600); //결과를 PC에 출력하기 위해서
+  dht.begin();
+  while (!Serial);
+
+  Serial.println("LoRa Sender");
+
+  if (!LoRa.begin(9209E5)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void loop() {
+
+  //1.온습도 센서의 값을 읽는다!
+  //2.전송하는 데이터를 구성한다
+  //3.데이터를 LoRa로 전송한다!
+
+  float h = dht.readHumidity(); //2bytes
+  float t = dht.readTemperature(); //2bytes
+  
+  byte a = (int)(h*100) >> 8;
+  byte b = (int)(h*100) & 0b11111111;
+  byte c = (int)(t*100) >> 8;
+  byte d = (int)(t*100) & 0b11111111;
+
+/*
+  float h2 = (a << 8 | b)/100.0;
+  float t2 = (c << 8 | d)/100.0;
+  Serial.println(h2);
+  Serial.println(t2);
+  Serial.println("------");
+*/
+  
+  LoRa.beginPacket();
+  LoRa.write(a);
+  LoRa.write(b);
+  LoRa.write(c);
+  LoRa.write(d);
+  LoRa.endPacket();
+  
+
+  delay(1000);
+}
