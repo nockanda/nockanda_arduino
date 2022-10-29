@@ -1,0 +1,34 @@
+/*
+ * 예제111-1
+ * 0~255범위의 숫자 10개를 외장 EEPROM에 저장했다가
+ * 다시 읽어보자
+ */
+#include <Eeprom_at24c256.h>
+Eeprom_at24c256 eeprom(0x50);
+byte nums[10] = {1,2,3,4,5,6,7,8,9,10};
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+
+  //쓰기
+    eeprom.write(0, (byte*) nums,sizeof(nums));
+    delay(10);
+
+  //읽기
+  byte message[10]; //buffer    
+    //reading(address, buffer to read into, bytes to write(usually size of buffer))
+    eeprom.read(0, (byte *) message,sizeof(message));
+   
+    for(int z=0; z < 10;z++){
+      
+      Serial.print(message[z]); //print block
+      Serial.print(",");
+    }
+    Serial.println(); 
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}

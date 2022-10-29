@@ -1,0 +1,112 @@
+/*
+ * 예제120
+ * 아두이노의 내장 EEPROM에 10명의 사용자 정보를 저장하고
+ * 지문센서에서 리딩되는 지문ID에 따라서 사용자 정보가
+ * 시리얼 모니터에 출력되도록 하라!
+ * 사용자정보)이름(영문), 국적(영문), 나이, 성별, 학년(1~4)
+ *          char name[10], char depart[2], byte age, byte gender, byte level
+ * 한사람의 정보는 15bytes이다
+ * 아두이노 내장 EEPROM의 전체 사이즈는 1K(1024byte)
+ * 현재 총 68명의 정보를 저장 가능하다
+ */
+#include <Adafruit_Fingerprint.h>
+#include <EEPROM.h>
+
+SoftwareSerial mySerial(2, 3);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+
+struct User {
+  char name[10]; //이름
+  char depart[2]; //국적(KR,CN,JP)
+  byte age; //나이
+  byte gender; //성별(0:남자, 1:여자)
+  byte level; //학년(1~4)
+};
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  finger.begin(57600);
+
+  finger.getTemplateCount();
+
+    if (finger.templateCount == 0) {
+    Serial.print("Sensor doesn't contain any fingerprint data. Please run the 'enroll' example.");
+  } 
+  else {
+    Serial.println("Waiting for valid finger...");
+      Serial.print("Sensor contains "); Serial.print(finger.templateCount); Serial.println(" templates");
+  }
+  
+  //데이터 적재
+  //set_eeprom();
+
+  /*
+  //데이터 리딩(전체 출력 테스트)
+  User user;
+  for(int i = 0;i<10;i++){
+    EEPROM.get(i*sizeof(user), user);
+    Serial.print(i);
+    Serial.print(",");
+    Serial.print(user.name);
+    Serial.print(",");
+    Serial.print(user.depart);
+    Serial.print(",");
+    Serial.print(user.age);
+    Serial.print(",");
+    Serial.print(user.gender);
+    Serial.print(",");
+    Serial.println(user.level);
+  }
+  */
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK)  return;
+
+  //EEPROM의 주소값은 0부터시작
+  //지문ID값은 1부터 시작
+  //지문ID에 해당하는 주소값은 지문ID-1
+  User user;
+  EEPROM.get((finger.fingerID-1)*sizeof(user), user);
+  
+  // found a match!
+  Serial.print("Found ID #"); Serial.print(finger.fingerID); 
+  Serial.print(" with confidence of "); Serial.println(finger.confidence);
+  Serial.print(user.name);
+  Serial.print(",");
+  Serial.print(user.depart);
+  Serial.print(",");
+  Serial.print(user.age);
+  Serial.print(",");
+  Serial.print(user.gender);
+  Serial.print(",");
+  Serial.println(user.level);
+}
+
+void set_eeprom(){
+  //EEPROM에 데이터를 적재하는 부분
+  User users[10] = {
+    {"nockanda1","KR",20,0,4},
+    {"finger2","JP",20,0,4},
+    {"finger3","CN",20,0,4},
+    {"finger4","KR",20,0,4},
+    {"finger5","KR",20,0,4},
+    {"finger6","KR",20,0,4},
+    {"finger7","KR",20,0,4},
+    {"finger8","KR",20,0,4},
+    {"finger9","KR",20,0,4},
+    {"finger10","KR",20,0,4}
+  };
+  for(int i = 0;i<10;i++){
+    //10인분 루프가 회전할 준비가 되었다.
+    EEPROM.put(i*sizeof(users[0]), users[i]);
+  }
+}

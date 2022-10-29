@@ -1,0 +1,42 @@
+/*
+ * 예제 118-2
+ * 아두이노 버튼을 2개 붙혀서
+ * 첫번째 버튼을 누르면 NOCKANDA 라고 프린트되고
+ * 두번째 버튼을 누르면 SUBSCRIBE 라고 프린트 되도록 해보자!
+ */
+#include "Adafruit_Thermal.h"
+#include "SoftwareSerial.h"
+#define TX_PIN 6
+#define RX_PIN 5 
+#define button1 2
+#define button2 3
+SoftwareSerial mySerial(RX_PIN, TX_PIN); 
+Adafruit_Thermal printer(&mySerial);     
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(7, OUTPUT); digitalWrite(7, LOW);
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+  Serial.begin(9600); //PC와 아두이노간통신
+  mySerial.begin(9600); //아두이노와 프린터간 통신
+  printer.begin();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //버튼이 눌려졌다
+  if(digitalRead(button1) == LOW){
+    //버튼1이 눌려진것
+    printer.setSize('M');
+    printer.println("NOCKANDA!");
+    printer.feed(2);
+  }
+  if(digitalRead(button2) == LOW){
+    //버튼2이 눌려진것
+    printer.setSize('M');
+    printer.println("SUBSCRIBE!");
+    printer.feed(2);
+  }
+  
+}

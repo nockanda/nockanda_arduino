@@ -1,0 +1,144 @@
+/*
+ * 예제122-2-1 (마스터코드)
+ * 마스터에 OLED 디스플레이가 연결되어있다.
+ * OLED디스플레이는 I2C통신을 하므로 고정된 위치에 연결해야한다
+ * SDA : A4, SCL : A5
+ * 슬레이브1번 아두이노에 온습도센서 DHT11이 연결되어있다
+ * 슬레이브2번 아두이노에 먼지센서인 GP2Y가 연결되어있다.
+ * 슬레이브1의 ID는 0x00이고 슬레이브2의 ID는 0x01이다
+ * 온습도센서의 command code는 0x01이다
+ * 먼지센서의 command code는 0x02이다
+ * (예제 패킷)
+ * 0x00 0x01 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+ * → ID가 0x00인 슬레이브에게 온습도센서의 값을 요청하는 패킷
+ * 0x01 0x02 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+ * → ID가 0x01인 슬레이브에게 먼지센서값을 요청하는 패킷
+ */
+
+#include <SoftwareSerial.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 32
+#define OLED_RESET     4
+
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define dhtcommand 0x01
+#define dustcommand 0x02
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+SoftwareSerial rs485(2, 3); // RX, TX
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+  display.display();
+  delay(2000);
+  display.clearDisplay();
+
+  display.setTextSize(2);  
+  display.setTextColor(SSD1306_WHITE);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  //슬레이브1에게 보내는 부분(request)
+  byte data[10];
+  data[0] = slave1;
+  data[1] = dhtcommand;
+  for(int i =2;i<10;i++){
+    data[i] = 0x00;
+  }
+  Serial.print("(마스터)송신데이터=");
+  for(int i = 0;i<10;i++){
+    Serial.print(data[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+  
+  digitalWrite(modepin,sendmode);
+  rs485.write(data,10);
+  digitalWrite(modepin,readmode);
+
+  //슬레이브1에게 받는부분(response)
+  byte recv[10] = {0};
+  rs485.readBytes(recv,10);
+
+  Serial.print("(마스터)수신데이터=");
+  for(int i =0;i<10;i++){
+    Serial.print(recv[i],HEX);
+    Serial.print(",");
+  }
+  Serial.println();
+
+  //온습도 센서값 계산
+  float t = ((recv[2]*256 + recv[3])-10000) / 100.0f;
+  float h = (recv[4]*256 + recv[5])/100.0f;
+  Serial.print("온도=");
+  Serial.print(t);
+  Serial.print("'c");
+  Serial.print(", 습도=");
+  Serial.print(h);
+  Serial.println("%");
+  display.clearDisplay();
+  display.setCursor(0,0); 
+  display.print(t);
+  display.print("'c, ");
+  display.print(h);
+  display.println("%");
+  display.display();
+  delay(1000);
+
+  //슬레이브2에게 보내는 부분(request)
+
+  data[0] = slave2;
+  data[1] = dustcommand;
+  for(int i =2;i<10;i++){
+    data[i] = 0x00;
+  }
+  Serial.print("(마스터)송신데이터=");
+  for(int i = 0;i<10;i++){
+    Serial.print(data[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+  
+  digitalWrite(modepin,sendmode);
+  rs485.write(data,10);
+  digitalWrite(modepin,readmode);
+
+  //슬레이브2에게 받는부분(response)
+  rs485.readBytes(recv,10);
+
+  Serial.print("(마스터)수신데이터=");
+  for(int i =0;i<10;i++){
+    Serial.print(recv[i],HEX);
+    Serial.print(",");
+  }
+  Serial.println();
+
+  //먼지센서계산
+  float dust = (recv[2]*256 + recv[3])/100.0f;
+  Serial.print("먼지센서=");
+  Serial.print(dust);
+  Serial.println("ug/m3");
+  display.clearDisplay();
+  display.setCursor(0,0); 
+  display.print(dust);
+  display.println("ug/m3");
+  display.display();
+  delay(1000);
+}

@@ -1,0 +1,42 @@
+/*
+ * 예제111-2
+ * 0~255범위의 랜덤한 숫자를 80개 뽑아서
+ * EEPROM에 저장했다가 불러와보자!
+ */
+#include <Eeprom_at24c256.h>
+Eeprom_at24c256 eeprom(0x50);
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  randomSeed(analogRead(0));
+  byte writebuffer[16];
+  for(int i = 0;i<5;i++){
+    //숫자 16개씩 5번 전송하면 끝
+    for(int j =0;j<16;j++){
+      writebuffer[j] = random(256);
+    }
+    eeprom.write(i*16, (byte*) writebuffer,sizeof(writebuffer));
+    delay(10);
+  }
+  //읽기
+  for(int i = 0; i < 5; i++){
+    byte message[16]; //buffer    
+    //reading(address, buffer to read into, bytes to write(usually size of buffer))
+    eeprom.read(i * 16, (byte *) message,sizeof(message));
+   
+    Serial.print(String(i)+"\t"); //print block address
+    for(int z=0; z < 16;z++){
+      
+      Serial.print(message[z]); //print block
+      Serial.print(",");
+    }
+    Serial.println();   
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}

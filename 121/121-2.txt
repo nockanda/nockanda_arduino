@@ -1,0 +1,64 @@
+/*
+ * 예제121-2 
+ * 121-1번 예제에 추가함
+ * TM1637을 CLK를 D5에 연결하고 DIO핀을 D6에 연결해서 현재온도를 FND에 표시되도록 하시오!
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+#define ONE_WIRE_BUS 2
+#define greenled 3
+#define rednled 4
+#define TEMPERATURE_PRECISION 12
+#define CLK 5
+#define DIO 6
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+DeviceAddress tempDeviceAddress;
+TM1637Display display(CLK, DIO);
+
+void setup(void)
+{
+  Serial.begin(9600);
+  Serial.println("Dallas Temperature IC Control Library Demo");
+  pinMode(greenled, OUTPUT);
+  pinMode(rednled, OUTPUT);
+  sensors.begin();
+  sensors.getAddress(tempDeviceAddress, 0);
+  sensors.setResolution(tempDeviceAddress, TEMPERATURE_PRECISION);
+  display.setBrightness(0x0f);
+}
+void loop(void)
+{ 
+  
+  Serial.print("Requesting temperatures...");
+  sensors.requestTemperatures(); 
+  Serial.println("DONE");
+  
+  float tempC = sensors.getTempCByIndex(0);
+
+  if(tempC != DEVICE_DISCONNECTED_C) 
+  {
+    Serial.print("Temperature for the device 1 (index 0) is: ");
+    Serial.println(tempC);
+    //TM1637에 TEMPC의 정수부분만 표시하되 0번째 FND에서 2칸을 활용해라
+    display.showNumberDec((int)tempC, false, 2, 0);
+    display.showNumberDec(((int)(tempC*100))%100, false, 2, 2);
+    if(tempC > 27){
+      //빨간 LED
+      digitalWrite(rednled,HIGH);
+      digitalWrite(greenled,LOW);
+    }else{
+      //녹색 LED
+      digitalWrite(rednled,LOW);
+      digitalWrite(greenled,HIGH);
+    }
+  } 
+  else
+  {
+    Serial.println("Error: Could not read temperature data");
+  }
+}

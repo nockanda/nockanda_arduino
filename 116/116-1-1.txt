@@ -1,0 +1,100 @@
+/*
+ * 예제116-1-1 (마스터코드)
+ * 마스터에 택트스위치(버튼) 2개가 있다
+ * 첫번째 택트스위치는 D4에 연결되어있고 슬레이브1의 LED를 제어한다
+ * 두번째 택트스위치는 D5에 연결되어있고 슬레이브2의 LED를 제어한다
+ * 버튼을 눌렀을때 슬레이브들의 LED가 켜지고 안눌렀을때 꺼지도록 하라!
+ * (예시) 총10바이트인데 첫번째 바이트는 id고 두번째 바이트는 작업의종류
+ * (예시) [슬레이브id] [명령의종류] [LED state] [나머지6바이트는 0x00]
+ * (예시) 명령의 종류는 0x01이 LED제어명령이다
+ * (예시) LED state 0x00=LED OFF, 0x01=LED ON
+ */
+
+#include <SoftwareSerial.h>
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define ledcontrol 0x01
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+#define s1button 4
+#define s2button 5
+SoftwareSerial rs485(2, 3); // RX, TX
+
+bool s1button_state = HIGH;
+bool s2button_state = HIGH;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  pinMode(s1button,INPUT_PULLUP);
+  pinMode(s2button,INPUT_PULLUP);
+  digitalWrite(modepin,readmode); //수신모드
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  bool s1button_now = digitalRead(s1button);
+  if(s1button_state == HIGH && s1button_now == LOW){
+    //슬레이브1버튼이 눌려진거
+    //Serial.println("슬레이브1버튼이 눌려진거");
+    rs485send(slave1,ledcontrol,0x01);
+  }else if(s1button_state == LOW && s1button_now == HIGH){
+    //슬레이브1버튼이 눌렀다가 땐거
+    //Serial.println("슬레이브1버튼이 눌렀다가 땐거");
+    rs485send(slave1,ledcontrol,0x00);
+  }
+  s1button_state = s1button_now;
+
+  bool s2button_now = digitalRead(s2button);
+  if(s2button_state == HIGH && s2button_now == LOW){
+    //슬레이브2버튼이 눌려진거
+    //Serial.println("슬레이브2버튼이 눌려진거");
+    rs485send(slave2,ledcontrol,0x01);
+  }else if(s2button_state == LOW && s2button_now == HIGH){
+    //슬레이브2버튼이 눌렀다가 땐거
+    //Serial.println("슬레이브2버튼이 눌렀다가 땐거");
+    rs485send(slave2,ledcontrol,0x00);
+  }
+  s2button_state = s2button_now;
+}
+
+void rs485send(byte id,byte order, byte led){
+  byte data[10];
+  data[0] = id;
+  data[1] = order;
+  data[2] = led;
+  for(int i =3;i<10;i++){
+    data[i] = 0x00;
+  }
+  //단순 테스트 출력문
+  Serial.print("(마스터)송신데이터=");
+  for(int i = 0;i<10;i++){
+    Serial.print(data[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+  
+  digitalWrite(modepin,sendmode);
+  rs485.write(data,10);
+  digitalWrite(modepin,readmode);
+
+  //슬레이브1에게 받는부분(response)
+  byte recv[10] = {0};
+  rs485.readBytes(recv,10);
+
+  Serial.print("(마스터)수신데이터=");
+  for(int i =0;i<10;i++){
+    if(i==2 || i==3){
+      Serial.print((char)recv[i]);
+    }else{
+      Serial.print(recv[i],HEX);
+    }
+    Serial.print(",");
+  }
+  Serial.println();
+}

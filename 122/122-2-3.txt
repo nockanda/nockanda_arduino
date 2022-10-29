@@ -1,0 +1,89 @@
+/*
+ * 예제122-2-3 (슬레이브2번코드)
+ * 먼지센서의 아날로그핀을 A0에 디지털핀을 D4에 연결한다.
+ * 마스터로부터 요청신호가 오면 아래와 같이 응답한다
+ * 0x00 0x01 [data1 data2 ..... data8]
+ */
+
+#include <SoftwareSerial.h>
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+SoftwareSerial rs485(2, 3); // RX, TX
+
+int measurePin = A0;
+int ledPower = 4; 
+int samplingTime = 280;
+int deltaTime = 40;
+int sleepTime = 9680;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+  pinMode(ledPower,OUTPUT);
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(rs485.available()){
+    //485모듈로 들어오는 값이 존재한다면
+    byte recv[10];
+    rs485.readBytes(recv,10);
+    if(recv[0] != slave2) return; //쌩~
+    
+    for(int i =0;i<10;i++){
+      Serial.print(recv[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println(); 
+
+    //데이터 측정(정수만 사용하자)
+    //0~1000 ?  ...2바이트 OK
+    float dustdata = dustsensor(); //ug/m3
+    
+    byte data[10];
+    data[0] = recv[0];
+    data[1] = recv[1];
+    //응답데이터
+    data[2] = (int)(dustdata*100)/256;
+    data[3] = (int)(dustdata*100)%256;
+    
+    for(int i =4;i<10;i++){
+      data[i] = 0x00;
+    }
+    for(int i =0;i<10;i++){
+      Serial.print(data[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println(); 
+    digitalWrite(modepin,sendmode);
+    rs485.write(data,10);
+    digitalWrite(modepin,readmode);
+  }
+}
+
+float dustsensor(){
+  float voMeasured = 0;
+  float calcVoltage = 0;
+  float dustDensity = 0;
+  digitalWrite(ledPower,LOW); // power on the LED
+  delayMicroseconds(samplingTime);
+  voMeasured = analogRead(measurePin); // read the dust value
+  delayMicroseconds(deltaTime);
+  digitalWrite(ledPower,HIGH); // turn the LED off
+  delayMicroseconds(sleepTime);
+
+  // 0 - 5V mapped to 0 - 1023 integer values
+  // recover voltage
+  calcVoltage = voMeasured * (5.0 / 1024.0);
+  // linear eqaution taken from http://www.howmuchsnow.com/arduino/airquality/
+  // Chris Nafis (c) 2012
+  dustDensity = 0.17 * calcVoltage - 0.1;
+
+  return dustDensity;
+}

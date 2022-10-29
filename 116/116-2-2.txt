@@ -1,0 +1,61 @@
+/*
+ * 예제116-2-2 (슬레이브1코드)
+ * 슬레이브에는 LED 1개가 D4에 연결되어있다
+ * 마스터에서 받는 데이터에 따라 LED가 점멸되록 하시오!
+ * (예시) 총10바이트인데 첫번째 바이트는 id고 두번째 바이트는 작업의종류
+ * (예시) [슬레이브id] [명령의종류] [LED state] [나머지6바이트는 0x00]
+ * (예시) 명령의 종류는 0x01이 LED제어명령이다
+ * (예시) LED state 0x00=LED OFF, 0x01=LED ON
+ */
+
+#include <SoftwareSerial.h>
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define ledcontrol 0x01
+#define sensorread 0x02
+#define sensorpin 4
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+SoftwareSerial rs485(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  pinMode(sensorpin,INPUT); //충격/근접센서
+  digitalWrite(modepin,readmode); //수신모드
+}
+bool pre_reading = HIGH;
+void loop() {
+  // put your main code here, to run repeatedly:
+  bool reading = digitalRead(sensorpin);
+  if(pre_reading == HIGH && reading == LOW){
+    //센서의 뭔가 감지가 된 그 순간
+    //보고서를 만들어야한다
+    rs485ok(slave1,sensorread);
+  }
+}
+
+void rs485ok(byte id,byte order){
+  byte data[10];
+  data[0] = id;
+  data[1] = order;
+  data[2] = 0x01; //감지가 되었다
+  for(int i =3;i<10;i++){
+    data[i] = 0x00;
+  }
+  //단순 테스트 출력문
+  Serial.print("(슬레이브1)송신데이터=");
+  for(int i = 0;i<10;i++){
+    Serial.print(data[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+  
+  digitalWrite(modepin,sendmode);
+  rs485.write(data,10);
+  digitalWrite(modepin,readmode);
+}

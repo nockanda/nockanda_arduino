@@ -1,0 +1,30 @@
+/*
+ * 예제 118-1
+ * PC에서 시리얼통신으로 메시지를 전송하면
+ * 영수증 프린터에서 그대로 출력되도록 해보자
+ */
+#include "Adafruit_Thermal.h"
+#include "SoftwareSerial.h"
+#define TX_PIN 6
+#define RX_PIN 5 
+SoftwareSerial mySerial(RX_PIN, TX_PIN); 
+Adafruit_Thermal printer(&mySerial);     
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(7, OUTPUT); digitalWrite(7, LOW);
+  Serial.begin(9600); //PC와 아두이노간통신
+  mySerial.begin(9600); //아두이노와 프린터간 통신
+  printer.begin();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    String recv = Serial.readString();
+    printer.setSize('M');
+    printer.println(recv);
+    printer.feed(4);
+  }
+  
+}

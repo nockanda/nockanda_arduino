@@ -1,0 +1,41 @@
+/*
+ * 예제115
+ * (적외선근접센서와 워터펌프로 자동 남자소변기센서 시뮬레이션)
+*시나리오*
+근접센서에 물체가 센싱되면 워터펌프가 일정시간 작동한뒤 멈춘다
+근접센서의 센싱된 물체가 유지되면 작동하지 않는다
+근접센서의 물체가 이탈하면 워터펌프가 일정시간 작동한뒤 멈춘다
+ */
+#define IRSENSOR 2
+#define waterpump 3
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 시리얼통신 하겠다!
+  pinMode(IRSENSOR,INPUT);
+  pinMode(waterpump,OUTPUT);
+}
+
+int pre_irdata = HIGH;
+void loop() {
+  // put your main code here, to run repeatedly:
+  //센싱이 안되었을때 HIGH / 센싱이 되었을때 LOW
+  int irdata = digitalRead(IRSENSOR);
+  Serial.println(irdata);
+  if(pre_irdata == HIGH && irdata== LOW){
+    //없었는데 있었습니다!
+    Serial.println("워터펌프 작동");
+    digitalWrite(waterpump,HIGH);
+    delay(2000);
+    digitalWrite(waterpump,LOW);
+  }else if(pre_irdata == LOW && irdata== HIGH){
+    //있었는데 없어졌습니다!
+    Serial.println("워터펌프 작동");
+    digitalWrite(waterpump,HIGH);
+    delay(2000);
+    digitalWrite(waterpump,LOW);
+  }
+ 
+  pre_irdata = irdata;
+  delay(100);
+}

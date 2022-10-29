@@ -1,0 +1,68 @@
+/*
+ * 예제 118-3
+ * 아두이노에 버튼을 D2에 연결한다음 버튼을 누르면 로또 번호가 5세트 나오도록 해라!
+ * 중복없이 1~45범위의 숫자를 6개 뽑으면 1000원어치!
+ * 5000원어치가 되도록 출력하시오!
+ */
+#include "Adafruit_Thermal.h"
+#include "SoftwareSerial.h"
+#define TX_PIN 6
+#define RX_PIN 5 
+#define button1 2
+SoftwareSerial mySerial(RX_PIN, TX_PIN); 
+Adafruit_Thermal printer(&mySerial);     
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(7, OUTPUT); digitalWrite(7, LOW);
+  pinMode(button1,INPUT_PULLUP);
+  Serial.begin(9600); //PC와 아두이노간통신
+  mySerial.begin(9600); //아두이노와 프린터간 통신
+  printer.begin();
+  randomSeed(analogRead(0));
+}
+
+byte lotto[6] = {0};
+byte count = 0;
+bool pre_button_state = HIGH;
+void loop() {
+  // put your main code here, to run repeatedly:
+  //버튼이 눌려졌다
+  bool now_button_state = digitalRead(button1);
+  if(pre_button_state == HIGH && now_button_state == LOW){
+    //버튼1이 눌려진것
+    //로또번호 추출
+    printer.setSize('M');
+    printer.println("NOCKANDA LOTTO!");
+    printer.println("SUBSCRIBE!!");
+    for(int j =0;j<5;j++){  
+      for(int i = 0;i<6;){
+        byte randNumber = random(1, 46); //1~45
+        if(lotto[i] == randNumber){
+          //중복된 숫자를 초이스
+          //아무일도 하지 않고 턴을 넘긴다
+        }else{
+          //중복이 안된것
+          lotto[i] = randNumber;
+          i++;
+        }
+      }
+      Serial.print(j);
+      Serial.println("번째 로또 번호");
+      String text = "";
+      for(int i = 0;i<6;i++){
+        text += String(lotto[i]) + " ";
+        //Serial.print(lotto[i]);
+        //Serial.print(",");
+      }
+      Serial.println(text);
+      
+      printer.println(text);
+      //Serial.println();
+    }
+    //영수증 여분
+    printer.feed(2);
+  }
+
+  pre_button_state = now_button_state;
+}

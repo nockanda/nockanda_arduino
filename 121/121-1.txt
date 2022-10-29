@@ -1,0 +1,57 @@
+/*
+ * 예제121-1 LED 2개 예제
+ * 녹색 LED를 D3에 연결하고 빨간색 LED를 D4에 연결하시오
+ * 온도센서의 온도값이 27도를 넘어가면 빨간 LED를 켜고
+ * 27도 이하면 녹색 LED를 켜도록 하시오!
+ * 온도센서는 D2에 연결하시오!
+ */
+
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+#define ONE_WIRE_BUS 2
+#define greenled 3
+#define rednled 4
+#define TEMPERATURE_PRECISION 12
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+DeviceAddress tempDeviceAddress;
+void setup(void)
+{
+  Serial.begin(9600);
+  Serial.println("Dallas Temperature IC Control Library Demo");
+  pinMode(greenled, OUTPUT);
+  pinMode(rednled, OUTPUT);
+  sensors.begin();
+  sensors.getAddress(tempDeviceAddress, 0);
+  sensors.setResolution(tempDeviceAddress, TEMPERATURE_PRECISION);
+}
+void loop(void)
+{ 
+  
+  Serial.print("Requesting temperatures...");
+  sensors.requestTemperatures(); 
+  Serial.println("DONE");
+  
+  float tempC = sensors.getTempCByIndex(0);
+
+  if(tempC != DEVICE_DISCONNECTED_C) 
+  {
+    Serial.print("Temperature for the device 1 (index 0) is: ");
+    Serial.println(tempC);
+    if(tempC > 27){
+      //빨간 LED
+      digitalWrite(rednled,HIGH);
+      digitalWrite(greenled,LOW);
+    }else{
+      //녹색 LED
+      digitalWrite(rednled,LOW);
+      digitalWrite(greenled,HIGH);
+    }
+  } 
+  else
+  {
+    Serial.println("Error: Could not read temperature data");
+  }
+}

@@ -1,0 +1,81 @@
+/*
+ * 예제126-2-3 (슬레이브2코드)
+ * Request*Response 기능을 강화하기 위한 V2코드
+ * 마스터가 슬레이브들에게 패킷을 전송한다음 수신할때 까지 기다린다.
+ * 일정시간동안 슬레이브가 동작하지 않을경우 오프라인으로 처리한다.
+ * 슬레이브에 각각 스탭모터가 1개씩 장착된다.
+ * 스탭모터가 2048스탭.. 32스탭만큼씩 64회 이동하면 360도다!
+ * (8바이트데이터 예시) 
+ * 0x00(양의방향) 스탭값1 스탭값2 0x00 0x00 0x00 0x00 0x00
+ * 0x01(음의방향) 스탭값1 스탭값2 0x00 0x00 0x00 0x00 0x00
+ * 스탭모터는 IN1(D8),IN2(D9),IN3(D10),IN4(D11)
+ */
+
+#include <SoftwareSerial.h>
+#include <Stepper.h>
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+SoftwareSerial rs485(2, 3); // RX, TX
+const int stepsPerRevolution = 2048;
+                                   //IN4 IN2 IN3 IN1
+Stepper myStepper(stepsPerRevolution, 11, 9, 10, 8);
+
+void setup() {
+  // put your setup code here, to run once:
+  myStepper.setSpeed(10);
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(rs485.available()){
+    //485모듈로 들어오는 값이 존재한다면
+    byte recv[10];
+    rs485.readBytes(recv,10);
+    if(recv[0] != slave2) return; //쌩~
+    //recv[0] : ID , recv[1] : command ID
+    //recv[2] : 부호 , recv[3] : 스탭모터값1, recv[4] : 스탭모터값2
+    unsigned int value1 = recv[3] * 256 + recv[4];
+    if(recv[2] == 0x00){
+      //양의방향으로 회전
+      myStepper.step(value1);
+      delay(100);
+    }else{
+      //음의방향으로 회전
+      myStepper.step(-value1);
+      delay(100);
+    }
+
+    
+    for(int i =0;i<10;i++){
+      Serial.print(recv[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println(); 
+
+    
+    byte data[10];
+    data[0] = recv[0];
+    data[1] = recv[1];
+    //응답데이터
+    data[2] = 'O';
+    data[3] = 'K';
+    for(int i =4;i<10;i++){
+      data[i] = 0x00;
+    }
+    for(int i =0;i<10;i++){
+      Serial.print(data[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println(); 
+    digitalWrite(modepin,sendmode);
+    rs485.write(data,10);
+    digitalWrite(modepin,readmode);
+  }
+}

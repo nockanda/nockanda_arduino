@@ -1,0 +1,89 @@
+/*
+ * 예제116-2-1 (마스터코드)
+ * 마스터는 중계역할만 한다
+ * 슬레이브1에 근접센서/충격센서가 장착되어있는데 감지되면 신호를 날려온다
+ * 이때 감지된 신호가 입력되었을때 슬레이브1의 LED를 켜거나 끄도록 해보자
+ * (예시) 총10바이트인데 첫번째 바이트는 id고 두번째 바이트는 작업의종류
+ * (예시) [슬레이브id] [명령의종류] [LED state] [나머지6바이트는 0x00]
+ * (예시) 명령의 종류는 0x01이 LED제어명령이다
+ * (예시) 명령의 종류는 0x02는 충격/근접센서 명령이다
+ * (예시) LED state 0x00=LED OFF, 0x01=LED ON
+ * (예시) 충격/근접센서 0x01=감지됨
+ */
+
+#include <SoftwareSerial.h>
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define ledcontrol 0x01
+#define sensorread 0x02
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+#define s1button 4
+#define s2button 5
+SoftwareSerial rs485(2, 3); // RX, TX
+
+bool s1button_state = HIGH;
+bool s2button_state = HIGH;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  pinMode(s1button,INPUT_PULLUP);
+  pinMode(s2button,INPUT_PULLUP);
+  digitalWrite(modepin,readmode); //수신모드
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(rs485.available()){
+    //슬레이브1에서 뭔가 날린값이 있다면~
+    byte recv[10];
+    rs485.readBytes(recv,10);
+    if(recv[0] == slave1 && recv[1] == sensorread){
+      //슬레이브2에게 LED 제어명령을 내리겠다
+      Serial.println("제어신호를 보내자");
+      rs485send(slave2,ledcontrol,HIGH);
+    }
+  }
+}
+
+void rs485send(byte id,byte order, byte led){
+  byte data[10];
+  data[0] = id;
+  data[1] = order;
+  data[2] = led;
+  for(int i =3;i<10;i++){
+    data[i] = 0x00;
+  }
+  //단순 테스트 출력문
+  Serial.print("(마스터)송신데이터=");
+  for(int i = 0;i<10;i++){
+    Serial.print(data[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+  
+  digitalWrite(modepin,sendmode);
+  rs485.write(data,10);
+  digitalWrite(modepin,readmode);
+
+  //슬레이브1에게 받는부분(response)
+  byte recv[10] = {0};
+  rs485.readBytes(recv,10);
+
+  Serial.print("(마스터)수신데이터=");
+  for(int i =0;i<10;i++){
+    if(i==2 || i==3){
+      Serial.print((char)recv[i]);
+    }else{
+      Serial.print(recv[i],HEX);
+    }
+    Serial.print(",");
+  }
+  Serial.println();
+}

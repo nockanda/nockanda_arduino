@@ -1,0 +1,93 @@
+/*
+ * 예제112-2-1 (마스터코드)
+ * 마스터가 슬레이브1과 슬레이브2에 각각 아래와 같은 패킷을 전송한다
+ * 0x00 0x02 0x05 0x06 0x00 0x00 0x00 0x00 0x00 0x00 
+ * → ID가 0x00인 아두이노야 0x05와 0x06를 더한값을 회신해라
+ * 0x01 0x03 0x07 0x08 0x00 0x00 0x00 0x00 0x00 0x00 
+ * → ID가 0x01인 아두이노야 0x07과 0x08중 더 큰값을 회신해라
+ */
+
+#include <SoftwareSerial.h>
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+SoftwareSerial rs485(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  //슬레이브1에게 보내는 부분(request)
+  byte data[10] = {0};
+  data[0] = slave1;
+  data[1] = 0x02; //커맨드
+  data[2] = 0x05; //데이터1
+  data[3] = 0x06; //데이터2
+  
+  Serial.print("(마스터)송신데이터=");
+  for(int i = 0;i<10;i++){
+    Serial.print(data[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+  
+  digitalWrite(modepin,sendmode);
+  rs485.write(data,10);
+  digitalWrite(modepin,readmode);
+
+  //슬레이브1에게 받는부분(response)
+  byte recv[10] = {0};
+  rs485.readBytes(recv,10);
+
+  Serial.print("(마스터)수신데이터=");
+  for(int i =0;i<10;i++){
+    Serial.print(recv[i],HEX);
+    Serial.print(",");
+  }
+  Serial.println();
+  
+  delay(5000);
+
+  //data 초기화
+  for(int i =0;i<10;i++){
+    data[i] = 0;
+    recv[i] = 0;
+  }
+  //슬레이브2에게 보내는 부분(request)
+  data[0] = slave2;
+  data[1] = 0x03;
+  data[2] = 0x07;
+  data[3] = 0x08;
+  Serial.print("(마스터)송신데이터=");
+  for(int i = 0;i<10;i++){
+    Serial.print(data[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+  
+  digitalWrite(modepin,sendmode);
+  rs485.write(data,10);
+  digitalWrite(modepin,readmode);
+
+  //슬레이브2에게 받는부분(response)
+  rs485.readBytes(recv,10);
+
+  Serial.print("(마스터)수신데이터=");
+  for(int i =0;i<10;i++){ 
+    Serial.print(recv[i],HEX);
+    Serial.print(",");
+  }
+  Serial.println();
+  
+  delay(5000);
+}

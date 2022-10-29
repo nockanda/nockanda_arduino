@@ -1,0 +1,77 @@
+/*
+ * 예제 114
+ * *시나리오*
+버튼1을 누르면 랜덤한 주파수A의 비프음이 재생된다
+버튼2를 누르면 가변저항 값을 읽어서 주파수 B의 비프음이 재생된다
+가변저항을 돌려서 주파수A와 주파수B의 음이 비슷하도록 유저가 맞춘다
+버튼3을 누르면 LED 3개의 결과가 출력된다.
+LED는 적색 녹색 적색 순서이고 일정한 범위로 일치하면 녹색 LED 들어오고,
+높거나 낮으면 적색 LED가 켜진다!
+ */
+#define resistor A0
+#define buzzer 9
+#define NOTE_C5  523
+#define NOTE_C8  4186
+#define button1 5 //랜덤값 뽑기버튼
+#define button2 6 //게임시작버튼
+#define button3 7 //확인버튼
+#define lowled 2
+#define matchled 3
+#define highled 4
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 시리얼 통신 할거야~ 누구랑? PC랑
+  randomSeed(analogRead(0));
+  pinMode(lowled,OUTPUT);
+  pinMode(matchled,OUTPUT);
+  pinMode(highled,OUTPUT);
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+  pinMode(button3,INPUT_PULLUP);
+}
+long randnum = 0;
+long value = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  Serial.println(randnum);
+  if(digitalRead(button1) ==LOW){
+    //버튼1이 눌려졌다면~
+    //랜덤값 추출
+    randnum = random(NOTE_C5, NOTE_C8);
+    //부저음 재생
+    tone(buzzer, randnum, 3000);
+    //3초간 유지
+    delay(3000);
+    //부저음 해제
+    noTone(buzzer);
+  }
+  if(digitalRead(button2) == LOW){
+    //버튼2가 눌려졌다면~
+    value = analogRead(resistor);
+    value = map(value, 0, 1023, NOTE_C5, NOTE_C8);
+    tone(buzzer, value, 10);
+  }
+  if(digitalRead(button3) == LOW){
+    //버튼3이 눌려졌다면~(비슷하다~~)
+    //+-3범위안에 들어오면 정답!
+    int point = value - randnum;
+    if(point <= 10 && point >= -10){
+      //match(matchled)
+      digitalWrite(matchled,HIGH);
+      digitalWrite(highled,LOW);
+      digitalWrite(lowled,LOW);
+    }else if(point > 10){
+      //이상(highled)
+      digitalWrite(matchled,LOW);
+      digitalWrite(highled,HIGH);
+      digitalWrite(lowled,LOW);
+    }else if(point < -10){
+      //이하(lowled)
+      digitalWrite(matchled,LOW);
+      digitalWrite(highled,LOW);
+      digitalWrite(lowled,HIGH);
+    }
+  }
+}

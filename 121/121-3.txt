@@ -1,0 +1,77 @@
+/*
+ * 예제121-3 
+ * 121-1번 예제에 추가함
+ * 0.91인치 OLED 디스플레이를 연결해서 온도를 표시되도록 하시오!
+ * OLED 디스플레이는 i2c통신을 하므로 i2c 전용핀에 연결하도록 하시오!
+ * SDA(A4) SCL(A5)
+ */
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 32
+#define OLED_RESET     4
+#define ONE_WIRE_BUS 2
+#define greenled 3
+#define rednled 4
+#define TEMPERATURE_PRECISION 12
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+DeviceAddress tempDeviceAddress;
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+void setup(void)
+{
+  Serial.begin(9600);
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+  display.display();
+  delay(2000);
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  
+  Serial.println("Dallas Temperature IC Control Library Demo");
+  pinMode(greenled, OUTPUT);
+  pinMode(rednled, OUTPUT);
+  sensors.begin();
+  sensors.getAddress(tempDeviceAddress, 0);
+  sensors.setResolution(tempDeviceAddress, TEMPERATURE_PRECISION);
+}
+void loop(void)
+{ 
+  
+  Serial.print("Requesting temperatures...");
+  sensors.requestTemperatures(); 
+  Serial.println("DONE");
+  
+  float tempC = sensors.getTempCByIndex(0);
+
+  if(tempC != DEVICE_DISCONNECTED_C) 
+  {
+    Serial.print("Temperature for the device 1 (index 0) is: ");
+    Serial.println(tempC);
+    display.clearDisplay();
+    display.setCursor(0,0);             // Start at top-left corner
+    display.println(tempC);
+    display.display();
+    if(tempC > 27){
+      //빨간 LED
+      digitalWrite(rednled,HIGH);
+      digitalWrite(greenled,LOW);
+    }else{
+      //녹색 LED
+      digitalWrite(rednled,LOW);
+      digitalWrite(greenled,HIGH);
+    }
+  } 
+  else
+  {
+    Serial.println("Error: Could not read temperature data");
+  }
+}

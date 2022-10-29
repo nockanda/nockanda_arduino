@@ -1,0 +1,105 @@
+/*
+ * 예제113-2-1 (마스터코드)
+ * 추가로 job2와 job3도 응용해보자!
+ */
+
+#include <SPI.h>
+#include <mcp2515.h>
+
+#define slave1 0x0F6
+#define slave2 0x036
+
+#define job1 0x00 //생존확인용 job
+#define job2 0x01 //2개 정수의 데이터의 합을 회신해라
+#define job3 0x02 //2개 정수중의 최대값일 회신해라
+
+struct can_frame canMsg;
+struct can_frame canMsg1;
+struct can_frame canMsg2;
+MCP2515 mcp2515(10);
+
+
+void setup() {
+  canMsg1.can_id  = 0x0F6; //슬레이브1의 ID
+  canMsg1.can_dlc = 8;
+  canMsg1.data[0] = job2;
+  canMsg1.data[1] = 0x05;
+  canMsg1.data[2] = 0x06;
+  canMsg1.data[3] = 0x00;
+  canMsg1.data[4] = 0x00;
+  canMsg1.data[5] = 0x00;
+  canMsg1.data[6] = 0x00;
+  canMsg1.data[7] = 0x00;
+
+  canMsg2.can_id  = 0x036; //슬레이브2의 ID
+  canMsg2.can_dlc = 8;
+  canMsg2.data[0] = job3;
+  canMsg2.data[1] = 0x07;
+  canMsg2.data[2] = 0x08;
+  canMsg2.data[3] = 0x00;
+  canMsg2.data[4] = 0x00;
+  canMsg2.data[5] = 0x00;
+  canMsg2.data[6] = 0x00;
+  canMsg2.data[7] = 0x00;
+  
+  Serial.begin(9600);
+  
+  mcp2515.reset();
+  mcp2515.setBitrate(CAN_125KBPS);
+  mcp2515.setNormalMode();
+  
+  Serial.println("Example: Write to CAN");
+}
+
+void loop() {
+  //Request slave1
+  mcp2515.sendMessage(&canMsg1);
+  Serial.println("[마스터에서 슬레이브1로 보낸 메시지]");
+  for (int i = 0; i<canMsg1.can_dlc; i++)  {  // print the data
+      Serial.print(canMsg1.data[i],HEX);
+      Serial.print(" ");
+  }
+  Serial.println();
+  //Response
+  if (mcp2515.readMessage(&canMsg) == MCP2515::ERROR_OK) {
+    Serial.println("[슬레이브1의 응답데이터]");
+    //Serial.print(canMsg.can_id, HEX); // print ID
+    //Serial.print(" "); 
+    //Serial.print(canMsg.can_dlc, HEX); // print DLC
+    //Serial.print(" ");
+    
+    for (int i = 0; i<canMsg.can_dlc; i++)  {  // print the data
+      Serial.print(canMsg.data[i],HEX);
+      Serial.print(" ");
+    }
+
+    Serial.println();
+  }
+  //Request slave1
+  mcp2515.sendMessage(&canMsg2);
+  Serial.println("[마스터에서 슬레이브2로 보낸 메시지]");
+  for (int i = 0; i<canMsg2.can_dlc; i++)  {  // print the data
+      Serial.print(canMsg2.data[i],HEX);
+      Serial.print(" ");
+  }
+  Serial.println();
+  //Response
+  if (mcp2515.readMessage(&canMsg) == MCP2515::ERROR_OK) {
+    Serial.println("[슬레이브2의 응답데이터]");
+    //Serial.print(canMsg.can_id, HEX); // print ID
+    //Serial.print(" "); 
+    //Serial.print(canMsg.can_dlc, HEX); // print DLC
+    //Serial.print(" ");
+    
+    for (int i = 0; i<canMsg.can_dlc; i++)  {  // print the data
+      Serial.print(canMsg.data[i],HEX);
+      Serial.print(" ");
+    }
+
+    Serial.println();
+  }
+  Serial.println("Messages sent");
+  
+  
+  delay(10000);
+}
