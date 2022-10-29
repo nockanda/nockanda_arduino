@@ -1,0 +1,47 @@
+#include <EEPROM.h>
+
+union{
+  float f;
+  byte b[4];
+}myunion;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  Serial.println("프로그램 시이이이이작!");
+  
+  float num = 500;
+  byte num2 = true;
+  //EEPROM에 저장~
+  myunion.f = num;
+  EEPROM.begin(512);
+  EEPROM.write(0, myunion.b[0]); //1byte
+  EEPROM.write(1, myunion.b[1]); //1byte
+  EEPROM.write(2, myunion.b[2]); //1byte
+  EEPROM.write(3, myunion.b[3]); //1byte
+  EEPROM.write(4, num2); //1byte
+  EEPROM.end();
+
+  myunion.b[0] = 0;
+  myunion.b[1] = 0;
+  myunion.b[2] = 0;
+  myunion.b[3] = 0;
+  num2 = 0;
+
+  //꺼내오기
+  EEPROM.begin(512);
+  myunion.b[0] = EEPROM.read(0);
+  myunion.b[1] = EEPROM.read(1);
+  myunion.b[2] = EEPROM.read(2);
+  myunion.b[3] = EEPROM.read(3);
+  int num3 = EEPROM.read(4);
+  EEPROM.end();
+
+  Serial.println(myunion.f);
+  Serial.println(num3);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}

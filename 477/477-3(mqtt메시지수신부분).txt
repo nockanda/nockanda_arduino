@@ -1,0 +1,5 @@
+service: input_text.set_value
+data:
+  value: '{{ trigger.payload }}'
+target:
+  entity_id: input_text.mqtt_msg

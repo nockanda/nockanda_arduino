@@ -1,0 +1,151 @@
+#include <Arduino.h>
+#include <IRremoteESP8266.h>
+#include <IRrecv.h>
+#include <IRsend.h>
+#include <IRutils.h>
+#include <EEPROM.h>
+
+#define led1 D4
+#define led2 D5
+
+uint64_t led1_control = 0;
+uint64_t led2_control = 0;
+
+const uint16_t kRecvPin = D3;
+const uint16_t kIrLed = D6;
+
+IRsend irsend(kIrLed); 
+IRrecv irrecv(kRecvPin);
+
+decode_results results;
+
+union{
+  uint64_t a;
+  byte b[8];
+}myunion;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  irsend.begin();
+  irrecv.enableIRIn();  // Start the receiver
+  while (!Serial)  // Wait for the serial connection to be establised.
+    delay(50);
+  Serial.println();
+  Serial.print("IRrecvDemo is now running and waiting for IR message on Pin ");
+  Serial.println(kRecvPin);
+
+  //이전에 학습해놓은 데이터를 불러온다
+  EEPROM.begin(512);
+  myunion.b[0] = EEPROM.read(0);
+  myunion.b[1] = EEPROM.read(1);
+  myunion.b[2] = EEPROM.read(2);
+  myunion.b[3] = EEPROM.read(3);
+  myunion.b[4] = EEPROM.read(4);
+  myunion.b[5] = EEPROM.read(5);
+  myunion.b[6] = EEPROM.read(6);
+  myunion.b[7] = EEPROM.read(7);
+  led1_control = myunion.a;
+  myunion.b[0] = EEPROM.read(8);
+  myunion.b[1] = EEPROM.read(9);
+  myunion.b[2] = EEPROM.read(10);
+  myunion.b[3] = EEPROM.read(11);
+  myunion.b[4] = EEPROM.read(12);
+  myunion.b[5] = EEPROM.read(13);
+  myunion.b[6] = EEPROM.read(14);
+  myunion.b[7] = EEPROM.read(15);
+  led2_control = myunion.a;
+  EEPROM.end();
+}
+
+void loop() {
+  if(Serial.available()){
+    char c = Serial.read();
+    if(c == '0'){
+      /*
+      mode = 1;
+      Serial.println("학습모드 시이이이작!");
+      */
+      Serial.println("학습로직이 시작되었습니다!");
+      Serial.println("1번 LED를 제어하는 리모컨 키를 입력해주세요!");
+      while(true){
+        if(irrecv.decode(&results)){
+          if((results.value & 0xFF00000000000000) != 0xFF00000000000000){
+             led1_control = results.value;
+              Serial.print("1번학습=");
+              serialPrintUint64(results.value, HEX);
+              irrecv.resume();
+              break;  
+          }
+          irrecv.resume();
+        }
+        delay(100);
+      }
+      //delay(1000);
+      Serial.println("2번 LED를 제어하는 리모컨 키를 입력해주세요!");
+      while(true){
+        if(irrecv.decode(&results)){
+          if((results.value & 0xFF00000000000000) != 0xFF00000000000000){
+             led2_control = results.value;
+              Serial.print("2번학습=");
+              serialPrintUint64(results.value, HEX);
+              irrecv.resume();
+              break;  
+          }
+          irrecv.resume();
+        }
+        delay(100);
+      }
+      Serial.println("학습이 종료되었습니다!");
+      //학습된 결과를 EEPROM에 기록한다
+      EEPROM.begin(512);
+      myunion.a = led1_control;
+      EEPROM.write(0,myunion.b[0]);
+      EEPROM.write(1,myunion.b[1]);
+      EEPROM.write(2,myunion.b[2]);
+      EEPROM.write(3,myunion.b[3]);
+      EEPROM.write(4,myunion.b[4]);
+      EEPROM.write(5,myunion.b[5]);
+      EEPROM.write(6,myunion.b[6]);
+      EEPROM.write(7,myunion.b[7]);
+      myunion.a = led2_control;
+      EEPROM.write(8,myunion.b[0]);
+      EEPROM.write(9,myunion.b[1]);
+      EEPROM.write(10,myunion.b[2]);
+      EEPROM.write(11,myunion.b[3]);
+      EEPROM.write(12,myunion.b[4]);
+      EEPROM.write(13,myunion.b[5]);
+      EEPROM.write(14,myunion.b[6]);
+      EEPROM.write(15,myunion.b[7]);
+      EEPROM.end();
+    }else if(c == '1'){
+      //1번 버튼 신호를 송신
+      irsend.sendNEC(led1_control);
+    }else if(c == '2'){
+      //2번 버튼 신호를 송신
+      irsend.sendNEC(led2_control);
+    }
+  }
+
+  if (irrecv.decode(&results)) {
+    // print() & println() can't handle printing long longs. (uint64_t)
+
+    //내가 원하는 리모컨 신호는 하위 4바이트만 차지하는 신호인데 그 이상의 신호는 무시한다!
+    if( (results.value & 0xFF00000000000000) != 0xFF00000000000000){
+      
+      serialPrintUint64(results.value, HEX);
+      Serial.println("");
+      if(results.value == led1_control){
+        Serial.println("1번 눌렀다!");
+        digitalWrite(led1,!digitalRead(led1));
+      }else if(results.value == led2_control){
+        Serial.println("2번 눌렀다!");
+        digitalWrite(led2,!digitalRead(led2));
+      }
+    }
+    irrecv.resume();  // Receive the next value
+  }
+  delay(100);
+  
+}

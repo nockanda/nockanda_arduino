@@ -1,0 +1,29 @@
+float cds_avg = 0;
+
+int t1 = 565;
+int t2 = 477;
+int t3 = 235;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  for(int i = 0;i<20;i++){
+    cds_avg += analogRead(A0);
+  }
+  cds_avg = cds_avg / 20;
+  if(cds_avg > t1){
+    Serial.println("빨강색!");
+  }else if(cds_avg > t2){
+    Serial.println("초록색!");
+  }else if(cds_avg > t3){
+    Serial.println("파란색!");
+  }else{
+    Serial.println("꺼짐!!");
+  }
+  Serial.println(cds_avg);
+  delay(100);
+}

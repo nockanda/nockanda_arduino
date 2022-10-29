@@ -1,0 +1,89 @@
+float cds_avg = 0;
+
+float t1 = 565;
+float t2 = 477;
+float t3 = 235;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    char c = Serial.read();
+    //러닝모드!
+    //R,B,G
+    
+    Serial.println("러닝모드 시이이이작!");
+    Serial.println("아무것도 손대지 마시오!");
+    delay(2000);
+    float n = 0;
+    for(int i =0;i<20;i++){
+      n += analogRead(A0);
+    }
+    n = n/20;
+    delay(1000);
+    Serial.println(n);
+    Serial.println("지금부터 내가 끝이라고 할때까지 빨간 LED를 눌러주세요!");
+    delay(2000);
+    float r = 0;
+    for(int i =0;i<20;i++){
+      r += analogRead(A0);
+    }
+    r = r/20;
+    Serial.println("끝!");
+    delay(1000);
+    Serial.println(r);
+    Serial.println("지금부터 내가 끝이라고 할때까지 녹색 LED를 눌러주세요!");
+    delay(2000);
+    float g = 0;
+    for(int i =0;i<20;i++){
+      g += analogRead(A0);
+    }
+    g = g/20;
+    Serial.println("끝!");
+    delay(1000);
+    Serial.println(g);
+    Serial.println("지금부터 내가 끝이라고 할때까지 파란색 LED를 눌러주세요!");
+    delay(2000);
+    float b = 0;
+    for(int i =0;i<20;i++){
+      b += analogRead(A0);
+    }
+    b = b/20;
+    Serial.println("끝!");
+    delay(1000);
+    Serial.println(b);
+    Serial.println("측정이 완료되었습니다!");
+
+    t1 = (r+g)/2;
+    t2 = (g+b)/2;
+    t3 = (b+n)/2;
+    Serial.print("t1 = ");
+    Serial.println(t1);
+    Serial.print("t2 = ");
+    Serial.println(t2);
+    Serial.print("t3 = ");
+    Serial.println(t3);
+  }
+ 
+  
+  for(int i = 0;i<20;i++){
+    cds_avg += analogRead(A0);
+  }
+  cds_avg = cds_avg / 20;
+  if(cds_avg > t1){
+    Serial.println("빨강색!");
+  }else if(cds_avg > t2){
+    Serial.println("초록색!");
+  }else if(cds_avg > t3){
+    Serial.println("파란색!");
+  }else{
+    Serial.println("꺼짐!!");
+  }
+  Serial.println(cds_avg);
+  delay(100);
+  
+}

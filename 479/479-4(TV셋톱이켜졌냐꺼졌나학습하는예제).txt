@@ -1,0 +1,70 @@
+float cds_avg = 0;
+
+//켜짐, 꺼짐
+float t1 = 200;
+bool on_first = true; //이값이 true면 켜짐일때의 값이 더 높다
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    char c = Serial.read();
+    Serial.println("꺼짐상태일때를 측정하겠습니다!");
+    delay(2000);
+    float off_state = 0;
+    for(int i = 0;i<100;i++){
+      off_state += analogRead(A0);
+    }
+    off_state /= 100;
+    Serial.println("끝");
+    delay(1000);
+    Serial.println("켜짐상태일때를 측정하겠습니다!");
+    delay(2000);
+    float on_state = 0;
+    for(int i = 0;i<100;i++){
+      on_state += analogRead(A0);
+    }
+    on_state /= 100;
+    Serial.println("끝");
+    delay(1000);
+    Serial.print("off=");
+    Serial.println(off_state);
+    Serial.print("on=");
+    Serial.println(on_state);
+
+    t1 = (on_state + off_state)/2;
+    if(on_state > off_state){
+      on_first = true;
+    }else{
+      on_first = false;
+    }
+  }
+  ///////////////
+
+  float cds = 0;
+  for(int i = 0;i<20;i++){
+    cds += analogRead(A0);
+  }
+  cds /= 20;
+  
+  if(on_first){
+    //기준값보다 높을때 ON
+    if(cds > t1){
+      Serial.println("켜짐(ON)!");
+    }else{
+      Serial.println("꺼짐(OFF)!");
+    }
+  }else{
+    //기준값보다 낮은게 ON
+    if(cds > t1){
+      Serial.println("꺼짐!(OFF)");
+    }else{
+      Serial.println("켜짐!(ON)");
+    }
+  }
+  delay(100);
+}

@@ -1,0 +1,4 @@
+service: mqtt.publish
+data:
+  topic: nockanda/esp8266
+  payload: '{{ states(''input_number.mynumber'') }}'

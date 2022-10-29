@@ -1,0 +1,25 @@
+#include <Arduino.h>
+#include <IRremoteESP8266.h>
+#include <IRsend.h>
+
+const uint16_t kIrLed = D3;
+
+IRsend irsend(kIrLed); 
+
+void setup() {
+  irsend.begin();
+  Serial.begin(115200);
+}
+
+
+void loop() {
+  if(Serial.available()){
+    char c = Serial.read();
+    if(c == '1'){
+      irsend.sendNEC(0x9CA8C03F);
+    }else if(c == '2'){
+      irsend.sendNEC(0x9CA820DF);
+    }
+  }
+  
+}
