@@ -1,0 +1,146 @@
+/*
+ * 예제96-1
+ * 8*32 도트메트릭스(MAX7219)를 연결해서
+ * DS1302의 날짜와 시간정보를 효과적으로
+ * 디스플레이 해보도록 하자!
+ */
+// CONNECTIONS:
+// DS1302 CLK/SCLK --> 2
+// DS1302 DAT/IO --> 3
+// DS1302 RST/CE --> 4
+// DS1302 VCC --> 5v
+// DS1302 GND --> GND
+
+#include <ThreeWire.h>  
+#include <RtcDS1302.h>
+#include "LedControl.h"
+LedControl lc=LedControl(12,11,10,4);//DIN,CLK,CS,디바이스갯수
+ThreeWire myWire(3,2,4); // IO, SCLK, CE
+RtcDS1302<ThreeWire> Rtc(myWire);
+
+byte nockanda_number[10][8]=
+{
+{B00011000,B00111100,B01100110,B01100110,B01100110,B01100110,B00111100,B00011000},//0
+{B00011000,B00111000,B01111000,B00011000,B00011000,B00011000,B00011000,B01111110}, //1
+{B00111100,B01111110,B01000110,B00001100,B00011000,B00110000,B01100000,B01111110}, //2
+{B00111100,B01111110,B01100110,B00001110,B00001100,B01000110,B01111110,B00111100}, //3
+{B00010000,B00100000,B01001000,B01001000,B01111110,B00001000,B00001000,B00001000}, //4
+{B01111110,B01100000,B01100000,B00111100,B00000110,B00000110,B01111110,B01111110}, //5
+{B00011100,B00110000,B01100000,B01111110,B01111110,B01000010,B01111110,B00111100}, //6
+{B00111100,B01111110,B01000110,B00000110,B00001100,B00011000,B00110000,B00100000}, //7
+{B00111100,B01000010,B01000010,B01111110,B00111100,B01000010,B01000010,B00111100}, //8
+{B00111100,B01111110,B01000010,B01111110,B00111110,B00000010,B00000010,B00111100} //9
+};
+
+void setup() {
+  // put your setup code here, to run once:
+  //예외처리+시간업데이트
+  Serial.begin(9600);
+
+    Serial.print("compiled: ");
+    Serial.print(__DATE__);
+    Serial.println(__TIME__);
+
+    Rtc.Begin();
+
+    RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
+    //printDateTime(compiled);
+    Serial.println();
+
+    if (!Rtc.IsDateTimeValid()) 
+    {
+        // Common Causes:
+        //    1) first time you ran and the device wasn't running yet
+        //    2) the battery on the device is low or even missing
+
+        Serial.println("RTC lost confidence in the DateTime!");
+        Rtc.SetDateTime(compiled);
+    }
+
+    if (Rtc.GetIsWriteProtected())
+    {
+        Serial.println("RTC was write protected, enabling writing now");
+        Rtc.SetIsWriteProtected(false);
+    }
+
+    if (!Rtc.GetIsRunning())
+    {
+        Serial.println("RTC was not actively running, starting now");
+        Rtc.SetIsRunning(true);
+    }
+
+    RtcDateTime now = Rtc.GetDateTime();
+    if (now < compiled) 
+    {
+        Serial.println("RTC is older than compile time!  (Updating DateTime)");
+        Rtc.SetDateTime(compiled);
+    }
+    else if (now > compiled) 
+    {
+        Serial.println("RTC is newer than compile time. (this is expected)");
+    }
+    else if (now == compiled) 
+    {
+        Serial.println("RTC is the same as compile time! (not expected but all is fine)");
+    }
+  for(int i = 0;i<lc.getDeviceCount();i++){
+    lc.shutdown(i,false);
+    lc.setIntensity(i,8);
+    lc.clearDisplay(i);
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  RtcDateTime now = Rtc.GetDateTime();
+  Serial.println(now.Year());
+  Serial.println(now.Month());
+  Serial.println(now.Day());
+  Serial.println(now.Hour());
+  Serial.println(now.Minute());
+  Serial.println(now.Second());
+  //년도나오고
+  disp_dot(now.Year());
+  //1초쉬고
+  delay(1000);
+  //월일 나오고
+  disp_dot(now.Month()*100+now.Day());
+  //1초쉬고
+   delay(1000);
+  //시분 나오고
+  disp_dot(now.Hour()*100+now.Minute());
+  //1초쉬고
+   delay(1000);
+  //초나오고
+  disp_dot(now.Second());
+  //1초쉬고
+  delay(1000);
+  
+  if (!now.IsValid())
+    {
+        // Common Causes:
+        //    1) the battery on the device is low or even missing and the power line was disconnected
+        Serial.println("RTC lost confidence in the DateTime!");
+    }
+  //delay(4000);
+}
+
+
+void disp_dot(int temp){
+    //첫번째자리
+  for(int j=0;j<8;j++){
+      lc.setRow(3,j,nockanda_number[temp/1000][j]);
+  }
+  //두번째자리
+  for(int j=0;j<8;j++){
+    lc.setRow(2,j,nockanda_number[(temp%1000)/100][j]);
+  }
+  //세번째자리
+  for(int j=0;j<8;j++){
+    lc.setRow(1,j,nockanda_number[(temp%100)/10][j]);
+  }
+  //네번째자리
+  for(int j=0;j<8;j++){
+    lc.setRow(0,j,nockanda_number[temp%10][j]);
+  }
+}

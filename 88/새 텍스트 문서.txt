@@ -1,0 +1,23 @@
+[아두이노강의] 포로리야 공대가자 #88 2.4인치 TFT LCD 터치스크린쉴드/Spfd5408(8편)
+
+(LCD는 아두이노와 1:1로 연결)
+88-1.txt
+0.01MB
+
+
+(2.4인치 TFT LCD 터치스크린쉴드/Spfd5408(8편))
+지문 스캔 결과에 따라 컬러 이미지를 보여준다!
+지문입력하면 결과를 LCD로 표현해보기
+지문인식모듈FPM10A의 도움을 받는다.
+지문인식 결과는 LCD에 장착된 SD카드 슬롯에서
+내부 이미지를 불러와서 보여주는것으로 해보자!
+
+ 
+
+관련라이브러리(SPFD5408)
+
+https://github.com/JoaoLopesF/SPFD5408
+
+관련라이브러리(finger print)
+
+https://github.com/adafruit/Adafruit-Fingerprint-Sensor-Library

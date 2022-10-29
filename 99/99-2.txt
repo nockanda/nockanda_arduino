@@ -1,0 +1,44 @@
+/*
+ * (블루투스 모듈 HC06/8편 지문인식)
+ * 2.지문의 로컬DB 정보를 함께 날리기
+-지문을 찍으면 지문에 매칭된 data를 스마트폰에게 블루투스로 전송해보자!
+-로컬DB는 어렵게 구현할 필요없이 아두이노 변수로 활용하자!
+지문모듈의 TX핀 아두이노 D0
+지문모듈의 RX핀 아두이노 D1
+블루투스 TX핀 아두이노 D2
+블루투스 RX핀 아두이노 D3
+스마트폰은 적절히 블루투스 시리얼 모니터 검색후 설치(앱스토어)
+(지금은 입력해놓은 지문이 2개뿐이라 text도 2개인 상황)
+ */
+
+#include <Adafruit_Fingerprint.h>
+#include <SoftwareSerial.h>
+#define mySerial Serial
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+SoftwareSerial mybluetooth(2, 3);
+
+String text[] = {"딸기","바나나"};
+
+void setup() {
+  // put your setup code here, to run once:
+  finger.begin(57600);
+  mybluetooth.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK)  return;
+  
+  // found a match!
+  //mybluetooth.print("Found ID #"); mybluetooth.print(finger.fingerID); 
+  //mybluetooth.print(" with confidence of "); mybluetooth.println(finger.confidence); 
+  int finger_index = finger.fingerID-1;
+  mybluetooth.println(text[finger_index]);
+}

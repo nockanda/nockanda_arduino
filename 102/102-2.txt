@@ -1,0 +1,65 @@
+/*
+ * 예제 102-2
+ * 키패드(D13~D6)에서 4자리수를 입력하고 샵(#)버튼을 누르면 비밀번호가 설정된다
+ * 스마트폰에서 블루투스 모듈(D2,D3)을 통해 4자리 숫자를 전송한다
+ * 이때 비밀번호와 스마트폰에서 보낸 숫자가 일치한다면
+ * 아두이노에 연결된 LED(D4)가 토글되도록 해보시오!
+ */
+
+#include <Keypad.h>
+#include <SoftwareSerial.h>
+#define LED 4
+const byte ROWS = 4;
+const byte COLS = 4;
+char hexaKeys[ROWS][COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+
+byte rowPins[ROWS] = {13, 12, 11, 10};
+byte colPins[COLS] = {9, 8, 7, 6};
+
+SoftwareSerial mySerial(2, 3); // RX, TX
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+
+unsigned long number = 0;
+unsigned long pw = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  mySerial.begin(9600);
+  pinMode(LED,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(mySerial.available()){
+    //스마트폰에서 아두이노쪽으로 날린값이 존재한다면~
+    String recv = mySerial.readString();
+    int recv_num = recv.toInt();
+    if(pw == recv_num){
+      //패스워드가 일치하는 상황
+      digitalWrite(LED,HIGH);
+    }else{
+      //일치하지 않는 상황
+      digitalWrite(LED,LOW);
+    }
+  }
+  
+  char customKey = customKeypad.getKey();
+  
+  if (customKey >= '0' && customKey <= '9'){
+    //Serial.println((int)customKey-48);
+    number = number*10 + (int)customKey-48;
+    if(number /10000 > 0){
+      //만단위가 존재한다면~
+      number = number % 10000;
+    }
+  }else if(customKey == '#'){
+    //비밀번호 설정을 한다
+    pw = number;
+    Serial.println("패스워드가 설정되었습니다");
+  }
+}

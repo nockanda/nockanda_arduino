@@ -1,0 +1,63 @@
+/*
+ * 예제107-2-1 (마스터코드)
+ * 슬레이브2번에 가상의 센서가 장착되어있다(1채널)
+ * 센서의 값은 0~255의 값을 가진다
+ * 센서값을 마스터가 수신을 한다음에 0~128까지는 LED 0FF
+ * 129~255까지는 LED를 ON 시키는 신호로 활용을 해보자
+ * LED는 슬레이브 1번에 연결되어있다.
+ */
+
+#include <SoftwareSerial.h>
+#define LEDon 0x01
+#define LEDoff 0x00
+#define master 0x99
+#define slave1 0x00
+#define slave2 0x01
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+SoftwareSerial rs485(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  rs485.begin(9600);
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+}
+byte recv[2];
+byte senddata[2];
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(rs485.available()){
+    rs485.readBytes(recv, 2);
+    byte id = recv[0];
+    byte data = recv[1];
+    Serial.println(id);
+    Serial.println(data);
+    
+    if(id == master){
+      //마스터일 경우에 작동하겠다!
+      //data = 0~255
+      if(data >= 0 && data <= 128){
+        //LED OFF(슬레이브1)
+        digitalWrite(modepin,sendmode);
+        Serial.println("LED OFF");
+        //do something,,,
+        senddata[0] = slave1;
+        senddata[1] = LEDoff;
+        rs485.write(senddata,2);
+        digitalWrite(modepin,readmode);
+      }else if(data > 128 && data<=255){
+        //LED ON(슬레이브1)
+        digitalWrite(modepin,sendmode);
+        Serial.println("LED ON");
+        senddata[0] = slave1;
+        senddata[1] = LEDon;
+        rs485.write(senddata,2);
+        digitalWrite(modepin,readmode);
+      }
+    }
+    
+  }
+}

@@ -1,0 +1,24 @@
+[아두이노강의] 포로리야 공대가자 #89 SD카드 모듈과 RFID(RC522)를 동시에 써보자(SPI 1:2통신)
+
+(LCD 쉴드는 1:1로 아두이노와 연결)
+89-1.txt
+0.01MB
+no.bmp
+0.14MB
+ok.bmp
+0.14MB
+(SD카드 모듈과 RFID(RC522)를 동시에 써보자(SPI 1:2통신))
+아두이노에서 SD카드 모듈하고 RFID 모듈 같이 쓰기 힘들다던데요?
+SD카드모듈은 SPI통신으로 아두이노에 연결된다.
+RFID모듈도 SPI통신으로 아두이노에 연결된다.
+이것 2개를 동시에 아두이노에서 사용하는 방법에 대해서 연구해보자!
+
+ 
+
+관련라이브러리(SPFD5408)
+
+https://github.com/JoaoLopesF/SPFD5408
+
+필요라이브러리(RC522)
+
+https://github.com/miguelbalboa/rfid

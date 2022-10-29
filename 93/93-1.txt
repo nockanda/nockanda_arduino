@@ -1,0 +1,64 @@
+/*
+ * 예제93-1 스탭모터를 GUI앱으로 제어해보자!
+ * 스마트폰앱에서 아래와 같이 버튼과 문자가 맵핑되있음!
+ * 32씩 64번 움직이면 360도(=2048)다
+ * '→' = 'd' : +32스탭
+ * '←' = 'a' : -32스탭
+ * '↑' = 'w' : +32스탭 * 10
+ * '↓' = 's' : -32스탭 * 10
+ * '네모' = '1' : +1바퀴
+ * '세모' = '2' : +2바퀴
+ * '엑스' = '3' : -1바퀴
+ * '동그라미' = '4' : -2바퀴
+ * 'select' = 'n' 
+ * 'start' = 'm'
+ */
+#include <SoftwareSerial.h>
+#include <Stepper.h>
+const int stepsPerRevolution = 2048;
+SoftwareSerial mySerial(2, 3); // RX, TX
+                                  //IN4  2  3   1
+                                  //11   9 10   8  
+Stepper myStepper(stepsPerRevolution, 11, 9, 10, 8);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 시리얼통신
+  mySerial.begin(9600); //아두이노-블루투스간 시리얼통신
+  myStepper.setSpeed(10); //RPM
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(mySerial.available()>0){
+    //블루투스에 뭔가 수신값이 있다면~
+    char recv = mySerial.read();
+    
+    if(recv == 'w'){
+      //위쪽
+      myStepper.step(320);
+    }else if(recv == 's'){
+      //아래
+      myStepper.step(-320);
+    }else if(recv == 'a'){
+      //왼쪽
+      myStepper.step(32);
+    }else if(recv == 'd'){
+      //오른쪽
+      myStepper.step(-32);
+    }else if(recv == '1'){
+      //네모
+      myStepper.step(2048);
+    }else if(recv == '2'){
+      //세모
+      myStepper.step(2048*2);
+    }else if(recv == '3'){
+      //엑스
+      myStepper.step(-2048);
+    }else if(recv == '4'){
+      //동글뱅이
+      myStepper.step(-(2048*2));
+    }
+    //myStepper.step(stepsPerRevolution);
+  }
+}

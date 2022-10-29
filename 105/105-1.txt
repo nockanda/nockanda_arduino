@@ -1,0 +1,37 @@
+/**
+ *예제 105-1
+ *일정하게 샘플링해서 디지털저울(실제kg은 아님)의 값을 스마트폰으로 전송
+디지털저울을 HX711에 연결해서 아두이노로 값을 측정하고
+일정한 데이터 규격으로 블루투스 인터페이스로 스마트폰에 전송해보자
+블루투스는 D0과 D1에 연결해서 하드웨어 시리얼통신을 했다.
+ *
+**/
+#include "HX711.h"
+#include <SoftwareSerial.h>
+
+// HX711 circuit wiring
+const int LOADCELL_DOUT_PIN = 4;
+const int LOADCELL_SCK_PIN = 5;
+
+
+HX711 scale;
+
+void setup() {
+  Serial.begin(9600);
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+
+  scale.set_scale(2280.f);                      // this value is obtained by calibrating the scale with known weights; see the README for details
+  scale.tare();               // reset the scale to 0
+
+}
+
+void loop() {
+  Serial.print("one reading:\t");
+  Serial.print(scale.get_units(), 1);
+  Serial.print("\t| average:\t");
+  Serial.println(scale.get_units(10), 1);
+
+  scale.power_down();             // put the ADC in sleep mode
+  delay(5000);
+  scale.power_up();
+}

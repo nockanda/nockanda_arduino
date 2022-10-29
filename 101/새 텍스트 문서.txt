@@ -1,0 +1,25 @@
+[아두이노#101] 블루투스 모듈 HC06/10편 도트매트릭스/MAX7219(녹칸다/포로리야공대가자)
+
+(블루투스 모듈 HC06/10편 도트매트릭스)
+스마트폰에서 날린 4개의 숫자를 8*32 매트릭스로 표현
+스마트폰에 블루투스 조이스틱으로 dot 좌표이동해보기
+
+
+101-1.txt
+0.00MB
+101-2.txt
+0.00MB
+
+관련라이브러리(MAX7219)
+
+wayoda.github.io/LedControl/
+
+ 
+LedControl
+
+The Arduino LedControl library LedControl is a library for the MAX7221 and MAX7219 Led display drivers. Only a few components are needed to control 64 Leds or a 7-segment display. There are already lot code-examples for the Arduino and the MAX72XX Led disp
+
+wayoda.github.io
+레퍼런스 프로젝트
+아두이노#96-1
+아두이노#56-5(조이스틱)

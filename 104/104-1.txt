@@ -1,0 +1,31 @@
+/*
+ * 예제 104-1
+ * IR리모컨 수신모듈에 입력되는 값을 스마트폰으로 전송하기
+ * IR리모컨에서 입력되는 key값을 그대로 스마트폰으로 날려보자
+ * IR수신부는 D13에 연결했다
+ */
+#include <IRremote.h>
+#include <SoftwareSerial.h>
+
+int RECV_PIN = 13;
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+SoftwareSerial mySerial(2, 3); // RX, TX
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  mySerial.begin(9600);
+  Serial.println("Enabling IRin");
+  irrecv.enableIRIn(); // Start the receiver
+  Serial.println("Enabled IRin");
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (irrecv.decode(&results)) {
+    //Serial.println(results.value, HEX);
+    mySerial.println(results.value, HEX);
+    irrecv.resume(); // Receive the next value
+  }
+  delay(100);
+}

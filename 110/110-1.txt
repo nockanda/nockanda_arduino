@@ -1,0 +1,74 @@
+/*
+ * 예제 110-1
+ * 예제1 LED 4개(D2~D5)를 연결하고 EEPROM을 활용해보자
+ * 컴퓨터에서 시리얼통신으로 0~15 숫자를 보내주면 LED가 2진수로 표현된다
+ * 예를들어 1을 보내면 2진수로 0001이니까 첫번째 LED가 켜지고
+ * 10을 보내면 2진수로 1010이니까 4번째와 2번째 LED가 켜진다
+ * 다음 버튼(D6)을 하나 장착을 해서 버튼을 누르면 EEPROM에 LED의 상태가 기록된다
+ * 전원을 껐다가 켰을때 직전 LED의 점멸상태가 유지되도록 해보자!
+ */
+
+#include <EEPROM.h>
+#define LED1 2 //제일 오른쪽
+#define LED2 3
+#define LED3 4
+#define LED4 5 //제일 왼쪽
+#define button 6
+
+int num;
+int addr;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED3, OUTPUT);
+  pinMode(LED4, OUTPUT);
+  pinMode(button, INPUT_PULLUP);
+  
+  addr = 0;
+  int state = EEPROM.read(addr);
+  set_LED(state);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(button) == LOW){
+    //풀업방식에는 LOW가 버튼이 눌려진것!
+    addr = 0;
+    EEPROM.write(addr, num);
+    Serial.println("저장되었습니다!");
+  }
+  
+  if(Serial.available()){
+    //PC에서 시리얼통신으로 뭔가 날린값이 존재한다면~
+    num = Serial.parseInt();
+    if(num < 0 || num > 15) return;
+    set_LED(num);
+  }
+}
+
+void set_LED(int num){
+      if((num & 0b0001) == 0b0001){
+      //제일 오른쪽 LED ON 
+      digitalWrite(LED1,HIGH);
+    }else{
+      //OFF
+      digitalWrite(LED1,LOW);
+    }
+    if((num & 0b0010) == 0b0010){
+      digitalWrite(LED2,HIGH);
+    }else{
+      digitalWrite(LED2,LOW);
+    }
+    if((num & 0b0100) == 0b0100){
+      digitalWrite(LED3,HIGH);
+    }else{
+      digitalWrite(LED3,LOW);
+    }
+    if((num & 0b1000) == 0b1000){
+      digitalWrite(LED4,HIGH);
+    }else{
+      digitalWrite(LED4,LOW);
+    }
+}

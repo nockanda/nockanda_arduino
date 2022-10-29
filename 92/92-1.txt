@@ -1,0 +1,82 @@
+/*
+ * 예제92-1
+ * 스마트폰앱에서 아래와 같이 버튼과 문자가 맵핑되있음!
+ * '→' = 'd'
+ * '←' = 'a'
+ * '↑' = 'w'
+ * '↓' = 's'
+ * '네모' = '1'
+ * '세모' = '2'
+ * '엑스' = '3'
+ * '동그라미' = '4'
+ * 'select' = 'n'
+ * 'start' = 'm'
+ */
+
+#include <SoftwareSerial.h>
+#include <Servo.h>
+SoftwareSerial mySerial(2, 3); // RX, TX
+Servo myservo1;
+Servo myservo2;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노
+  mySerial.begin(9600); //아두이노-블루투스
+  myservo1.attach(9); //아래쪽서보
+  myservo2.attach(10); //위쪽서보
+  myservo1.write(0);
+  myservo2.write(0);
+}
+
+byte degree1 = 0;
+byte degree2 = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(mySerial.available()>0){
+    //Serial.println((char)mySerial.read());
+    char recv = (char)mySerial.read();
+    if(recv == 'w'){
+      //위
+      degree2+=10;
+    }else if(recv == 's'){
+      //아래
+      degree2-=10;
+    }else if(recv == 'd'){
+      //오른쪽
+      degree1+=10;
+    }else if(recv == 'a'){
+      //왼쪽
+      degree1-=10;
+    }else if(recv == 'n'){
+      //셀렉트
+      degree1 = 0;
+      degree2 = 0;
+    }else if(recv == 'm'){
+      //스타트버튼
+      degree1 = 180;
+      degree2 = 180;
+    }else if(recv == '1'){
+      //네모
+      degree1 = 30;
+      degree2 = 30;
+    }else if(recv == '2'){
+      //세모
+      degree1 = 60;
+      degree2 = 60;
+    }else if(recv == '3'){
+      //엑스
+      degree1 = 90;
+      degree2 = 90;
+    }
+    else if(recv == '4'){
+      //동그라미
+      degree1 = 120;
+      degree2 = 120;
+    }
+    degree1 = constrain(degree1,0,180);
+    degree2 = constrain(degree2,0,180);
+    myservo1.write(degree1);
+    myservo2.write(degree2);
+    delay(100);
+  }
+}

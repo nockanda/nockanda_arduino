@@ -1,0 +1,16 @@
+[아두이노#96] RTC모듈(DS1302)와 도트매트릭스(MAX7219)로 시계만들기
+
+
+96-1.txt
+0.00MB
+8*32도트매트릭스로 디지탈 시계 만들기!
+
+ 
+
+관련라이브러리(ledcontrol)
+
+http://wayoda.github.io/LedControl/
+
+관련라이브러리(DS1302)
+
+https://github.com/Makuna/Rtc/wiki

@@ -1,0 +1,16 @@
+[아두이노#95] RTC모듈(DS1302)와 FND모듈(TM1637)로 시계만들기
+
+
+95-1.txt
+0.00MB
+FND디스플레이 4개를 이용한 디지탈시계만들기!
+
+ 
+
+관련라이브러리(TM1637)
+
+https://github.com/avishorp/TM1637
+
+관련라이브러리(DS1302)
+
+https://github.com/Makuna/Rtc/wiki

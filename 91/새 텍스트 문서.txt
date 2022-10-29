@@ -1,0 +1,38 @@
+[아두이노강의] 포로리야 공대가자 #91 2.4인치 TFT LCD 터치스크린쉴드/Spfd5408(9편)
+
+(LCD 쉴드는 아두이노와 1:1로 연결)
+
+91-1.txt
+0.01MB
+img1.bmp
+0.11MB
+img2.bmp
+0.11MB
+img3.bmp
+0.11MB
+img4.bmp
+0.11MB
+img5.bmp
+0.11MB
+img6.bmp
+0.11MB
+img7.bmp
+0.11MB
+(2.4인치 TFT LCD 터치스크린쉴드/Spfd5408(9편))
+RFID인식 결과를 컬러 이미지로 보여줘보자!
+RFID인식 결과를 LCD로 표현해보기
+RFID모듈인 RC522의 도움을 받는다!
+RFID인식결과는 LCD에 장착된 SD카드 슬롯에서
+내부 이미지를 불러와서 보여주는것으로 해보자!
+(단, SD카드모듈과 RFID모듈이 연동되었을때 가능한 예제이다)
+(둘다 SPI통신으로 상황에 따라 불가능할 가능성이 있음!)
+
+ 
+
+관련라이브러리(SPFD5408)
+
+https://github.com/JoaoLopesF/SPFD5408
+
+필요라이브러리(RC522)
+
+https://github.com/miguelbalboa/rfid

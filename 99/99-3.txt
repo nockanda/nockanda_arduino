@@ -1,0 +1,97 @@
+/*
+ * (블루투스 모듈 HC06/8편 지문인식)
+ * 3.스마트폰과 아두이노의 블루투스 양방향 통신을 위해서 양념을 쳐보자!
+-버튼2개를 달아서 ID모드와 DATA모드를 전환할 수 있도록 하자
+-이때 모드 전환은 LED 2개를 장착해서 시각적으로 확인 가능하도록 하자
+-모드 전환을 스마트폰에서 날린 값으로 가능하도록 해보자
+-ID모드일때는 태그ID값이 전송되고 DATA모드일때는 ID에 연결된 value가 전송되도록 해보자!
+지문모듈의 TX핀 아두이노 D0
+지문모듈의 RX핀 아두이노 D1
+블루투스 TX핀 아두이노 D2
+블루투스 RX핀 아두이노 D3
+빨간LED 아날로그0
+녹색LED 아날로그1
+첫번째버튼 아날로그2
+두번째버튼 아날로그3
+첫번째 버튼을 눌렀을때 ID모드로 전환되고 빨간 LED 켜짐
+두번째 버튼을 눌렀을때 Text모드로 전환되고 녹색 LED 켜짐
+스마트폰은 적절히 블루투스 시리얼 모니터 검색후 설치(앱스토어)
+(지금은 입력해놓은 지문이 2개뿐이라 text도 2개인 상황)
+ */
+
+#include <Adafruit_Fingerprint.h>
+#include <SoftwareSerial.h>
+#define mySerial Serial
+#define redled A0
+#define greenled A1
+#define button1 A2
+#define button2 A3
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+SoftwareSerial mybluetooth(2, 3);
+bool mode = 0; //0일때 ID모드 1일때 text모드
+String text[] = {"딸기","바나나"};
+
+void setup() {
+  // put your setup code here, to run once:
+  finger.begin(57600);
+  mybluetooth.begin(9600);
+  pinMode(redled,OUTPUT);
+  pinMode(greenled,OUTPUT);
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+  //기본은 ID모드임
+  digitalWrite(redled,HIGH);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(button1) == LOW){
+    //풀업방식에서 LOW는 버튼이 눌려진것
+    //ID모드
+    mode = 0;
+    digitalWrite(redled,HIGH);
+    digitalWrite(greenled,LOW);
+  }
+  if(digitalRead(button2) == LOW){
+    //풀업방식에서 LOW는 버튼이 눌려진것
+    //TEXT모드
+    mode = 1;
+    digitalWrite(redled,LOW);
+    digitalWrite(greenled,HIGH);
+  }
+  if(mybluetooth.available()){
+    //스마트폰에서 블루투스로 뭔가 날라온값이 있다면~
+    int recv = mybluetooth.read();
+    if(recv ==0){
+      //ID모드
+      mode = 0;
+      digitalWrite(redled,HIGH);
+      digitalWrite(greenled,LOW);
+    }else if(recv == 1){
+      //text모드
+      mode = 1;
+      digitalWrite(redled,LOW);
+      digitalWrite(greenled,HIGH);
+    }
+  }
+  
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK)  return;
+  
+  // found a match!
+  if(mode == 0){
+    mybluetooth.print("Found ID #"); mybluetooth.print(finger.fingerID); 
+    mybluetooth.print(" with confidence of "); mybluetooth.println(finger.confidence);   
+  }else{
+    int finger_index = finger.fingerID-1;
+    mybluetooth.println(text[finger_index]);
+  }
+  
+  
+}

@@ -1,0 +1,56 @@
+/*
+ * 110-2
+ * 예제2 서보모터 2개를 연결하고 EEPROM을 활용해보자
+ * 시리얼 통신으로 2개의 각도값을 전송하면 서보모터 2개가
+ * 입력한 각도대로 회전하도록 하자!
+ * 서보모터 1번은 디지털9에 연결하고 서보모터 2는 디지털 10에 연결했다.
+ * 아두이노가 부팅되었을때 전원이 분리되기 직전 각도값을 EEPROM에 저장했다가
+ * 전원이 인가되면 직전 각도값을 복구 할 수 있도록 해보자!
+ * 버튼을 D2에 연결해서 버튼을 눌렀을때 현재 각도값이 EEPROM에 저장되도록 하자
+ */
+#include <EEPROM.h>
+#include <Servo.h>
+#define servo1_pin 9
+#define servo2_pin 10
+#define button 2
+Servo myservo1; //서보모터1번
+Servo myservo2; //서보모터2번
+int degree1;
+int degree2;
+int addr;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 시리얼 통신 할거다
+  pinMode(button,INPUT_PULLUP);
+  myservo1.attach(servo1_pin);
+  myservo2.attach(servo2_pin);
+  myservo1.write(0); //초기화
+  myservo2.write(0); //초기화
+  delay(2000);
+  //EEPROM에서 데이터를 읽어서 원래각도로 이동
+  int state1 = EEPROM.read(0); //각도1의 저장값
+  int state2 = EEPROM.read(1); //각도2의 저장값
+  myservo1.write(state1);
+  myservo2.write(state2);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(button) == LOW){
+    //버튼이 눌려진것
+    addr = 0;
+    EEPROM.write(addr, degree1);
+    addr = 1;
+    EEPROM.write(addr, degree2);
+    Serial.println("저장되었습니다!");
+  }
+  if(Serial.available()){
+    //PC에서 아두이노쪽으로 날린 데이터가 존재한다면~
+    //숫자1 숫자2
+    degree1 = Serial.parseInt(); //숫자1
+    degree2 = Serial.parseInt(); //숫자2
+    myservo1.write(degree1);
+    myservo2.write(degree2);
+  }
+  //myservo.write(val); 
+}

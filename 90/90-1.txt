@@ -1,0 +1,33 @@
+/*
+ * 예제90-1 블루투스모듈과 릴레이를 이용해서
+ * USB선풍기를 제어하는 예제이다
+ * 릴레이는 D4에 연결하면 되고
+ * USB선풍기의 한쪽선을 보조베터리의 -에 연결하고
+ * 보조베터리의 +선을 릴레이에 COM에 연결하고
+ * USB선풍기의 다른한쪽선을 릴레이에 NO에 연결하면 된다!
+ */
+
+#include <SoftwareSerial.h>
+#define relay 4 //릴레이가 D4에 연결됨
+SoftwareSerial mySerial(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  mySerial.begin(9600);
+  pinMode(relay,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(mySerial.available() > 0){
+    //블루투스로 뭔가 날라오는 값이 있다면~
+    byte recv = mySerial.read();
+    if(recv == 0){
+      digitalWrite(relay,LOW);
+    }else{
+      digitalWrite(relay,HIGH);
+    }
+    Serial.println(recv);
+  }
+}

@@ -1,0 +1,70 @@
+/*
+ * 예제101-2
+ * 8*32 도트메트릭스(MAX7219)를 연결해서
+ * 스마트폰에서 날린 4개의 숫자를 8*32 매트릭스로 표현
+ * ←a →d ↑w ↓s
+ */
+
+#include "LedControl.h"
+#include <SoftwareSerial.h>
+LedControl lc=LedControl(12,11,10,4);//DIN,CLK,CS,디바이스갯수
+SoftwareSerial mySerial(2, 3); // RX, TX
+byte point_x = 0;
+byte point_y = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  mySerial.begin(9600);//블루투스 세팅 완료!
+  for(int i = 0;i<lc.getDeviceCount();i++){
+    //초기화 과정이다..
+    lc.shutdown(i,false);
+    lc.setIntensity(i,8);
+    lc.clearDisplay(i);
+  }
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(mySerial.available()){
+    char v = mySerial.read();
+    //Serial.println(v);
+    //←a →d ↑w ↓s
+    if(v == 'a'){
+      point_x--;
+    }else if(v == 'd'){
+      point_x++;
+    }else if(v == 'w'){
+      point_y--;
+    }
+    else if(v == 's'){
+      point_y++;
+    }
+  }
+
+  if(point_x > 31) point_x=31;
+  if(point_x < 0)point_x=0;
+  if(point_y > 7) point_y=7;
+  if(point_y < 0)point_y=0;
+  //point_x = constrain(point_x,0,31); //32개
+  //point_y = constrain(point_y,0,7); //8개
+  //lc.setLed(0,row,col,true);
+  //3 2 1 0
+  //0   15
+  //(point)%8 = device
+  //point/8 = led_num
+  //0~7 8~15 16~23 24~31
+  //24~31 16~23 8~15 0~7
+  for(int i = 0;i<lc.getDeviceCount();i++){
+    lc.clearDisplay(i);
+  }
+  lc.setLed(3-point_x/8,point_y,point_x%8,true);
+  
+  //Serial.print(point_x);
+  //Serial.print(",");
+  //Serial.println(point_y);
+  delay(100);
+}
+
+

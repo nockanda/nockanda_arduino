@@ -1,0 +1,44 @@
+/*
+ * 예제107-2-3 (슬레이브2)
+ * 마스터가 슬레이브 2개의 각각 장착된 LED를 제어하도록 하라
+ * 슬레이브 1은 빨간LED 슬레이브 2는 녹색 LED 이다
+ * 슬레이브1은 id가 0x00이고 슬레이브2는 0x01이다
+ * 값은 0x00을 보내면 LED꺼짐, 0x01을 보내면 LED켜짐이다
+ * RS485모듈의 송수신제어핀은 D13에 연결했다
+ */
+
+#include <SoftwareSerial.h>
+#define LEDon 0x01
+#define LEDoff 0x00
+#define master 0x99
+#define slave1 0x00
+#define slave2 0x01
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+#define myLED 4
+SoftwareSerial rs485(2, 3); // RX, TX
+
+byte randNumber; //0~255
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  rs485.begin(9600);
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,sendmode); //송신모드
+  pinMode(myLED,OUTPUT);//녹색 LED
+  randomSeed(analogRead(0));
+  
+}
+byte senddata[2];
+void loop() {
+  // put your main code here, to run repeatedly:
+  randNumber = random(0, 256); //0~255
+  senddata[0] = master;
+  senddata[1] = randNumber;
+  //Serial.println(senddata[0]);
+  //Serial.println(senddata[1]);
+  rs485.write(senddata,2);
+  delay(1000);
+}

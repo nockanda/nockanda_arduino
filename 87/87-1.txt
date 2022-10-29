@@ -1,0 +1,18 @@
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  //0xAC00
+  //0xB080
+  unsigned long data1 = '가';
+  unsigned long data2 = '까';
+  
+
+  Serial.println(data1);
+  Serial.println(data2);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  
+}

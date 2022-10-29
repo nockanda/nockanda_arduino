@@ -1,0 +1,30 @@
+/*
+ * 예제 106-1-1 (마스터 전용 코드)
+ * 라이브러리 기본 예제 돌려보기(1:1)
+-마스터아두이노는 오더를 내리는 역활만한다
+-RS485모듈의 RO핀은 output으로 TTL통신에 TX핀에 해당된다
+-RS485모듈의 DI핀은 input으로 TTL통신에 RX에 해당된다.
+-그러므로 RO를 D2에 연결하고 DI를 D3에 연결하자
+-송수신 제어를 위한 핀은 D13에 연결했다
+-마스터와 쫄병의 핀배치는 동일하다
+-쫄병 아두이노는 D4포트에 빨간색LED가 하나 설치되어있다.
+-쫄병 아두이노는 마스터아두이노에서 0또는 1을 받는다
+-입력받은 값이 0일때 LED를 끄고, 1일때 LED를 켠다
+ */
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(13,OUTPUT);
+  digitalWrite(13,HIGH); //송신모드
+  mySerial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  mySerial.print((byte)0);
+  delay(1000);
+  mySerial.print((byte)1);
+  delay(1000);
+}

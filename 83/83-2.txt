@@ -1,0 +1,28 @@
+/*
+ * 예제83-2 충격센서의 감지신호를
+ * 블루투스로 아스키코드로 한번 보내보자!
+ */
+#include <SoftwareSerial.h>
+#define DMSENSOR 4
+SoftwareSerial bluetooth(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  bluetooth.begin(9600);
+  pinMode(DMSENSOR,INPUT);
+}
+
+bool pre_state = HIGH;
+void loop() {
+  // put your main code here, to run repeatedly:
+  //평소에는 1 감지되면 0
+  bool now_state = digitalRead(DMSENSOR);
+  if(pre_state == HIGH && now_state == LOW){
+    //감지가 된 그순간 딱 1회
+    bluetooth.println("감지");
+  }
+
+  pre_state = now_state;
+  delay(100);
+}

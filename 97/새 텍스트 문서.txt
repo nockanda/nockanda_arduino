@@ -1,0 +1,16 @@
+[아두이노#97] RTC모듈(DS1302)와 0.91인치 OLED 디스플레이로 시계만들기
+
+
+97-1.txt
+0.00MB
+I2C통신을하는 0.91인치 OLED디스플레이에 디지털 시계를 한번 뛰워보자!
+
+ 
+
+관련라이브러리(ssd1306)
+
+https://github.com/adafruit/Adafruit_SSD1306
+
+관련라이브러리(DS1302)
+
+https://github.com/Makuna/Rtc/wiki

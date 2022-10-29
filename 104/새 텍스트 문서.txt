@@ -1,0 +1,37 @@
+[아두이노#104] 블루투스 모듈 HC06/13편 적외선리모컨(녹칸다/포로리야공대가자)
+
+
+104-1.txt
+0.00MB
+104-2.txt
+0.00MB
+(블루투스 모듈 HC06/13편 적외선리모컨)
+IR리모컨 수신모듈에 입력되는 값을 스마트폰으로 전송하기
+리모컨을 누르면 ID값을 스마트폰으로 전송하기
+
+/*
+    FF30CF 1
+    FF18E7 2
+    FF7A85 3
+    FF10EF 4
+    FF38C7 5
+    FF5AA5 6
+    FF42BD 7
+    FF4AB5 8
+    FF52AD 9
+    FF6897 0
+    FF9867 100+
+    FFB04F 200+
+    FFE01F -
+    FFA857 +
+    FF906F EQ
+    FF22DD |◀◀
+    FF02FD ▶▶|
+    FFC23D ▶||
+    FFA25D CH-
+    FF629D CH
+    FFE21D CH+
+    */
+관련라이브러리(irremote)
+
+github.com/z3t0/Arduino-IRremote

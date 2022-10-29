@@ -1,0 +1,21 @@
+[아두이노강의] 포로리야 공대가자 #84 지문인식센서/FPM10A 2편(초고난이도)
+
+
+FPM10A_sample.zip
+0.12MB
+*아두이노 메가를 구입해야 해결될듯!
+
+지문인식센서/FPM10A 2편(초고난이도)
+라이브러리를 좀더 꼼꼼하게 살펴보기
+분명 제조사 메뉴얼을보면 지문(finger print)의 raw image를 획득가능하다고 한다!
+이미지버퍼, 캐릭터버퍼, 데이터베이스에 대해 조사한 내용 브리핑
+지문의 원본이미지를 저장해서 사용하지 않는 2가지 이유가 있다.
+지문모듈에서 받은 image stream을 사람눈에 보이게 어떻게 한번 만들어보자!
+
+https://github.com/hanifizzudinrahman/Module-Fingerprint-DY50-FPM10A
+
+ 
+
+관련라이브러리(finger print)
+
+https://github.com/adafruit/Adafruit-Fingerprint-Sensor-Library

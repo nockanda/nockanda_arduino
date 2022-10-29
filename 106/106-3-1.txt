@@ -1,0 +1,30 @@
+/*
+ * 예제 106-3-1 (마스터 전용 코드)
+ * 라이브러리 기본 예제 돌려보기(1:1)
+-내용은 106-1-1과 같으나
+-시리얼통신으로 PC에서 1을 마스터에게 전송하면 쫄병의 LED가 꺼지고
+-0을 마스터에게 전송하면 쫄병의 LED가 켜지도록 하라!
+ */
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(13,OUTPUT);
+  digitalWrite(13,HIGH); //송신모드
+  mySerial.begin(9600); //485모듈과 시리얼통신(TTL)
+  Serial.begin(9600); //PC와 시리얼통신(TTL)
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    //PC에서 뭔가 수신한 값이 존재한다면~
+    char recv = Serial.read();
+    if(recv == '0'){
+      mySerial.print((byte)0);
+    }else if(recv == '1'){
+      mySerial.print((byte)1);    
+    }
+  }
+}
