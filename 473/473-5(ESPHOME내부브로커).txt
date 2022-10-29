@@ -1,0 +1,58 @@
+esphome:
+  name: nockanda4
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+switch:
+  - platform: gpio
+    pin: 5
+    name: "LED1"
+    id: led1
+  - platform: gpio
+    pin: 4
+    name: "LED2"
+    id: led2
+
+mqtt:
+  broker: 192.168.0.11
+  username: mqtt
+  password: 123123
+
+sensor:
+  - platform: mqtt_subscribe
+    name: "Num Sensor"
+    topic: nockanda/sensor
+
+text_sensor:
+  - platform: mqtt_subscribe
+    name: "Text Sensor"
+    topic: nockanda/textsensor
+    on_value:
+      then:
+         lambda: |-
+            if(x == "1") id(led1).turn_off();
+            if(x == "2") id(led1).turn_on();
+            if(x == "3") id(led2).turn_off();
+            if(x == "4") id(led2).turn_on();
+
+ota:
+  password: "5540bdfe29301d5b64f04029f61c5a67"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Nockanda4 Fallback Hotspot"
+    password: "CIS6Smn8RFHb"
+
+captive_portal:
+    

@@ -1,0 +1,67 @@
+#include <ESP8266WiFi.h>
+#include <espnow.h>
+
+#define redled D3
+#define greenled D4
+
+struct DHTSENSOR{
+  float humi;
+  float temp;
+};
+
+DHTSENSOR mydata;
+
+unsigned long t = 0; //millis()
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+
+  pinMode(redled,OUTPUT);
+  pinMode(greenled,OUTPUT);
+  digitalWrite(redled,HIGH);
+  digitalWrite(greenled,LOW);
+
+  WiFi.mode(WIFI_STA); //제일 처음 할일! 와이파이모드를 스테이션 모드로!
+
+  //ESPNOW의 기능을 활성화한다!
+  if (esp_now_init() != 0) {
+    //ESP NOW 시작 실패!
+    Serial.println("ESPNOW 실패!");
+    return;
+  }else{
+     //ESP NOW 시작 성공!
+     Serial.println("ESPNOW 성공!");
+  }
+
+  //지금 이보드의 역할은 컨트롤러이다!
+  esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
+
+  //수신 콜백함수 등록
+  esp_now_register_recv_cb(OnDataRecv);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //마지막으로 메시지를 받은 시점부터 3초가 지나면 통신불능상태이다!
+  if(millis() - t > 3000){
+    digitalWrite(redled,HIGH);
+    digitalWrite(greenled,LOW);
+  }
+
+}
+
+void OnDataRecv(uint8_t * mac, uint8_t * data, uint8_t len) {
+  //수신데이터를 여기서 출력하면 되겠군!!!
+  digitalWrite(redled,LOW);
+  digitalWrite(greenled,HIGH);
+  t = millis();
+  
+  memcpy(&mydata,data,sizeof(mydata));
+
+  Serial.print("습도 = ");
+  Serial.print(mydata.humi);
+  Serial.print("%, 온도 = ");
+  Serial.print(mydata.temp);
+  Serial.println("'C");
+}

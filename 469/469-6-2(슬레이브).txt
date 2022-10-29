@@ -1,0 +1,41 @@
+#include <ESP8266WiFi.h>
+#include <espnow.h>
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+
+  WiFi.mode(WIFI_STA); //제일 처음 할일! 와이파이모드를 스테이션 모드로!
+
+  //ESPNOW의 기능을 활성화한다!
+  if (esp_now_init() != 0) {
+    //ESP NOW 시작 실패!
+    Serial.println("ESPNOW 실패!");
+    return;
+  }else{
+     //ESP NOW 시작 성공!
+     Serial.println("ESPNOW 성공!");
+  }
+
+  //지금 이보드의 역할은 컨트롤러이다!
+  esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
+
+  //수신 콜백함수 등록
+  esp_now_register_recv_cb(OnDataRecv);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}
+
+void OnDataRecv(uint8_t * mac, uint8_t * data, uint8_t len) {
+  //수신데이터를 여기서 출력하면 되겠군!!!
+  float mynum[2];
+  //이함수를 쓰면 보낸쪽 데이터의 변수가 그대로 카피된다!
+  memcpy(&mynum, data, sizeof(mynum));
+
+  Serial.print(mynum[0]);
+  Serial.print(",");
+  Serial.println(mynum[1]);
+}

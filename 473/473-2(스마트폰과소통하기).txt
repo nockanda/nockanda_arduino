@@ -1,0 +1,23 @@
+
+# Configure a default setup of Home Assistant (frontend, api, etc)
+default_config:
+
+sensor:
+  - platform: mqtt
+    name: "SENSOR1"
+    state_topic: "nockanda/sensor"
+
+switch:
+  - platform: mqtt
+    name: "Nockanda Switch"
+    command_topic: "nockanda/sw"
+    payload_on: "ON"
+    payload_off: "OFF"
+
+# Text to speech
+tts:
+  - platform: google_translate
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
