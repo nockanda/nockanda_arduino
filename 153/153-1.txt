@@ -1,0 +1,36 @@
+/*
+ * 예제 153-1
+ * 모터드라이버L298N을 3,4,5번핀에 적절히 연결하고!
+ * 속도가 점진적으로 올리갔다가 점진적으로 감소하도록 해보라!
+ */
+
+#define control1 3
+#define control2 4
+#define power 5
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(control1,OUTPUT);
+  pinMode(control2,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //정방향이라 가정 
+  digitalWrite(control1,HIGH);
+  digitalWrite(control2,LOW);
+  for(int i = 0;i<256;i+=32){
+    analogWrite(power,i); //0:0V 255: 5V
+    delay(1000);
+  }
+  delay(5000);
+  //역방향(정방향과 상대적인 개념)
+  digitalWrite(control1,LOW);
+  digitalWrite(control2,HIGH);
+  for(int i = 0;i<256;i+=32){
+    analogWrite(power,i); //0:0V 255: 5V
+    delay(1000);
+  }
+  delay(5000);
+  
+}

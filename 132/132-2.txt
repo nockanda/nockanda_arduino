@@ -1,0 +1,123 @@
+/*
+ * 132-2 postserver예제를 입맛에 맞게 고쳐서
+ * built-in led를 제어하는 예제로 일단 만들어보자!
+ */
+
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+
+#ifndef STASSID
+#define STASSID "your-ssid"
+#define STAPSK  "your-password"
+#endif
+
+const char* ssid     = STASSID;
+const char* password = STAPSK;
+
+ESP8266WebServer server(80);
+
+const int led = LED_BUILTIN;
+
+const String postForms = "<html>\
+  <head>\
+    <title>ESP8266 Web Server POST handling(nockanda)</title>\
+    <style>\
+      body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
+    </style>\
+  </head>\
+  <body>\
+    <h1>POST form data to /postform/</h1><br>\
+    <form method=\"post\" enctype=\"application/x-www-form-urlencoded\" action=\"/postform/\">\
+      <br>0 = led Off, 1 = led On<br>\
+      <input type=\"text\" name=\"led\" value=\"\"><br>\
+      <input type=\"submit\" value=\"Submit\">\
+    </form>\
+  </body>\
+</html>";
+
+void handleRoot() {
+  digitalWrite(led, 1);
+  server.send(200, "text/html", postForms);
+  digitalWrite(led, 0);
+}
+
+
+//두번째 form에서 처리하는부분
+void handleForm() {
+  if (server.method() != HTTP_POST) {
+    digitalWrite(led, 1);
+    server.send(405, "text/plain", "Method Not Allowed");
+    digitalWrite(led, 0);
+  } else {
+    String message = "POST form was:\n";
+    for (uint8_t i = 0; i < server.args(); i++) {
+      if(server.argName(i) == "led"){
+        if(server.arg(i) == "0"){
+          //led를 끈다
+          digitalWrite(led, HIGH);
+          message += "LED OFF";
+        }else if(server.arg(i) == "1"){
+          //led를 켠다
+          digitalWrite(led, LOW);
+          message += "LED ON";
+        }
+      }
+      //message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+    }
+    server.send(200, "text/plain", message);
+    
+  }
+}
+
+void handleNotFound() {
+  digitalWrite(led, 1);
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i = 0; i < server.args(); i++) {
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+  }
+  server.send(404, "text/plain", message);
+  digitalWrite(led, 0);
+}
+
+void setup(void) {
+  pinMode(led, OUTPUT);
+  digitalWrite(led, 0);
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  if (MDNS.begin("esp8266")) {
+    Serial.println("MDNS responder started");
+  }
+
+  server.on("/", handleRoot);
+  server.on("/postform/", handleForm);
+  server.onNotFound(handleNotFound);
+
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop(void) {
+  server.handleClient();
+}

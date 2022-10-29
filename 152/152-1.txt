@@ -1,0 +1,34 @@
+/*
+ * 예제 152-1 블루투스모듈인 AT09에 마스터모드와 슬레이브모드를 선택할 수 있게끔 만들어보자!
+ * 주의사항! 아두이노에서 블루투스모듈AT09와 uart통신을 하기 위해서
+ * 데이터의 제일 끝에 CR(0x0D), LF(0x0A) 이걸 붙여야함!
+ * AT+INQ : AT09가 마스터모드일때 주변 디바이스를 검색하는 명령어!
+ * AT+CONA[mac address] : mac주소로 슬레이브와 블루투스 페어링!
+ * 예시)
+ * AT+CONA50338BF41EAF : 50338BF41EAF주소로 페어링을 해라!
+ * 이코드를 활용하면.. 모드변경 OK.. master모드에서 slave와 페어링 OK..!
+ */
+
+#include <SoftwareSerial.h>
+SoftwareSerial AT09(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  AT09.begin(9600); //아두이노-블루투스모듈간 통신
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //노트북에서 아두이노로 날린걸 블루투스로 날려보자!
+  if(Serial.available()){
+    //존재여부 조건문
+    AT09.write(Serial.read());
+  }
+
+  //블루투스모듈에서 날린걸 아두에노가 받아서 노트북으로~!
+  if(AT09.available()){
+    //존재하냐?
+    Serial.write(AT09.read());
+  }
+}

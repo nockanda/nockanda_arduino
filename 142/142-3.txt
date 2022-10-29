@@ -1,0 +1,57 @@
+/*
+ * 142-3 GM65 상품 4개의 바코드를 입력시키고
+ * 바코드값을 비교해서 상품정보를 출력해보자!
+ * 구조체를 사용해서 조금더 고급스럽게 만들어보자!
+ */
+
+#include <SoftwareSerial.h>
+SoftwareSerial GM65(2, 3); // RX, TX
+#define count 4
+typedef struct{
+  String code;
+  String c_name;
+  unsigned int price;
+} Sangpoom;
+
+Sangpoom mysangpoom[count] = {
+  {"8801045520117","진라면",700},
+  {"8801043015653","육개장사발면",650},
+  {"8801048101023","진로소주",1200},
+  {"47497","다이소제품",1000}
+};
+
+unsigned long total_price = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);// PC-아두이노간 통신
+  GM65.begin(9600); //GM65-아두이노간 통신
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(GM65.available()){
+    //GM65에서 아두이노로 날라오는 값이 존재한다면~
+    String barcode = GM65.readStringUntil('\n');
+    Serial.println(barcode);
+    Serial.println(barcode.length());
+    //8801045520117 진라면
+    //8801043015653 육개장사발면
+    //8801048101023 진로소주
+    //47497 다이소제품
+    for(int i = 0;i<count;i++){
+      if(barcode.indexOf(mysangpoom[i].code) != -1){
+        //i번째에 해당되는 상품이 검색이 되었다!
+        Serial.println(mysangpoom[i].c_name);
+        total_price+=mysangpoom[i].price;
+        Serial.println(mysangpoom[i].price);
+        Serial.print("전체금액=");
+        Serial.println(total_price);
+        break;
+      }
+    }
+
+    //Serial.print((char)GM65.read());
+
+  }
+}

@@ -1,0 +1,78 @@
+/*
+ * 예제146-4 버튼(택트스위치) 2개를 D2, D3에 각각 연결한다
+ * 각 버튼을 눌렀을때 눌러졌다는 이벤트를 LCD에 표시해보자
+ */
+
+#include "SPI.h"
+#include "Adafruit_GFX.h"
+#include "Adafruit_ILI9341.h"
+
+// For the Adafruit shield, these are the default.
+#define TFT_DC 9
+#define TFT_CS 10
+#define TFT_MOSI 11
+#define TFT_CLK 13
+#define TFT_RST 8
+#define TFT_MISO 12
+
+#define button1 2 //2번핀
+#define button2 3 //3번핀
+
+// Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
+//Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
+// If using the breakout, change pins as desired
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("ILI9341 Test!"); 
+  randomSeed(analogRead(0));
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);  
+  tft.begin();
+
+  // read diagnostics (optional but can help debug problems)
+  uint8_t x = tft.readcommand8(ILI9341_RDMODE);
+  Serial.print("Display Power Mode: 0x"); Serial.println(x, HEX);
+  x = tft.readcommand8(ILI9341_RDMADCTL);
+  Serial.print("MADCTL Mode: 0x"); Serial.println(x, HEX);
+  x = tft.readcommand8(ILI9341_RDPIXFMT);
+  Serial.print("Pixel Format: 0x"); Serial.println(x, HEX);
+  x = tft.readcommand8(ILI9341_RDIMGFMT);
+  Serial.print("Image Format: 0x"); Serial.println(x, HEX);
+  x = tft.readcommand8(ILI9341_RDSELFDIAG);
+  Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); 
+
+  tft.setRotation(1); //화면의 방향을 결정(0~3)
+
+  
+
+}
+
+
+void loop(void) {
+  //0 == LOW, 1 == HIGH
+  bool button1_state = digitalRead(button1);
+  bool button2_state = digitalRead(button2);
+  if(button1_state == LOW){
+    //버튼1이 눌러진것!
+    Serial.println("버튼1 눌려짐!");
+    drawtext(1);
+  }
+  if(button2_state == LOW){
+    //버튼2가 눌려진것!
+    Serial.println("버튼2 눌려짐!");
+    drawtext(2);
+  }
+  delay(100);
+}
+
+void drawtext(int button_num){
+  tft.fillScreen(ILI9341_BLACK); //화면을 검은색으로 초기화
+  tft.setCursor(0, 0); //글자가 드로잉될 위치
+  tft.setTextColor(ILI9341_GREEN); 
+  tft.setTextSize(5);
+  tft.print(button_num);
+  tft.println(" button pressed!!");
+}
+

@@ -1,0 +1,43 @@
+/*
+ * 142-2 GM65 상품 4개의 바코드를 입력시키고
+ * 바코드값을 비교해서 상품정보를 출력해보자!
+ */
+
+#include <SoftwareSerial.h>
+SoftwareSerial GM65(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);// PC-아두이노간 통신
+  GM65.begin(9600); //GM65-아두이노간 통신
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(GM65.available()){
+    //GM65에서 아두이노로 날라오는 값이 존재한다면~
+    String barcode = GM65.readStringUntil('\n');
+    Serial.println(barcode);
+    Serial.println(barcode.length());
+    //8801045520117 진라면
+    //8801043015653 육개장사발면
+    //8801048101023 진로소주
+    //47497 다이소제품
+    if(barcode.indexOf("8801045520117") != -1){
+      Serial.println("진라면");
+      Serial.println("금액:700");
+    }else if(barcode.indexOf("8801043015653") != -1){
+      Serial.println("육개장사발면");
+      Serial.println("금액:650");
+    }else if(barcode.indexOf("8801048101023") != -1){
+      Serial.println("진로소주");
+      Serial.println("금액:1200");
+    }else if(barcode.indexOf("47497") != -1){
+      Serial.println("다이소제품");
+      Serial.println("금액:1000");
+    }
+
+    //Serial.print((char)GM65.read());
+
+  }
+}

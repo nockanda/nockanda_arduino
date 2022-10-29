@@ -1,0 +1,92 @@
+/*
+ * 예제146-3 이전에했던 75-1번예제의 draw_arc를 이용해서
+ * 더미값으로 미세먼지 스타일의 그래프를 출력해보자
+ */
+
+#include "SPI.h"
+#include "Adafruit_GFX.h"
+#include "Adafruit_ILI9341.h"
+
+// For the Adafruit shield, these are the default.
+#define TFT_DC 9
+#define TFT_CS 10
+#define TFT_MOSI 11
+#define TFT_CLK 13
+#define TFT_RST 8
+#define TFT_MISO 12
+
+// Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
+//Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
+// If using the breakout, change pins as desired
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("ILI9341 Test!"); 
+  randomSeed(analogRead(0));
+  tft.begin();
+
+  // read diagnostics (optional but can help debug problems)
+  uint8_t x = tft.readcommand8(ILI9341_RDMODE);
+  Serial.print("Display Power Mode: 0x"); Serial.println(x, HEX);
+  x = tft.readcommand8(ILI9341_RDMADCTL);
+  Serial.print("MADCTL Mode: 0x"); Serial.println(x, HEX);
+  x = tft.readcommand8(ILI9341_RDPIXFMT);
+  Serial.print("Pixel Format: 0x"); Serial.println(x, HEX);
+  x = tft.readcommand8(ILI9341_RDIMGFMT);
+  Serial.print("Image Format: 0x"); Serial.println(x, HEX);
+  x = tft.readcommand8(ILI9341_RDSELFDIAG);
+  Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); 
+
+  tft.setRotation(1); //화면의 방향을 결정(0~3)
+
+  
+
+}
+
+
+void loop(void) {
+
+  int num = random(361); //0~360
+  mongisensor(num);
+  delay(1000);
+}
+
+void fillArc(int arc_center_x,int arc_center_y,int arc_r,float arc_angle,int arc_tick, uint16_t color){ 
+  
+  for(float i = 0; i<=arc_angle; i+=0.3){
+    float arc_x = arc_center_x+arc_r * cos(i*(PI/180.0));
+    float arc_y = arc_center_y-arc_r * sin(i*(PI/180.0));
+    float arc_x2 = arc_center_x+(arc_r-arc_tick) * cos(i*(PI/180.0));
+    float arc_y2 = arc_center_y-(arc_r-arc_tick) * sin(i*(PI/180.0));
+    //tft.fillCircle(arc_x, arc_y, 1, YELLOW);
+    //tft.fillCircle(arc_x2, arc_y2, 1, GREEN);
+    tft.drawLine(arc_x, arc_y, arc_x2, arc_y2, color);
+  }
+}
+void mongisensor(float value){
+  uint16_t color;
+  if(value > 360) value= 360;
+  
+  if(value > 301) color = ILI9341_MAGENTA;
+  else if(value > 201) color = ILI9341_CYAN;
+  else if(value > 151) color = ILI9341_RED;
+  else if(value > 101) color = ILI9341_BLUE;
+  else if(value > 51) color = ILI9341_YELLOW;
+  else color = ILI9341_GREEN;
+  tft.fillScreen(ILI9341_BLACK);
+  tft.setCursor((tft.width()/2)-80,(tft.height()/2)-20);
+  tft.setTextSize(5);
+  tft.setTextColor(color);
+  tft.println(value);
+  tft.setCursor((tft.width()/2)-30,(tft.height()/2)+30);
+  tft.setTextSize(3);
+  tft.setTextColor(color);
+  tft.println("mg/m3");
+  tft.drawCircle(tft.width()/2, tft.height()/2, tft.height()/2, color);
+  tft.drawCircle(tft.width()/2, tft.height()/2, (tft.height()/2)-10, color);
+  fillArc(tft.width()/2,tft.height()/2,tft.height()/2,value,10,color);
+  //tft.drawFastHLine(0, tft.height()/2, tft.width(), YELLOW);
+  //tft.drawFastVLine(tft.width()/2, 0, tft.height(), YELLOW);
+  
+}

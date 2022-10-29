@@ -1,0 +1,41 @@
+/*
+ * 예제148-1 이산화탄소센서(MH-Z19B)를 연결해서
+ * 기본적인 값을 시리얼 모니터에 출력해보자!
+ */
+
+#include <SoftwareSerial.h>
+#include <MHZ19.h>
+
+SoftwareSerial co2sensor(2, 3); //RX, TX
+MHZ19 mhz(&co2sensor);
+
+void setup()
+{
+  Serial.begin(115200);
+  Serial.println(F("Starting..."));
+
+  co2sensor.begin(9600); //기본 보레이트가 9600인가 보다..
+}
+
+void loop()
+{
+  MHZ19_RESULT response = mhz.retrieveData();
+  if (response == MHZ19_RESULT_OK)
+  {
+    Serial.print(F("CO2: "));
+    Serial.println(mhz.getCO2()); //우리가 원하는 값..
+    Serial.print(F("Min CO2: "));
+    Serial.println(mhz.getMinCO2());
+    Serial.print(F("Temperature: "));
+    Serial.println(mhz.getTemperature()); //온도
+    Serial.print(F("Accuracy: "));
+    Serial.println(mhz.getAccuracy()); 
+  }
+  else
+  {
+    Serial.print(F("Error, code: "));
+    Serial.println(response);
+  }
+  
+  delay(15000);
+}

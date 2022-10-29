@@ -1,0 +1,64 @@
+/*
+ * 예제146-1 아두이노에 ILI9341모듈을 연결하고 기본적인 텍스트를 출력해보자!
+ * 예를들면 hello world 같은거..
+ */
+
+#include "SPI.h"
+#include "Adafruit_GFX.h"
+#include "Adafruit_ILI9341.h"
+
+// For the Adafruit shield, these are the default.
+#define TFT_DC 9
+#define TFT_CS 10
+#define TFT_MOSI 11
+#define TFT_CLK 13
+#define TFT_RST 8
+#define TFT_MISO 12
+
+// Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
+//Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
+// If using the breakout, change pins as desired
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("ILI9341 Test!"); 
+ 
+  tft.begin();
+
+  // read diagnostics (optional but can help debug problems)
+  uint8_t x = tft.readcommand8(ILI9341_RDMODE);
+  Serial.print("Display Power Mode: 0x"); Serial.println(x, HEX);
+  x = tft.readcommand8(ILI9341_RDMADCTL);
+  Serial.print("MADCTL Mode: 0x"); Serial.println(x, HEX);
+  x = tft.readcommand8(ILI9341_RDPIXFMT);
+  Serial.print("Pixel Format: 0x"); Serial.println(x, HEX);
+  x = tft.readcommand8(ILI9341_RDIMGFMT);
+  Serial.print("Image Format: 0x"); Serial.println(x, HEX);
+  x = tft.readcommand8(ILI9341_RDSELFDIAG);
+  Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); 
+
+  tft.setRotation(1); //화면의 방향을 결정(0~3)
+  tft.fillScreen(ILI9341_BLACK); //화면을 검은색으로 초기화
+  tft.setCursor(0, 0); //글자가 드로잉될 위치
+  tft.setTextColor(ILI9341_GREEN); 
+  tft.setTextSize(5);
+  tft.println("Hello World!");
+  tft.println("NOCKANDA!!");
+
+}
+
+
+void loop(void) {
+ 
+  
+}
+
+void testText(){
+  tft.fillScreen(ILI9341_BLACK); //화면을 검은색으로 초기화
+  tft.setCursor(0, 0); //글자가 드로잉될 위치
+  tft.setTextColor(ILI9341_GREEN); 
+  tft.setTextSize(5);
+  tft.println("Hello World!");
+  tft.println("NOCKANDA!!");
+}

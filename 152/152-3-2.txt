@@ -1,0 +1,29 @@
+/*
+ * 152-3-2 (slave 코드)
+ * 디지털 4번핀에 빨간색 LED가 연결되어있다!
+ * 마스터에서 받은 데이터를 확인해서 LED를 제어해라!
+ */
+#include <SoftwareSerial.h>
+#define LED 4
+SoftwareSerial AT09(2, 3); // RX, TX
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  AT09.begin(9600); //아두이노-블루투스모듈간 통신
+  pinMode(LED,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(AT09.available()){
+    //Serial.write(AT09.read());
+    byte recv[3];
+    AT09.readBytes(recv,3);
+    //Serial.println((char)recv[0]);
+    if(recv[0] == '0'){
+      digitalWrite(LED,LOW); //LED OFF
+    }else if(recv[0] == '1'){
+      digitalWrite(LED,HIGH); //LED ON
+    }
+  }
+}

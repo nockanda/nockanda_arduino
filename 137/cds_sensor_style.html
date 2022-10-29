@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+
+
+#btn{
+border: 1px solid blue;
+background-color: rgba(0,0,0,0);
+color: blue;
+padding: 5px;
+border-top-left-radius: 5px;
+border-bottom-left-radius: 5px;
+border-top-right-radius: 5px;
+border-bottom-right-radius: 5px;
+margin-right:2px;
+height:40px;
+}
+table {
+border-collapse: collapse;
+width:500px;
+}
+table, td, th {
+border: solid 1px #cccccc;
+}
+tr {
+height:40px;
+text-align: center;
+}
+td, th {
+padding: 5px;
+}
+.set1 {
+background-color: red;
+color: white;
+text-decoration: underline;
+font-weight: bold;
+}
+#c_head {
+height:30px;
+background-color: #eeeeee;
+}
+#c_width{
+width: 500px;
+}
+</style>
+</head>
+<body>
+<h1>NOCKANDA CDS(ANALOG) SENSOR EXAMPLE!</h1>
+
+<table>
+<tr id="c_head">
+<th>RAW DATA</th>
+</tr>
+<tr>
+<td id="c_width">512</td>
+</tr>
+<tr id="c_head">
+<th>RULES</th>
+</tr>
+<tr>
+<td id="c_width">
+      DAY(>300), NIGHT(<=300)<BR>
+      <button id="btn" onclick="location.href='#' ">DOWN(-100)</button>
+      <button id="btn" onclick="location.href='#' ">UP(+100)</button>
+</td>
+</tr>
+<tr id="c_head">
+<th>RESULT(DAY/NIGHT)</th>
+</tr>
+<tr>
+<td id="c_width">NIGHT</td>
+</tr>
+<tr>
+<td><button id="btn" onclick="location.href='#' ">REFRESH</button></td>
+</tr>
+</table>
+
+</body>
+</html>

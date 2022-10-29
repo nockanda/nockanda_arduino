@@ -1,0 +1,231 @@
+/*
+    예제134-1 TM1637이 wemos d1r1에 연결되어있다.
+    CLK를 D3에 DIO를 D4에 연결했다.
+    웹브라우저에서 원하는 숫자를 입력하면 디스플레이에 표시되도록하고
+    업다운 카운트 버튼을 만들어서 숫자가 1씩 변하도록 해보시오!
+*/
+#include <Arduino.h>
+#include <TM1637Display.h>
+#include <ESP8266WiFi.h>
+
+#define CLK D3
+#define DIO D4
+
+#ifndef STASSID
+#define STASSID "your-ssid"
+#define STAPSK  "your-password"
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+TM1637Display display(CLK, DIO);
+
+long tm1637_value = 0;
+bool tm1637_option = false;
+
+void setup() {
+  Serial.begin(115200);
+  //TM1637의 밝기설정(일단 최대밝기)
+  display.setBrightness(0x0f); //0~f(15)
+  // prepare LED
+  pinMode(LED_BUILTIN, OUTPUT); //내장 LED가 출력모드로 설정됨
+  digitalWrite(LED_BUILTIN, LOW); //내장 LED를 끈다
+
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\n');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  //서버가 클라이언트로 받은 메시지 전문을 출력
+  while (client.available()) {
+    // byte by byte is not very efficient
+    String text = client.readStringUntil('\n');
+    Serial.println(text);
+  }
+
+  String nockanda = "/nockanda/";
+  int index = req.indexOf(nockanda);
+  if(index != -1){
+    //패턴을 찾았는데 어떻게 동작할거냐?
+    index = index + nockanda.length();
+    int index2 = req.indexOf("/",index);
+    String text = req.substring(index,index2);
+    Serial.println(text);
+    tm1637_value=text.toInt();
+    if(tm1637_value < 0){
+      //음수일때
+      display.showNumberDec(tm1637_value, false);
+    }else{
+      //0을 포함한 양수일때
+      display.showNumberDec(tm1637_value, tm1637_option);
+    }
+    
+  }else{
+    //패턴이없다..
+    //서버의 ip주소로만 딱 접속했을때
+    //192.168.0.7
+  }
+  if(req.indexOf("/nockanda2/up/") != -1){
+    //업카운트 버튼
+    tm1637_value++;
+    if(tm1637_value < 0){
+      //음수일때
+      display.showNumberDec(tm1637_value, false);
+    }else{
+      //0을 포함한 양수일때
+      display.showNumberDec(tm1637_value, tm1637_option);
+    }
+  }else if(req.indexOf("/nockanda2/down/") != -1){
+    //다운카운트 버튼
+    tm1637_value--;
+    if(tm1637_value < 0){
+      //음수일때
+      display.showNumberDec(tm1637_value, false);
+    }else{
+      //0을 포함한 양수일때
+      display.showNumberDec(tm1637_value, tm1637_option);
+    }
+  }else if(req.indexOf("/nockanda2/true/") != -1){
+    //true 버튼
+    tm1637_option = true;
+  }else if(req.indexOf("/nockanda2/false/") != -1){
+    //false 버튼
+    tm1637_option = false;
+  }
+
+  String nockanda3 = "/nockanda3/";
+  int index3 = req.indexOf(nockanda3);
+  if(index3 != -1){
+    //해당 패턴이 찾아진 경우
+    //밝기조절이 이루어지면 OK
+    index3 = index3 + nockanda3.length();
+    int index4 = req.indexOf("/",index3);
+    //0x00
+    String bright = req.substring(index3,index4);
+    Serial.print("BRIGHT=");
+    int bright_int = bright.toInt();
+    Serial.println(bright_int);
+    display.setBrightness(bright_int,false); //0~15
+    display.setBrightness(bright_int,true); //0~15
+  }
+  
+
+  // Set LED according to the request
+  //digitalWrite(LED_BUILTIN, val);
+
+  // read/ignore the rest of the request
+  // do not client.flush(): it is for output only, see below
+  /*while (client.available()) {
+    // byte by byte is not very efficient
+    client.read();
+  }*/
+
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+  //1234 4567 8910 1112 -1 -12 -123
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>\r\n"));
+  client.print(F("<table border=1 width=400><tr><td colspan=2>Nockanda TM1637 example!</td></tr><tr><td colspan=2>TM1637 now number=>"));
+  client.print(tm1637_value);
+  client.print(F("</td></tr><tr><td colspan=2>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/1/'>[1]</a>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/12/'>[12]</a>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/1234/'>[1234]</a>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/4567/'>[4567]</a>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/8910/'>[8910]</a>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/1112/'>[1112]</a>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/-1/'>[-1]</a>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/-12/'>[-12]</a>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/-123/'>[-123]</a>"));
+  client.print(F("</td></tr><tr><td colspan=2>updown count<BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda2/up/'>[UP]</a>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda2/down/'>[DOWN]</a>"));
+  client.print(F("</td></tr><tr><td colspan=2>option setting<BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda2/true/'>[TRUE]</a>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda2/false/'>[FALSE]</a>"));
+  client.print(F("</td></tr><tr><td colspan=2>setBrightness setting<BR>"));
+  for(int i =0x00;i<= 0x0f;i++){
+     client.print(F("<a href='http://"));
+     client.print(WiFi.localIP());
+     client.print(F("/nockanda3/"));
+     client.print(i);
+     client.print(F("/'>["));
+     client.print(i);
+     client.print(F("]</a>"));  
+  }
+  
+ 
+  client.print(F("</td></tr></html>"));
+
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}

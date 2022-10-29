@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>NOCKANDA DHT11 EXAMPLE</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+<style>
+#btn{
+border: 1px solid blue;
+background-color: rgba(0,0,0,0);
+color: blue;
+padding: 5px;
+border-top-left-radius: 5px;
+border-bottom-left-radius: 5px;
+border-top-right-radius: 5px;
+border-bottom-right-radius: 5px;
+margin-right:-4px;
+height:40px;
+}
+table {
+border-collapse: collapse;
+width:500px;
+}
+table, td, th {
+border: solid 1px #cccccc;
+}
+tr {
+height:40px;
+text-align: center;
+}
+td, th {
+padding: 5px;
+}
+.set1 {
+background-color: red;
+color: white;
+text-decoration: underline;
+font-weight: bold;
+}
+#c_head {
+height:30px;
+background-color: #eeeeee;
+}
+#c_width{
+width: 500px;
+}
+</style>
+</head>
+<body>
+<h1>NOCKANDA DHT11 SENSOR EXAMPLE!</h1>
+<table>
+<tr id="c_head"><th>Temperature</th><th>Huminity</th></tr>
+<tr id="c_head">
+   <th>
+     <div style="width:250px; height:200px;">
+       <canvas id="donut1"></canvas>
+     </div>
+    </th>
+   <th>
+     <div style="width:250px; height:200px;">
+       <canvas id="donut2"></canvas>
+     </div>
+    </th>
+</tr><tr><td colspan=2>
+<div style="width:500px;">
+<canvas id="line1"></canvas>
+</div>
+</td></tr><tr><td colspan=2 align=center>
+<button id="btn" onclick="location.href=window.location.href">REFRESH</button>
+</td></tr></table>
+<script>
+var t_value = 25.12;
+var t_color = "red";
+var num = (t_value + 50)/100; 
+var data = { labels: [ "Temperature" ], datasets: [ { data: [num, 1-num], backgroundColor: [t_color ], hoverBackgroundColor: [t_color] }] }; 
+var ctx2 = document.getElementById('donut1').getContext('2d');
+var chart2 = new Chart(ctx2, {
+type: 'doughnut',
+data: data,
+options: { 
+   responsive: true, 
+   legend: { display: false }, 
+   elements: { center: { text: Math.round(num*100), fontStyle: 'Helvetica', sidePadding: 15 } }, 
+   maintainAspectRatio : false, 
+   cutoutPercentage:70, 
+   animation: {
+      onComplete: function () {
+           ctx2.textAlign = 'center';
+           ctx2.textBaseline = 'middle';
+           ctx2.font = '50px Arial';
+           ctx2.fillStyle = t_color;
+           ctx2.fillText(t_value , chart2.width/2, chart2.height-70);
+           ctx2.font = '20px Arial';
+           ctx2.fillText("(℃)", chart2.width/2, chart2.height-40);
+      }
+   }, 
+   rotation: 1 * Math.PI, 
+   circumference: 1 * Math.PI } 
+});
+var h_value = 50.12;
+var h_color = "blue";
+var num2 = h_value/100; 
+var data2 = { labels: [ "Huminity" ], datasets: [ { data: [num2, 1-num2], backgroundColor: [ h_color ], hoverBackgroundColor: [ h_color] }] }; 
+var ctx3 = document.getElementById('donut2').getContext('2d');
+var chart3 = new Chart(ctx3, {
+// 챠트 종류를 선택
+type: 'doughnut',
+data: data2,
+options: { 
+   responsive: true, 
+   legend: { display: false }, 
+   elements: { center: { text: Math.round(num2*100), fontStyle: 'Helvetica', sidePadding: 15 } }, 
+   maintainAspectRatio : false, 
+   cutoutPercentage:70, 
+   animation: {
+      onComplete: function () {
+           ctx3.textAlign = 'center';
+           ctx3.textBaseline = 'middle';
+           ctx3.font = '50px Arial';
+           ctx3.fillStyle = h_color;
+           ctx3.fillText(h_value, chart3.width/2, chart3.height-70);
+           ctx3.font = '20px Arial';
+           ctx3.fillText("(%)", chart3.width/2, chart3.height-40);
+      }
+   }, 
+   rotation: 1 * Math.PI, 
+   circumference: 1 * Math.PI } 
+});
+var ctx = document.getElementById('line1').getContext('2d');
+var chart = new Chart(ctx, {
+type: 'line',
+data: {
+labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],
+datasets: [
+{
+label: 'Temperature',
+backgroundColor: 'transparent',
+borderColor: t_color,
+data: [20, 10, 5, 2, 20, 30, 45]
+},
+{
+label: 'Huminity',
+backgroundColor: 'transparent',
+borderColor: h_color,
+data: [10, 5, 2, 20, 30, 45,20]
+}
+]
+},
+options: {}
+});
+</script>
+</body>
+</html>

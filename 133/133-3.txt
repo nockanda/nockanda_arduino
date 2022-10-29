@@ -1,0 +1,154 @@
+/*
+    예제133-3 LED 4개를 get방식으로 제어해보자!
+    wemos 디지털 2번,3번,4번,5번 포트에 LED를 하나씩 연결한다!
+    웹브라우저로 LED를 개별적으로 제어해보자!
+    (예시) 0000 모두꺼짐 1010 첫번째 세번째만 켜짐
+    1111 모두켜짐 0001 마지막것만 켜짐
+*/
+
+#include <ESP8266WiFi.h>
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+#define led1 D2
+#define led2 D3
+#define led3 D4
+#define led4 D5
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+byte vals[4];
+byte led_array[] = {led1,led2,led3,led4};
+void setup() {
+  Serial.begin(115200);
+
+  // prepare LED
+  pinMode(led1, OUTPUT);
+  pinMode(led2, OUTPUT);
+  pinMode(led3, OUTPUT);
+  pinMode(led4, OUTPUT);
+
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\n');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  //서버가 클라이언트로 받은 메시지 전문을 출력
+  while (client.available()) {
+    // byte by byte is not very efficient
+    client.readStringUntil('\n');
+    //String text = client.readStringUntil('\n');
+    //Serial.println(text);
+  }
+
+  // Match the request
+  
+  // nockanda/0000
+  String getid = "/nockanda/";
+  int index = req.indexOf(getid);
+  if (index != -1) {
+    //nockanda라는 패턴이 검색됨..
+    index = index + getid.length();
+    String data = req.substring(index, index+4);
+    //Serial.print("OUTPUT=>");
+    //Serial.println(data);
+    for(int i = 0;i<4;i++){
+      if(data[i] == '0'){
+        //LED OFF
+        digitalWrite(led_array[i],0);
+        vals[i] = 0;
+      }else{
+        //LED ON
+        digitalWrite(led_array[i],1);
+        vals[i] = 1;
+      }
+    }
+    //val1 = 0;
+    //digitalWrite(led1, val1);
+  }else{
+    for(int i = 0;i<4;i++){
+      vals[i] = digitalRead(led_array[i]);
+    }
+  }
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+  //0000 1111 1010 0101 1001 0110
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>\r\n"));
+  client.print(F("<table border=1 width=400><tr><td colspan=2>Nockanda LED SAMPLE</td></tr><tr><td colspan=2>NOW D2 PORT STATE = >"));
+  client.print((vals[0]) ? F("high") : F("low"));
+  client.print(F("<BR>NOW D3 PORT STATE = >"));
+  client.print((vals[1]) ? F("high") : F("low"));
+  client.print(F("<BR>NOW D4 PORT STATE = >"));
+  client.print((vals[2]) ? F("high") : F("low"));
+  client.print(F("<BR>NOW D5 PORT STATE = >"));
+  client.print((vals[3]) ? F("high") : F("low"));
+  client.print(F("</td></tr><tr><td width=200 colspan=2>"));
+  //
+  for(int i =0;i<16;i++){
+    //(i,BIN)  3 = 0011
+    String number = String(i, BIN);
+    //number.length() 3  101
+    while(number.length() <4){
+      number = "0" + number;
+    }
+    client.print(F("<a href='http://"));
+    client.print(WiFi.localIP());
+    client.print(F("/nockanda/"));
+    client.print(number);
+    client.print(F("'>["));
+    client.print(number);
+    client.print(F("]</a>"));
+    client.print(F("<BR>"));
+  }
+  //
+  client.print(F("</td></tr></html>"));
+
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}

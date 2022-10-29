@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#btn{
+border: 1px solid blue;
+background-color: rgba(0,0,0,0);
+color: blue;
+padding: 5px;
+border-top-left-radius: 5px;
+border-bottom-left-radius: 5px;
+border-top-right-radius: 5px;
+border-bottom-right-radius: 5px;
+margin-right:-4px;
+height:40px;
+}
+table {
+border-collapse: collapse;
+width:500px;
+}
+table, td, th {
+border: solid 1px #cccccc;
+}
+tr {
+height:40px;
+text-align: center;
+}
+td, th {
+padding: 5px;
+}
+.set1 {
+background-color: red;
+color: white;
+text-decoration: underline;
+font-weight: bold;
+}
+#c_head {
+height:30px;
+background-color: #eeeeee;
+}
+#c_width{
+width: 500px;
+}
+</style>
+</head>
+<body>
+<h1>NOCKANDA RELAY EXAMPLE!</h1>
+<table>
+<tr id="c_head">
+<th>RESULT(ON or OFF)</th>
+</tr>
+<tr>
+<td height=100 class='set1'><h1>ON</h1></td>
+</tr>
+<tr>
+<td>
+    <button id="btn" onclick="location.href=window.location.host+'?ON'">REALY ON</button>
+    <button id="btn" onclick="location.href=window.location.host+'?OFF'">RELAY OFF</button>
+</td>
+</tr>
+</table>
+</body>
+</html>

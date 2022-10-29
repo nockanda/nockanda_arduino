@@ -1,0 +1,358 @@
+/*
+    예제145-2 사물인터넷보드인 wemos d1r1에 스탭모터가 연결되어있다.
+    노트북이나 스마트폰의 웹브라우저를 이용해서 스탭모터를 제어해보자!
+    사물인터넷보드는 서버역할을 한다!
+*/
+
+#include <ESP8266WiFi.h>
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+#define IN1 D6
+#define IN2 D5
+#define IN3 D4
+#define IN4 D3
+
+//Stepper::Stepper(int number_of_steps, int motor_pin_1, int motor_pin_2,
+//int motor_pin_3, int motor_pin_4)
+byte motor_pin_1 = IN4; //IN4
+byte motor_pin_2 = IN2; //IN2
+byte motor_pin_3 = IN3; //IN3
+byte motor_pin_4 = IN1; //IN1
+
+ int step_number = 0;    
+ bool direct = 0;     
+ long number_of_steps = 2048; 
+ int step_delay = 5;
+
+ long now_steper_value = 0; //현재 저장된 스탭수
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+IPAddress server_ip; //일단 선언만!
+String server_ip2string;
+void setup() {
+  Serial.begin(115200);
+  pinMode(motor_pin_1,OUTPUT);
+  pinMode(motor_pin_2,OUTPUT);
+  pinMode(motor_pin_3,OUTPUT);
+  pinMode(motor_pin_4,OUTPUT);
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  //서버IP를 String type으로 바꿔보자!
+  server_ip = WiFi.localIP();
+  //server_ip[0] , server_ip[1], server_ip[2], server_ip[3]
+  server_ip2string = String(server_ip[0]) + "." + String(server_ip[1]) + "." + String(server_ip[2]) + "." + String(server_ip[3]);
+
+  // Print the IP address
+  Serial.println(server_ip2string);
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\n');
+  Serial.println(F("before = "));
+  Serial.println(req);
+
+  //서버가 클라이언트로 받은 메시지 전문을 출력
+  while (client.available()) {
+    // byte by byte is not very efficient
+    String text = client.readStringUntil('\n');
+    //Serial.println(text);
+  }
+
+  //GET /favicon.ico HTTP/1.1   //fillter
+  if(req.indexOf("favicon.ico") != -1){
+    //검색했더니 있더라~
+    return;
+  }
+  //GET /+64 HTTP/1.1  //OK
+  String s1 = "GET /";
+  String s2 = " HTTP";
+  int start_index = req.indexOf(s1) + s1.length();
+  int end_index = req.indexOf(s2);
+  req = req.substring(start_index,end_index);
+
+  Serial.println(F("after = "));
+  Serial.println(req);
+
+  int request_value = req.toInt();
+  now_steper_value = now_steper_value + request_value;
+
+  //now_steper_value == -64
+  if(now_steper_value > 64){
+    now_steper_value = now_steper_value - 64;
+  }else if(now_steper_value < 0){
+    now_steper_value = 64 + now_steper_value;
+  }
+  int stepper_degree = (360*32*now_steper_value)/2048;
+  Serial.print("degree = ");
+  Serial.println(stepper_degree);
+  Serial.print("now_steper_value = ");
+  Serial.println(now_steper_value);
+  //now_steper_value*32:x = 2048:360
+  //x = (360*32*now_steper_value)/2048;
+  // read/ignore the rest of the request
+  // do not client.flush(): it is for output only, see below
+  /*while (client.available()) {
+    // byte by byte is not very efficient
+    //client.read();
+  }*/
+//---------------------------------------------------
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"));
+  String response = "\
+<!DOCTYPE html>\
+<html>\
+<head>\
+<title>NOCKANDA STEPPER EXAMPLE</title>\
+<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js\"></script>\
+<script type=\"text/javascript\" charset=\"utf-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js\"></script>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:-4px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:500px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 500px;\
+}\
+</style>\
+</head>\
+<body>\
+<h1>NOCKANDA STEPPER MOTOR EXAMPLE!</h1>\
+<table border=0>\
+<tr id=\"c_head\"><th>STEPPER MOTOR</th></tr>\
+<tr id=\"c_head\"><th>\
+<div style=\"width:500px; height:300px;\">\
+<canvas id=\"myChart\"></canvas>\
+</div>\
+</th>\
+<tr><td>\
+   <table border=0>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/+1'\">+1 STEP</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/-1'\">-1 STEP</button></td>\
+     </tr>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/+4'\">+4 STEP</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/-4'\">-4 STEP</button></td>\
+     </tr>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/+8'\">+8 STEP</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/-8'\">-8 STEP</button></td>\
+     </tr>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/+16'\">+16 STEP</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/-16'\">-16 STEP</button></td>\
+     </tr>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/+32'\">+32 STEP</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/-32'\">-32 STEP</button></td>\
+     </tr>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/+64'\">+64 STEP</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/-64'\">-64 STEP</button></td>\
+     </tr>\
+   </table>\
+</td></tr>\
+<tr><td align=center>\
+<button id=\"btn\" onclick=\"location.href=window.location.href\">REFRESH</button>\
+</td></tr></table>\
+<script>\
+var input_value = "+
+String(stepper_degree)
++";\
+var num = input_value/360; \
+var color = 'blue';\
+var data = { labels: ['stepper value'], datasets: [ { data: [num, 1-num], backgroundColor: [color], hoverBackgroundColor: [ color ] }] }; \
+var ctx = document.getElementById('myChart').getContext('2d');\
+var chart = new Chart(ctx, {\
+type: 'doughnut',\
+data: data,\
+options: { \
+   responsive: true, \
+   legend: { display: false }, \
+   elements: { center: { text: Math.round(num*100), fontStyle: 'Helvetica', sidePadding: 15 } }, \
+   maintainAspectRatio : false, \
+   cutoutPercentage:70, \
+   animation: {\
+      onComplete: function () {\
+           ctx.textAlign = 'center';\
+           ctx.textBaseline = 'middle';\
+           ctx.font = '80px Arial';\
+           ctx.fillStyle = color;\
+           ctx.fillText(input_value, chart.width/2, chart.height-150);\
+           ctx.font = '30px Arial';\
+           ctx.fillText(\"(degree)\", chart.width/2, chart.height-110);\
+      }\
+   }, \
+   } \
+});\
+</script>\
+</body>\
+</html>\
+";
+
+  client.print(response);
+
+  //스탭모터 각도조정
+  nockanda_step(request_value*32);
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}
+void nockanda_step(int steps_to_move)
+{
+  int steps_left = abs(steps_to_move);  // how many steps to take
+
+  // determine direction based on whether steps_to_mode is + or -:
+  if (steps_to_move > 0) { direct = 1; }
+  if (steps_to_move < 0) { direct = 0; }
+
+
+  // decrement the number of steps, moving one step each time:
+  while (steps_left > 0)
+  {
+
+      if (direct == 1)
+      {
+        step_number++;
+        if (step_number == number_of_steps) {
+          step_number = 0;
+        }
+      }
+      else
+      {
+        if (step_number == 0) {
+          step_number = number_of_steps;
+        }
+        step_number--;
+      }
+      steps_left--;
+
+     switch (step_number % 4) {
+      case 0:  // 1010
+        digitalWrite(motor_pin_1, HIGH);
+        digitalWrite(motor_pin_2, LOW);
+        digitalWrite(motor_pin_3, HIGH);
+        digitalWrite(motor_pin_4, LOW);
+      break;
+      case 1:  // 0110
+        digitalWrite(motor_pin_1, LOW);
+        digitalWrite(motor_pin_2, HIGH);
+        digitalWrite(motor_pin_3, HIGH);
+        digitalWrite(motor_pin_4, LOW);
+      break;
+      case 2:  //0101
+        digitalWrite(motor_pin_1, LOW);
+        digitalWrite(motor_pin_2, HIGH);
+        digitalWrite(motor_pin_3, LOW);
+        digitalWrite(motor_pin_4, HIGH);
+      break;
+      case 3:  //1001
+        digitalWrite(motor_pin_1, HIGH);
+        digitalWrite(motor_pin_2, LOW);
+        digitalWrite(motor_pin_3, LOW);
+        digitalWrite(motor_pin_4, HIGH);
+      break;
+    }
+    //쉬는시간이 어느정도 있어야 하더라~
+    delay(step_delay); //5ms정도 쉬어라~
+  }
+}

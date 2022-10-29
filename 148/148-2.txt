@@ -1,0 +1,56 @@
+/*
+ * 예제148-2 이산화탄소센서(MH-Z19B)를 연결해서
+ * TM1637 2개를 이용해서 온도와 이산화탄소 농도를 표시하자!
+ */
+
+#include <SoftwareSerial.h>
+#include <MHZ19.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK1 4 //TM1637 1번
+#define DIO1 5 //TM1637 1번
+#define CLK2 6 //TM1637 2번
+#define DIO2 7 //TM1637 2번
+
+SoftwareSerial co2sensor(2, 3); //RX, TX
+MHZ19 mhz(&co2sensor);
+
+TM1637Display display1(CLK1, DIO1);
+TM1637Display display2(CLK2, DIO2);
+
+void setup()
+{
+  Serial.begin(115200);
+  Serial.println(F("Starting..."));
+  display1.setBrightness(0x0f); //밝기 최대..
+  display2.setBrightness(0x0f); //밝기 최대..
+  co2sensor.begin(9600); //기본 보레이트가 9600인가 보다..
+}
+
+void loop()
+{
+  MHZ19_RESULT response = mhz.retrieveData();
+  if (response == MHZ19_RESULT_OK)
+  {
+    /*
+    Serial.print(F("CO2: "));
+    Serial.println(mhz.getCO2()); //우리가 원하는 값..
+    Serial.print(F("Min CO2: "));
+    Serial.println(mhz.getMinCO2());
+    Serial.print(F("Temperature: "));
+    Serial.println(mhz.getTemperature()); //온도
+    Serial.print(F("Accuracy: "));
+    Serial.println(mhz.getAccuracy()); 
+    */
+    display1.showNumberDec(mhz.getCO2(), false);
+    display2.showNumberDec(mhz.getTemperature(), false);
+  }
+  else
+  {
+    Serial.print(F("Error, code: "));
+    Serial.println(response);
+  }
+  
+  delay(15000);
+}

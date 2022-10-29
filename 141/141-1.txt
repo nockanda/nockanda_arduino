@@ -1,0 +1,270 @@
+/*
+    예제141-1 미세먼지센서(GP2Y)를 A0과 D3에 각각 연결했다!
+    측정되는 미세먼지값을 웹브라우저를 통해 클라이언트에게 보여주자!
+*/
+
+#include <ESP8266WiFi.h>
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+int measurePin = A0; //Connect dust sensor to Arduino A0 pin
+int ledPower = D3;   //Connect 3 led driver pins of dust sensor to Arduino D2
+int samplingTime = 280;
+int deltaTime = 40;
+int sleepTime = 9680;
+float voMeasured = 0;
+float calcVoltage = 0;
+float dustDensity = 0;
+float dust[7] = {0};
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(ledPower,OUTPUT);
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    //클라이언트가 존재하지 않는다면~
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  //여기쯤 측정 시작!
+  digitalWrite(ledPower,LOW); // power on the LED
+  delayMicroseconds(samplingTime);
+  voMeasured = analogRead(measurePin); // read the dust value
+  delayMicroseconds(deltaTime);
+  digitalWrite(ledPower,HIGH); // turn the LED off
+  delayMicroseconds(sleepTime);
+  calcVoltage = voMeasured * (3.3 / 1024.0);
+  dustDensity = (0.17 * calcVoltage - 0.1) *1000; //ug/m3
+  if(dustDensity < 0) dustDensity = 0;
+
+  //dustDensity = random(10, 200); //테스트용 더미 데이터(테스트시 주석해제)
+
+  //0(1) 1(2) 2(3) 3(4) 4(5) 5(6) ,,, 6(최신값)
+  for(int i = 0;i<6;i++){
+    dust[i] = dust[i+1];
+  }
+  dust[6] = dustDensity;
+
+  //1,2,3,4,5,6,7
+  String dust2string;
+  for(int i =0;i<7;i++){
+    dust2string = dust2string + String(dust[i]);
+    if(i != 6){
+      //제일 끝이 아닌 모든 경우
+      dust2string += ",";
+    }
+  }
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\n');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  //서버가 클라이언트로 받은 메시지 전문을 출력
+  while (client.available()) {
+    // byte by byte is not very efficient
+    String text = client.readStringUntil('\n');
+    Serial.println(text);
+  }
+
+  // Match the request
+  int val;
+  if (req.indexOf(F("/nockanda/0")) != -1) {
+    //req의 문자열 패턴에서 /gpio/0 패턴이 검색이 된다면~
+    val = LOW;
+  } else if (req.indexOf(F("/nockanda/1")) != -1) {
+    //req의 문자열 패턴에서 /gpio/1 패턴이 검색이 된다면~
+    val = HIGH;
+  } else {
+    Serial.println(F("invalid request"));
+    val = digitalRead(LED_BUILTIN);
+  }
+
+  // read/ignore the rest of the request
+  // do not client.flush(): it is for output only, see below
+  /*while (client.available()) {
+    // byte by byte is not very efficient
+    //client.read();
+  }*/
+
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>\r\n"));
+
+  String response = "\
+<head>\
+<title>NOCKANDA DHT11 EXAMPLE</title>\
+<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js\"></script>\
+<script type=\"text/javascript\" charset=\"utf-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js\"></script>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:-4px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:500px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 500px;\
+}\
+</style>\
+</head>\
+<body>\
+<h1>NOCKANDA DUST(GP2Y) SENSOR EXAMPLE!</h1>\
+<table border=0>\
+<tr id=\"c_head\"><th>DUST SENSOR</th></tr>\
+<tr><td><table border=0>\
+<td bgcolor=\"blue\"><font color=white>VERY GOOD<BR>(0~30)</font></td>\
+<td bgcolor=\"green\"><font color=white>GOOD<BR>(31~80)</font></td>\
+<td bgcolor=\"orange\"><font color=white>BAD<BR>(81~150)</font></td>\
+<td bgcolor=\"red\"><font color=white>VERY BAD<BR>(151~)</font></td></table></td></tr>\
+<tr id=\"c_head\"><th>\
+<div style=\"width:500px; height:300px;\">\
+<canvas id=\"myChart\"></canvas>\
+</div>\
+</th></tr><tr><td>\
+<div style=\"width:500px;\">\
+<canvas id=\"myChart2\"></canvas>\
+</div>\
+</td></tr><tr><td align=center>\
+<button id=\"btn\" onclick=\"location.href=window.location.href \">REFRESH</button>\
+</td></tr></table>\
+<script>\
+var input_value = "+
+String(dustDensity)
++";\
+var graph_value;\
+if(input_value > 200) graph_value = 200;\
+else graph_value = input_value;\
+var num = graph_value/200; \
+var color;\
+if(input_value < 30) color = 'blue';\
+else if(input_value < 80) color = 'green';\
+else if(input_value < 150) color = 'orange';\
+else if(input_value > 151) color ='red';\
+var data = { labels: ['dust value'], datasets: [ { data: [num, 1-num], backgroundColor: [color], hoverBackgroundColor: [ color ] }] }; \
+var ctx = document.getElementById('myChart').getContext('2d');\
+var chart = new Chart(ctx, {\
+type: 'doughnut',\
+data: data,\
+options: { \
+   responsive: true, \
+   legend: { display: false }, \
+   elements: { center: { text: Math.round(num*100), fontStyle: 'Helvetica', sidePadding: 15 } }, \
+   maintainAspectRatio : false, \
+   cutoutPercentage:70, \
+   animation: {\
+      onComplete: function () {\
+           ctx.textAlign = 'center';\
+           ctx.textBaseline = 'middle';\
+           ctx.font = '80px Arial';\
+           ctx.fillStyle = color;\
+           ctx.fillText(input_value, chart.width/2, chart.height-90);\
+           ctx.font = '30px Arial';\
+           ctx.fillText(\"(ug/m3)\", chart.width/2, chart.height-30);\
+      }\
+   }, \
+   rotation: 1 * Math.PI, \
+   circumference: 1 * Math.PI } \
+});\
+var ctx2 = document.getElementById('myChart2').getContext('2d');\
+var chart2 = new Chart(ctx2, {\
+type: 'line',\
+data: {\
+labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+datasets: [\
+{\
+label: 'DUST',\
+backgroundColor: 'transparent',\
+borderColor: 'blue',\
+data: ["+
+dust2string
++"]\
+}\
+]\
+},\
+options: {}\
+});\
+</script>\
+</body>\
+</html>\
+";
+
+  client.print(response);
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}

@@ -1,0 +1,38 @@
+/*
+ * 예제 152-2-1(master 코드)
+ * 유저가 시리얼모니터를 통해 AT커맨드로 페어링 하는게 아니라
+ * 아두이노의 코드로 페어링이 되게 할 수는 없는가?
+ * 자동 페어링은 어렵다...
+ * 어느정도 합의점을 제안해보자!
+ */
+
+#include <SoftwareSerial.h>
+SoftwareSerial AT09(2, 3); // RX, TX
+byte cona[]={'A','T','+','C','O','N','A','5','0','3','3','8','B','F','4','1','E','A','F',0x0D,0x0A};
+byte message[] = {'N','O','C','K','A','N','D','A',0x0D,0x0A};
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  AT09.begin(9600); //아두이노-블루투스모듈간 통신
+
+  //AT+CONA50338BF41EAF 페어링 명령!
+  //19개 데이터+ CR+ LF = 총 21개
+  
+
+  AT09.write(cona,sizeof(cona)); //페어링 해라!
+}
+
+unsigned long t = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(AT09.available()){
+    Serial.write(AT09.read());
+  }
+  unsigned long t2 = millis();
+  if(t2-t > 1000){
+    AT09.write(message,sizeof(message));
+    t = t2;
+  }
+
+}

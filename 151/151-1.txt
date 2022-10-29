@@ -1,0 +1,219 @@
+/*
+    예제151-1 모스펫(mosfet)을 D3에 연결했다.
+    모스펫에 USB선풍기를 연결했다.
+    웹브라우저를 통해서 USB선풍기의 속도를 조절하면서 제어해보라!
+*/
+
+#include <ESP8266WiFi.h>
+
+#define mosfet D3
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+int power = 0; //0~1023 
+
+void setup() {
+  Serial.begin(115200);
+
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\n');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  //서버가 클라이언트로 받은 메시지 전문을 출력
+  while (client.available()) {
+    // byte by byte is not very efficient
+    String text = client.readStringUntil('\n');
+    Serial.println(text);
+  }
+
+  // Match the request
+  
+  if (req.indexOf(F("/UP")) != -1) {
+    //req의 문자열 패턴에서 /gpio/0 패턴이 검색이 된다면~
+    power+=128;
+    if(power > 1023) power = 1023;
+  } else if (req.indexOf(F("/DOWN")) != -1) {
+    //req의 문자열 패턴에서 /gpio/1 패턴이 검색이 된다면~
+    power-=128;
+    if(power < 0) power = 0;
+  } else if (req.indexOf(F("/MAX")) != -1) {
+    //req의 문자열 패턴에서 /gpio/1 패턴이 검색이 된다면~
+    power = 1023;
+  } else if (req.indexOf(F("/MIN")) != -1) {
+    //req의 문자열 패턴에서 /gpio/1 패턴이 검색이 된다면~
+    power = 0;
+  } 
+  analogWrite(mosfet,power);
+  // read/ignore the rest of the request
+  // do not client.flush(): it is for output only, see below
+  /*while (client.available()) {
+    // byte by byte is not very efficient
+    //client.read();
+  }*/
+
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"));
+  String response = "\
+  <!DOCTYPE html>\
+<html>\
+<head>\
+<title>NOCKANDA MOSFET EXAMPLE</title>\
+<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js\"></script>\
+<script type=\"text/javascript\" charset=\"utf-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js\"></script>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:-4px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:500px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 500px;\
+}\
+</style>\
+</head>\
+<body>\
+<h1>NOCKANDA MOSFET EXAMPLE!</h1>\
+<table border=0>\
+<tr id=\"c_head\"><th>MOSFET POWER(%)</th></tr>\
+<tr id=\"c_head\"><th>\
+<div style=\"width:500px; height:300px;\">\
+<canvas id=\"myChart\"></canvas>\
+</div>\
+</th>\
+<tr>\
+<td>\
+   <table border = 0>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='/UP'\">POWER UP</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='/DOWN'\">POWER DOWN</button></td>\
+     </tr>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='/MAX'\">MAX POWER</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='/MIN'\">MIN POWER(OFF)</button></td>\
+     </tr>\
+   </table>\
+</td>\
+</tr>\
+</table>\
+<script>\
+var input_value = "+
+String(power)
++";\
+var num = input_value/1023; \
+var color = 'blue';\
+var data = { labels: ['mosfet value'], datasets: [ { data: [num, 1-num], backgroundColor: [color], hoverBackgroundColor: [ color ] }] }; \
+var ctx = document.getElementById('myChart').getContext('2d');\
+var chart = new Chart(ctx, {\
+type: 'doughnut',\
+data: data,\
+options: { \
+   responsive: true, \
+   legend: { display: false }, \
+   elements: { center: { text: Math.round(num*100), fontStyle: 'Helvetica', sidePadding: 15 } }, \
+   maintainAspectRatio : false, \
+   cutoutPercentage:70, \
+   animation: {\
+      onComplete: function () {\
+           ctx.textAlign = 'center';\
+           ctx.textBaseline = 'middle';\
+           ctx.font = '80px Arial';\
+           ctx.fillStyle = color;\
+           ctx.fillText(Math.round(num*100), chart.width/2, chart.height-90);\
+           ctx.font = '30px Arial';\
+           ctx.fillText(\"(%)\", chart.width/2, chart.height-30);\
+      }\
+   }, \
+   rotation: 1 * Math.PI, \
+   circumference: 1 * Math.PI } \
+});\
+</script>\
+</body>\
+</html>\
+  ";
+  client.print(response);
+
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}

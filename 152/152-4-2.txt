@@ -1,0 +1,47 @@
+/*
+ * 152-4-2 (slave 코드)
+ * 슬레이브에 LED가 2개로 늘었다..
+ * D4에 빨간LED가 있고 D5에 녹색 LED가 있다.
+ * 제어해보자!
+ */
+#include <SoftwareSerial.h>
+#define LED1 4
+#define LED2 5
+SoftwareSerial AT09(2, 3); // RX, TX
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  AT09.begin(9600); //아두이노-블루투스모듈간 통신
+  pinMode(LED1,OUTPUT);
+  pinMode(LED2,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(AT09.available()){
+    //Serial.write(AT09.read());
+    byte recv[4];
+    AT09.readBytes(recv,4);
+    Serial.println((char)recv[0]);
+    Serial.println((char)recv[1]);
+    if(recv[0] == '0'){
+      //LED1
+      if(recv[1] == '0'){
+        //OFF
+        digitalWrite(LED1,LOW);
+      }else if(recv[1] == '1'){
+        //ON
+        digitalWrite(LED1,HIGH);
+      }
+    }else if(recv[0] == '1'){
+      //LED2
+      if(recv[1] == '0'){
+        //OFF
+        digitalWrite(LED2,LOW);
+      }else if(recv[1] == '1'){
+        //ON
+        digitalWrite(LED2,HIGH);
+      }
+    }
+  }
+}

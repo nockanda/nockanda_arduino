@@ -1,0 +1,175 @@
+/*
+    예제133-2 LED 4개를 get방식으로 제어해보자!
+    wemos 디지털 2번,3번,4번,5번 포트에 LED를 하나씩 연결한다!
+    웹브라우저로 LED를 개별적으로 제어해보자!
+*/
+
+#include <ESP8266WiFi.h>
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+#define led1 D2
+#define led2 D3
+#define led3 D4
+#define led4 D5
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+int val1,val2,val3,val4;
+void setup() {
+  Serial.begin(115200);
+
+  // prepare LED
+  pinMode(led1, OUTPUT);
+  pinMode(led2, OUTPUT);
+  pinMode(led3, OUTPUT);
+  pinMode(led4, OUTPUT);
+
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\n');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  //서버가 클라이언트로 받은 메시지 전문을 출력
+  while (client.available()) {
+    // byte by byte is not very efficient
+    client.readStringUntil('\n');
+    //String text = client.readStringUntil('\n');
+    //Serial.println(text);
+  }
+
+  // Match the request
+  
+  
+  if (req.indexOf(F("/nockanda/0")) != -1) {
+    val1 = 0;
+    digitalWrite(led1, val1);
+  } else if (req.indexOf(F("/nockanda/1")) != -1) {
+    val1 = 1;
+    digitalWrite(led1, val1);
+  } else if (req.indexOf(F("/nockanda/2")) != -1) {
+    val2 = 0;
+    digitalWrite(led2, val2);
+  } else if (req.indexOf(F("/nockanda/3")) != -1) {
+    val2 = 1;
+    digitalWrite(led2, val2);
+  } else if (req.indexOf(F("/nockanda/4")) != -1) {
+    val3 = 0;
+    digitalWrite(led3, val3);
+  } else if (req.indexOf(F("/nockanda/5")) != -1) {
+    val3 = 1;
+    digitalWrite(led3, val3);
+  } else if (req.indexOf(F("/nockanda/6")) != -1) {
+    val4 = 0;
+    digitalWrite(led4, val4);
+  } else if (req.indexOf(F("/nockanda/7")) != -1) {
+    val4 = 1;
+    digitalWrite(led4, val4);
+  } else {
+    Serial.println(F("invalid request"));
+    val1 = digitalRead(led1);
+    val2 = digitalRead(led2);
+    val3 = digitalRead(led3);
+    val4 = digitalRead(led4);
+  }
+  Serial.print(val1);
+  Serial.print(",");
+  Serial.print(val2);
+  Serial.print(",");
+  Serial.print(val3);
+  Serial.print(",");
+  Serial.println(val4);
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>\r\n"));
+  client.print(F("<table border=1 width=400><tr><td colspan=2>Nockanda LED SAMPLE</td></tr><tr><td colspan=2>NOW D2 PORT STATE = >"));
+  client.print((val1) ? F("high") : F("low"));
+  client.print(F("<BR>NOW D3 PORT STATE = >"));
+  client.print((val2) ? F("high") : F("low"));
+  client.print(F("<BR>NOW D4 PORT STATE = >"));
+  client.print((val3) ? F("high") : F("low"));
+  client.print(F("<BR>NOW D5 PORT STATE = >"));
+  client.print((val4) ? F("high") : F("low"));
+  client.print(F("</td></tr><tr><td width=200>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/1'>[LED1 ON]</a>"));
+  client.print(F("<BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/3'>[LED2 ON]</a>"));
+  client.print(F("<BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/5'>[LED3 ON]</a>"));
+  client.print(F("<BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/7'>[LED4 ON]</a>"));
+  client.print(F("</td><td width=200>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/0'>[LED1 OFF]</a>"));
+  client.print(F("<BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/2'>[LED2 OFF]</a>"));
+  client.print(F("<BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/4'>[LED3 OFF]</a>"));
+  client.print(F("<BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/6'>[LED4 OFF]</a>"));
+  client.print(F("</td></tr></html>"));
+
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}

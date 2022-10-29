@@ -1,0 +1,158 @@
+/*
+    예제136-1 적외선 근접센서(IR DETECTOR SENSOR)를 D3에 연결하자!
+    사물인터넷 아두이노보드인 WEMOS D1R1을 WIFI에 연결하자
+    노트북의 크롬웹브라우저를 이용해서 적외선 근접센서의 상태를 모니터링 해보자!
+    IR센서는 감지가 되었을때 0(LOW)가 출력되고 평소에 1(HIGH)가 출력된다.
+*/
+
+#include <ESP8266WiFi.h>
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+#define IRSENSOR D3
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+
+bool irdetector = HIGH;
+IPAddress server_ip; //일단 선언만!
+String server_ip2string;
+void setup() {
+  Serial.begin(115200);
+
+  //핀모드 설정
+  pinMode(IRSENSOR, INPUT); //입력모드
+  
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  //서버IP를 String type으로 바꿔보자!
+  server_ip = WiFi.localIP();
+  //server_ip[0] , server_ip[1], server_ip[2], server_ip[3]
+  server_ip2string = String(server_ip[0]) + "." + String(server_ip[1]) + "." + String(server_ip[2]) + "." + String(server_ip[3]);
+
+  // Print the IP address
+  Serial.println(server_ip2string);
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  //센서값 리딩
+  irdetector = digitalRead(IRSENSOR);
+  String result;
+  if(irdetector == HIGH){
+    //감지안됨 NO
+    result = "NO";
+  }else{
+    //감지성공 YES
+    result = "YES";
+  }
+  client.setTimeout(5000); // default is 1000
+
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>\r\n"));  
+  String response = "\
+  <head>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:-4px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:500px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 500px;\
+}\
+</style>\
+</head>\
+<body>\
+<h1>NOCKANDA IR DETECTOR SENSOR EXAMPLE!</h1>\
+<table>\
+<tr id=\"c_head\">\
+<th>RESULT(YES or NO)</th>\
+</tr>\
+<tr>\
+<td id=\"c_width\">"+
+result
++"</td>\
+</tr>\
+<tr>\
+<td><button id=\"btn\" onclick=\"location.href='http://"+
+server_ip2string
++"'\">REFRESH</button></td>\
+</tr>\
+</table>\
+</body>\
+</html>\
+  ";
+  client.print(response);
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}

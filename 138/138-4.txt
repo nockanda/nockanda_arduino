@@ -1,0 +1,77 @@
+/*
+ * 예제138-4
+ * i2C통신을 하는 0.91인치 OLED 디스플레이(SSD1306)를 연결해서
+ * 적외선 온도값을 oled dp에 표시되도록 해보자!
+ * 버튼을 1개 추가해서 버튼을 누른시간동안 계속 측정을해서 평균을 내시오!
+ */
+
+#include <Wire.h>
+#include <Adafruit_MLX90614.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128 
+#define SCREEN_HEIGHT 32 
+#define OLED_RESET     4
+
+#define button 2
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+float temp;
+int index = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(button,INPUT_PULLUP); //버튼 사용할 준비가 완료!
+  Serial.println("Adafruit MLX90614 test");  
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+  display.display();
+  delay(2000); // Pause for 2 seconds
+
+  // Clear the buffer
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  mlx.begin();  
+}
+
+bool pre_button_state = HIGH;
+void loop() {
+  //데이터 누적..
+  bool now_button_state = digitalRead(button);
+  if(now_button_state == LOW){
+    //버튼을 눌렀을때!
+    temp += mlx.readObjectTempC();
+    index++;
+  }else if(pre_button_state == LOW && now_button_state == HIGH){
+    //버튼을 뗀것!
+    //결과 출력
+    temp = temp / index;
+    Serial.println(temp);
+    display.clearDisplay();
+    display.setCursor(5, 5);
+    display.print("TEMP=");
+    display.print(temp);
+    display.println("'C");
+    display.display();
+    temp = 0;
+    index = 0;
+  }
+  pre_button_state = now_button_state; //데이터 이월!
+  
+  
+  
+    
+    
+  /*
+  Serial.print("Ambient = "); Serial.print(mlx.readAmbientTempC()); 
+  Serial.print("*C\tObject = "); Serial.print(mlx.readObjectTempC()); Serial.println("*C");
+  Serial.print("Ambient = "); Serial.print(mlx.readAmbientTempF()); 
+  Serial.print("*F\tObject = "); Serial.print(mlx.readObjectTempF()); Serial.println("*F");
+*/
+  delay(500);
+}

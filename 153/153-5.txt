@@ -1,0 +1,51 @@
+/*
+ * 예제 153-5
+ * 2축조이스틱이 아두이노에 연결되었다!
+ * x축핀을 A0에 y축핀을 A1에 연결했다!
+ * y축만 일단 사용해보자!
+ * y축의 아날로그값의 범위 0~1023을 이용해서 파워를 절대값으로 조절해라!
+ * 무슨말이냐면 위로 100%올리면 100% 파워지만 50%만큼 올리면 50%파워로 회전하도록 하라!
+ * 조이스틱의 위치로 모터드라이버의 속도를 결정해라!
+ */
+
+#define control1 3
+#define control2 4
+#define power 5
+#define joysticx A0
+#define joysticy A1
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 시리얼 통신할거야!
+  pinMode(control1,OUTPUT);
+  pinMode(control2,OUTPUT);
+}
+int power_value = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  //y축을 위로하면 0 아래로하면 1023
+  //0~255
+  //(518 ~ 1023) //(0~518)
+  //0~510 / 528 ~ 1023
+  int x = analogRead(joysticx);
+  int y = analogRead(joysticy);
+  if(y <= 510){
+    //위쪽
+    //버튼1이 눌려진것(풀업방식)
+    //정방향이라 가정 
+    digitalWrite(control1,HIGH);
+    digitalWrite(control2,LOW);
+    power_value = map(510-y,0,510,0,255);
+  }else if(y >= 528){
+    //아래쪽
+    //버튼2가 눌려진것!
+    //역방향(정방향과 상대적인 개념)
+    digitalWrite(control1,LOW);
+    digitalWrite(control2,HIGH);
+    power_value = map(y,528,1023,0,255);
+  }else{ //300보다 크고 700보다 작을땐
+    power_value = 0;
+  }
+  analogWrite(power,power_value);
+  Serial.println(power_value);
+}

@@ -1,0 +1,74 @@
+/*
+ * 149-1 초음파센서와 비접촉 온도센서를 이용해서 코로나용 체온측정기 만들기
+ * 기본적인 시리얼 모니터에 결과를 출력하는 예제
+ */
+
+#include <Wire.h>
+#include <Adafruit_MLX90614.h>
+
+#define trig 2
+#define echo 3
+
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+
+int limit = 20; //유저가 얼마만큼 가까이 와야 작동할거냐~
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(trig,OUTPUT); //trig 발사
+  pinMode(echo,INPUT); //echo 받기
+  mlx.begin(); 
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(choumpa() <= limit){
+    //버튼이 눌려진것(풀업방식)
+    //Serial.println("버튼이 눌려졌다!");
+    //3초동안 오브젝트가 유지가 되었을때(=3초간 버튼을 눌렀을때)
+    unsigned long t = millis(); //스톱워치작동!
+    bool mode = false;
+    while(1){
+      if(choumpa() > limit){
+        //버튼이 안눌려진거
+        break;
+      }
+      if(millis() - t > 3000){
+        //루프진입시점대비 3초이상 차이가 발생한 지점!
+        mode = true;
+        break;
+      }
+    }
+
+    if(mode){
+      Serial.println("온도측정 중입니다! 움직이지마세요!");  
+      t = millis(); //스톱워치작동!
+      float temp = 0; //온도값을 누적할 변수
+      int count = 0; //샘플의 갯수를 누적할 변수
+      while(1){
+        if(millis() - t > 3000){
+          //3초이상
+          break;
+        }
+        temp += mlx.readObjectTempC();
+        count++;
+        delay(10);
+      }
+      Serial.println("측정종료=");
+      Serial.println(temp/count);
+    }
+    
+  }
+}
+
+float choumpa(){
+  float duration = 0;
+  digitalWrite(trig,LOW);
+  delayMicroseconds(trig);
+  digitalWrite(trig,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig,LOW);
+  duration = (pulseIn(echo, HIGH)/29.0)/2; //cm
+  return duration;
+}

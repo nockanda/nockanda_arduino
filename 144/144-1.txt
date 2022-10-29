@@ -1,0 +1,270 @@
+/*
+    예제144-1 서보모터가 wemos d1r1의 D8에 연결되어있다.
+    웹브라우저를 통해서 서보모터의 각도를 움직여보자!
+*/
+
+#include <ESP8266WiFi.h>
+#include <Servo.h>
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+Servo myservo;
+IPAddress server_ip; //일단 선언만!
+String server_ip2string;
+
+int angle = 0; //0~255
+
+void setup() {
+  Serial.begin(115200);
+  myservo.attach(D8);
+  myservo.write(angle);//degree
+  
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  //서버IP를 String type으로 바꿔보자!
+  server_ip = WiFi.localIP();
+  //server_ip[0] , server_ip[1], server_ip[2], server_ip[3]
+  server_ip2string = String(server_ip[0]) + "." + String(server_ip[1]) + "." + String(server_ip[2]) + "." + String(server_ip[3]);
+
+  // Print the IP address
+  Serial.println(server_ip2string);
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\n');
+  Serial.println(F("request: "));
+  //GET /+90 HTTP/1.1
+  String a = "GET /";
+  String b = " HTTP";
+  int start_index = req.indexOf(a) + a.length();
+  int end_index = req.indexOf(b);
+  req = req.substring(start_index, end_index);
+  Serial.println(req);
+  angle = angle + req.toInt();//0보다 작을수O, 180보다 클수도있죠
+  
+  if(angle <0) angle = 0; //MIN
+  else if(angle > 180) angle = 180; //MAX
+
+  Serial.print("ANGLE=");
+  Serial.println(angle);
+
+  //서버가 클라이언트로 받은 메시지 전문을 출력
+  while (client.available()) {
+    // byte by byte is not very efficient
+    String text = client.readStringUntil('\n');
+    //Serial.println(text);
+  }
+
+
+  // read/ignore the rest of the request
+  // do not client.flush(): it is for output only, see below
+  /*while (client.available()) {
+    // byte by byte is not very efficient
+    //client.read();
+  }*/
+
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"));
+
+  String response = "\
+  <!DOCTYPE html>\
+<html>\
+<head>\
+<title>NOCKANDA SERVO EXAMPLE</title>\
+<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js\"></script>\
+<script type=\"text/javascript\" charset=\"utf-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js\"></script>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:-4px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:500px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 500px;\
+}\
+</style>\
+</head>\
+<body>\
+<h1>NOCKANDA SERVO MOTOR EXAMPLE!</h1>\
+<table border=0>\
+<tr id=\"c_head\"><th>SERVO MOTOR</th></tr>\
+<tr id=\"c_head\"><th>\
+<div style=\"width:500px; height:300px;\">\
+<canvas id=\"myChart\"></canvas>\
+</div>\
+</th>\
+<tr>\
+<td>\
+   <table border = 0>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/+1'\">+1 degree</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/-1'\">-1 degree</button></td>\
+     </tr>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/+5'\">+5 degree</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/-5'\">-5 degree</button></td>\
+     </tr>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/+10'\">+10 degree</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/-10'\">-10 degree</button></td>\
+     </tr>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/+20'\">+20 degree</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/-20'\">-20 degree</button></td>\
+     </tr>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/+30'\">+30 degree</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/-30'\">-30 degree</button></td>\
+     </tr>\
+     <tr>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/+90'\">+90 degree</button></td>\
+        <td><button id=\"btn\" onclick=\"location.href='http://"+
+        server_ip2string
+        +"/-90'\">-90 degree</button></td>\
+     </tr>\
+   </table>\
+</td>\
+</tr>\
+<tr><td align=center>\
+<button id=\"btn\" onclick=\"location.href=window.location.href \">REFRESH</button>\
+</td></tr></table>\
+<script>\
+var input_value = "+
+String(angle)
++";\
+var num = input_value/180; \
+var color = 'blue';\
+var data = { labels: ['servo value'], datasets: [ { data: [num, 1-num], backgroundColor: [color], hoverBackgroundColor: [ color ] }] }; \
+var ctx = document.getElementById('myChart').getContext('2d');\
+var chart = new Chart(ctx, {\
+type: 'doughnut',\
+data: data,\
+options: { \
+   responsive: true, \
+   legend: { display: false }, \
+   elements: { center: { text: Math.round(num*100), fontStyle: 'Helvetica', sidePadding: 15 } }, \
+   maintainAspectRatio : false, \
+   cutoutPercentage:70, \
+   animation: {\
+      onComplete: function () {\
+           ctx.textAlign = 'center';\
+           ctx.textBaseline = 'middle';\
+           ctx.font = '80px Arial';\
+           ctx.fillStyle = color;\
+           ctx.fillText(input_value, chart.width/2, chart.height-90);\
+           ctx.font = '30px Arial';\
+           ctx.fillText(\"(degree)\", chart.width/2, chart.height-30);\
+      }\
+   }, \
+   rotation: 1 * Math.PI, \
+   circumference: 1 * Math.PI } \
+});\
+</script>\
+</body>\
+</html>\
+  ";
+  
+  client.print(response);
+  //서버응답이 끝나는 부분..
+  myservo.write(angle);
+  delay(100); 
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}

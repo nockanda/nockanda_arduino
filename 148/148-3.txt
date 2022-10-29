@@ -1,0 +1,61 @@
+/*
+ * 예제148-3 이산화탄소센서(MH-Z19B)를 연결해서
+ * 2.8인치 SPI LCD에 이산화탄소농도와 온도값을 표시해보자!
+ */
+
+#include <SoftwareSerial.h>
+#include <MHZ19.h>
+#include "SPI.h"
+#include "Adafruit_GFX.h"
+#include "Adafruit_ILI9341.h"
+
+#define TFT_DC 9
+#define TFT_CS 10
+#define TFT_MOSI 11
+#define TFT_CLK 13
+#define TFT_RST 8
+#define TFT_MISO 12
+
+SoftwareSerial co2sensor(2, 3); //RX, TX
+MHZ19 mhz(&co2sensor);
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+
+void setup()
+{
+  Serial.begin(115200);
+  Serial.println(F("Starting..."));
+  tft.begin();
+  tft.setTextColor(ILI9341_YELLOW);
+  tft.setTextSize(5);
+  tft.setRotation(1); //가로모드
+  co2sensor.begin(9600); //기본 보레이트가 9600인가 보다..
+  
+}
+
+void loop()
+{
+  MHZ19_RESULT response = mhz.retrieveData();
+  if (response == MHZ19_RESULT_OK)
+  {
+    tft.fillScreen(ILI9341_BLACK);
+    tft.setCursor(0, 0);
+    
+    tft.print(F("CO2: "));
+    tft.println(mhz.getCO2()); //우리가 원하는 값..
+    tft.print(F("Min CO2: "));
+    tft.println(mhz.getMinCO2());
+    tft.print(F("Temperature: "));
+    tft.println(mhz.getTemperature()); //온도
+    tft.print(F("Accuracy: "));
+    tft.println(mhz.getAccuracy()); 
+    
+    
+  }
+  else
+  {
+    Serial.print(F("Error, code: "));
+    Serial.println(response);
+  }
+  
+  delay(15000);
+}

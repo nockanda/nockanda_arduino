@@ -1,0 +1,69 @@
+/*
+ * 예제 152-4-1(master 코드)
+ * 마스터에 버튼2개가 있다.
+ * 버튼은 D4, D5에 연결되어있다.
+ * 버튼을 눌렀을때 슬레이브에 연결된 LED가 제어되도록 해보자!
+ * 첫번째 버튼을 누르면 빨간LED가 켜지고 두번째 버튼을 누르면 녹색 LED가 켜진다!
+ * 4바이트로 제어를 해보자! (그중 2바이트는 cr, lf)
+ * 예시) 0 0 CR LF : 첫번쨰꺼 꺼라
+ * 예시) 0 1 CR LF : 첫번쨰꺼 켜라
+ * 예시) 1 0 CR LF : 두번째꺼 꺼라
+ * 예시) 1 1 CR LF : 두번쨰꺼 켜라
+ */
+
+#include <SoftwareSerial.h>
+#define button1 4
+#define button2 5
+SoftwareSerial AT09(2, 3); // RX, TX
+byte cona[]={'A','T','+','C','O','N','A','5','0','3','3','8','B','F','4','1','E','A','F',0x0D,0x0A};
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  AT09.begin(9600); //아두이노-블루투스모듈간 통신
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+  //AT+CONA50338BF41EAF 페어링 명령!
+  //19개 데이터+ CR+ LF = 총 21개
+  
+
+  AT09.write(cona,sizeof(cona)); //페어링 해라!
+}
+
+bool pre_button1_state = HIGH;
+bool pre_button2_state = HIGH;
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(AT09.available()){
+    Serial.write(AT09.read());
+  }
+
+  bool now_button1_state = digitalRead(button1);
+  bool now_button2_state = digitalRead(button2);
+  if(pre_button1_state == HIGH && now_button1_state == LOW){
+    //누르지 않고 있다가 누르는 그 순간!
+    byte message[] = {'0','1',0x0D,0x0A};
+    AT09.write(message,sizeof(message));
+  }else if(pre_button1_state == LOW && now_button1_state ==HIGH){
+    //누르고 있다가 뗀 그 순간!
+    byte message[] = {'0','0',0x0D,0x0A};
+    AT09.write(message,sizeof(message));
+  }
+  
+  if(pre_button2_state == HIGH && now_button2_state == LOW){
+    //누르지 않고 있다가 누르는 그 순간!
+    byte message[] = {'1','1',0x0D,0x0A};
+    AT09.write(message,sizeof(message));
+  }else if(pre_button2_state == LOW && now_button2_state ==HIGH){
+    //누르고 있다가 뗀 그 순간!
+    byte message[] = {'1','0',0x0D,0x0A};
+    AT09.write(message,sizeof(message));
+  }
+  //AT09.write(onmessage,sizeof(onmessage));
+  //AT09.write(offmessage,sizeof(offmessage));
+
+  pre_button1_state = now_button1_state;
+  pre_button2_state = now_button2_state;
+  delay(10);
+}

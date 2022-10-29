@@ -1,0 +1,17 @@
+/*
+ * 152-2-2 (slave 코드)
+ */
+#include <SoftwareSerial.h>
+SoftwareSerial AT09(2, 3); // RX, TX
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  AT09.begin(9600); //아두이노-블루투스모듈간 통신
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(AT09.available()){
+    Serial.write(AT09.read());
+  }
+}

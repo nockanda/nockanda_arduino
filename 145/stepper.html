@@ -1,0 +1,119 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<title>NOCKANDA STEPPER EXAMPLE</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+<style>
+#btn{
+border: 1px solid blue;
+background-color: rgba(0,0,0,0);
+color: blue;
+padding: 5px;
+border-top-left-radius: 5px;
+border-bottom-left-radius: 5px;
+border-top-right-radius: 5px;
+border-bottom-right-radius: 5px;
+margin-right:-4px;
+height:40px;
+}
+table {
+border-collapse: collapse;
+width:500px;
+}
+table, td, th {
+border: solid 1px #cccccc;
+}
+tr {
+height:40px;
+text-align: center;
+}
+td, th {
+padding: 5px;
+}
+.set1 {
+background-color: red;
+color: white;
+text-decoration: underline;
+font-weight: bold;
+}
+#c_head {
+height:30px;
+background-color: #eeeeee;
+}
+#c_width{
+width: 500px;
+}
+</style>
+</head>
+<body>
+<h1>NOCKANDA STEPPER MOTOR EXAMPLE!</h1>
+<table border=0>
+<tr id="c_head"><th>STEPPER MOTOR</th></tr>
+<tr id="c_head"><th>
+<div style="width:500px; height:300px;">
+<canvas id="myChart"></canvas>
+</div>
+</th>
+<tr><td>
+   <table border=0>
+     <tr>
+        <td><button id="btn" onclick="location.href=window.location.href+'/+1'">+1 STEP</button></td>
+        <td><button id="btn" onclick="location.href=window.location.href+'/-1'">-1 STEP</button></td>
+     </tr>
+     <tr>
+        <td><button id="btn" onclick="location.href=window.location.href+'/+4'">+4 STEP</button></td>
+        <td><button id="btn" onclick="location.href=window.location.href+'/-4'">-4 STEP</button></td>
+     </tr>
+     <tr>
+        <td><button id="btn" onclick="location.href=window.location.href+'/+8'">+8 STEP</button></td>
+        <td><button id="btn" onclick="location.href=window.location.href+'/-8'">-8 STEP</button></td>
+     </tr>
+     <tr>
+        <td><button id="btn" onclick="location.href=window.location.href+'/+16'">+16 STEP</button></td>
+        <td><button id="btn" onclick="location.href=window.location.href+'/-16'">-16 STEP</button></td>
+     </tr>
+     <tr>
+        <td><button id="btn" onclick="location.href=window.location.href+'/+32'">+32 STEP</button></td>
+        <td><button id="btn" onclick="location.href=window.location.href+'/-32'">-32 STEP</button></td>
+     </tr>
+     <tr>
+        <td><button id="btn" onclick="location.href=window.location.href+'/+64'">+64 STEP</button></td>
+        <td><button id="btn" onclick="location.href=window.location.href+'/-64'">-64 STEP</button></td>
+     </tr>
+   </table>
+</td></tr>
+<tr><td align=center>
+<button id="btn" onclick="location.href=window.location.href">REFRESH</button>
+</td></tr></table>
+<script>
+var input_value = 180;
+var num = input_value/360; 
+var color = 'blue';
+var data = { labels: ['stepper value'], datasets: [ { data: [num, 1-num], backgroundColor: [color], hoverBackgroundColor: [ color ] }] }; 
+var ctx = document.getElementById('myChart').getContext('2d');
+var chart = new Chart(ctx, {
+type: 'doughnut',
+data: data,
+options: { 
+   responsive: true, 
+   legend: { display: false }, 
+   elements: { center: { text: Math.round(num*100), fontStyle: 'Helvetica', sidePadding: 15 } }, 
+   maintainAspectRatio : false, 
+   cutoutPercentage:70, 
+   animation: {
+      onComplete: function () {
+           ctx.textAlign = 'center';
+           ctx.textBaseline = 'middle';
+           ctx.font = '80px Arial';
+           ctx.fillStyle = color;
+           ctx.fillText(input_value, chart.width/2, chart.height-150);
+           ctx.font = '30px Arial';
+           ctx.fillText("(degree)", chart.width/2, chart.height-110);
+      }
+   }, 
+   } 
+});
+</script>
+</body>
+</html>

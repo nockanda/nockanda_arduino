@@ -1,0 +1,383 @@
+/*
+    예제135-2 0.91인치 OLED 디스플레이(ssd1306)을 i2c핀에 연결하자!
+    wemos d1r1 보드에 d3(SCL), d4(SDA)에 각각 맞는 핀을 연결하고
+    +,-는 5v에 연결하자!
+    라이브러리에있는 예제코드를 웹브라우저에서 활용가능하도록 해보자!
+    포스트(post)방식으로 라이브러리 예제를 활용해보자!
+*/
+
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 32 // OLED display height, in pixels
+
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+const char* ssid     = STASSID;
+const char* password = STAPSK;
+
+ESP8266WebServer server(80);
+const int led = LED_BUILTIN;
+
+#define LOGO_HEIGHT   32
+#define LOGO_WIDTH    128
+static const unsigned char PROGMEM logo_bmp[] =
+{ 
+B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000,
+B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000,
+B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000,
+B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000,
+B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B10000000,
+B00000000, B00000000, B00000010, B00000000, B00000000, B10000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B01000000,
+B00000000, B00000000, B00000010, B00000000, B00000000, B01000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000010, B00000000, B00000000, B01000000,
+B00010000, B00000001, B11110010, B00000000, B00010000, B01000011, B11111000, B00011111, B11000000, B00000000, B00111111, B11100000, B00000010, B00000000, B00000000, B01000000,
+B00010000, B00000000, B00010010, B00001111, B10010000, B01000000, B00001000, B00010000, B00000000, B00000000, B00000010, B00000000, B11100011, B00000011, B11100000, B01000000,
+B00010000, B00000011, B11100010, B00001000, B00010000, B01000000, B00001000, B00010000, B00000000, B11100000, B00001101, B10000001, B00010001, B00000100, B00010000, B01000000,
+B00011111, B11000000, B00100011, B10001000, B00010000, B01000000, B00001000, B00011111, B11000001, B00010000, B00110000, B01100010, B00001001, B00001000, B00011000, B01000000,
+B00000010, B00000000, B01000010, B00001000, B00010000, B01100000, B00001000, B00000010, B00000001, B00010010, B00000010, B00000010, B00001001, B10001000, B00001000, B01000000,
+B01111111, B11110001, B10000010, B00001000, B00011100, B00101111, B11111110, B01111111, B11110001, B00100010, B01111111, B11110010, B00001001, B00000100, B00010000, B01000000,
+B00000000, B00000010, B00000010, B00001000, B00010000, B00100000, B01000000, B00000000, B00000000, B11000000, B00000010, B00000001, B00001001, B00000011, B11100000, B01000000,
+B00011111, B11000000, B00000010, B00001000, B00010000, B00100000, B01000000, B00011111, B11000011, B00110100, B00111111, B11100001, B00010001, B00000010, B00100000, B01000000,
+B00000000, B01000000, B10000000, B00001111, B11010000, B00000000, B01000000, B00000000, B01000010, B00001000, B00000000, B00000000, B11100001, B00000010, B00100000, B00000000,
+B00000000, B01000000, B10000000, B00000000, B00010000, B00000000, B01000000, B00000000, B01000010, B00011100, B00001111, B10000000, B00000001, B00011111, B11111100, B00000000,
+B00000000, B01000000, B10000000, B00000000, B00010000, B11000000, B01000000, B00000000, B01000001, B11100110, B00010000, B01000000, B00000001, B10000000, B00000000, B11000000,
+B00000000, B01000000, B11111111, B00000000, B00010000, B00000000, B01000000, B00000000, B01000000, B00000000, B00001111, B10000000, B00000000, B00000000, B00000000, B00000000,
+B00000000, B00000000, B00111000, B00000000, B00000000, B00000000, B00000000, B00000000, B01100000, B00000000, B00000000, B00001100, B00000000, B00000000, B00000000, B00000000,
+B00000000, B00000000, B11111110, B00000000, B10000000, B11100000, B00000001, B11000001, B11111000, B00000001, B00000000, B01111111, B00000000, B00000000, B00000011, B10000000,
+B00000001, B11100001, B11111110, B00000001, B11100011, B11111000, B00001111, B11110111, B11111100, B00000011, B11000011, B11111111, B00000000, B01111000, B00011111, B11100000,
+B00000011, B11111011, B11111110, B00000011, B11111111, B11111100, B00011111, B11111111, B11111100, B00000111, B11110111, B11111111, B10000000, B11111110, B01111111, B11100000,
+B00000111, B11111111, B11111110, B00000111, B11111111, B11111100, B00111111, B11111111, B11111100, B00001111, B11111111, B11111111, B10000001, B11111111, B11111111, B11110000,
+B00000111, B11111111, B11011110, B00001111, B11111111, B11111100, B00111111, B11111111, B00111100, B00001111, B11111111, B11000111, B10000001, B11111111, B11111110, B11110000,
+B00000111, B10111111, B10011110, B00001111, B10111111, B00111100, B00111110, B00111100, B00111100, B00001111, B01111111, B00000111, B10000001, B11110111, B11111000, B11110000,
+B00000111, B10111110, B00011110, B00001111, B10111100, B01111100, B00011111, B00011100, B00111100, B00001111, B00011110, B00011111, B10000000, B11111111, B11100001, B11110000,
+B00000111, B11011110, B00111110, B00000111, B11011101, B11111100, B00011111, B10000000, B00111100, B00001111, B11000000, B01111111, B10000000, B01111111, B11000001, B11110000,
+B00000111, B11100000, B11111100, B00000111, B11001111, B11111000, B00001111, B11000000, B01111100, B00001111, B11110000, B11111110, B00000000, B01111110, B00000011, B11100000,
+B00000011, B11110111, B11111100, B00000011, B11111111, B11110000, B00000111, B11110001, B11111100, B00000111, B11111111, B11111110, B00000000, B00111111, B00001111, B11000000,
+B00000001, B11111111, B11111000, B00000001, B11111111, B11000000, B00000011, B11111111, B11110000, B00000001, B11111111, B11111000, B00000000, B00001111, B10111111, B11000000,
+B00000000, B11111111, B11100000, B00000000, B11111111, B10000000, B00000000, B11111111, B11100000, B00000000, B00111111, B10000000, B00000000, B00000111, B11111111, B10000000
+  };
+
+const String postForms = "<html>\
+  <head>\
+    <title>ESP8266 Web Server POST handling(nockanda)</title>\
+    <style>\
+      body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
+    </style>\
+  </head>\
+  <body>\
+    <form method=\"post\" enctype=\"application/x-www-form-urlencoded\" action=\"/postform/\">\
+      <table border=1 width=500>\
+        <tr>\
+          <td>\
+             <h1>NOCKANDA SSD1306 EXAMPLE!</h1><br>\
+          </td>\
+        </tr>\
+        <tr>\
+          <td>\
+             testdrawline<input type=\"radio\" name=\"contents\" value=\"0\" checked><br>\
+             testdrawrect<input type=\"radio\" name=\"contents\" value=\"1\"><br>\
+             testfillrect<input type=\"radio\" name=\"contents\" value=\"2\"><br>\
+             testdrawcircle<input type=\"radio\" name=\"contents\" value=\"3\"><br>\
+             testfillcircle<input type=\"radio\" name=\"contents\" value=\"4\"><br>\
+             testdrawroundrect<input type=\"radio\" name=\"contents\" value=\"5\"><br>\
+             testfillroundrect<input type=\"radio\" name=\"contents\" value=\"6\"><br>\
+             estdrawtriangle<input type=\"radio\" name=\"contents\" value=\"7\"><br>\
+             testfilltriangle<input type=\"radio\" name=\"contents\" value=\"8\"><br>\
+             testdrawchar<input type=\"radio\" name=\"contents\" value=\"9\"><br>\
+             testdrawstyles<input type=\"radio\" name=\"contents\" value=\"10\"><br>\
+             testdrawbitmap<input type=\"radio\" name=\"contents\" value=\"11\"><br>\
+          </td>\
+        </tr>\
+        <tr>\
+          <td>\
+              <input type=\"submit\" value=\"Submit\">\
+          </td>\
+        </tr>\
+      </table>\  
+    </form>\
+  </body>\
+</html>";
+
+void handleRoot() {
+  digitalWrite(led, 1);
+  server.send(200, "text/html", postForms);
+  digitalWrite(led, 0);
+}
+
+
+//두번째 form에서 처리하는부분
+void handleForm() {
+  if (server.method() != HTTP_POST) {
+    digitalWrite(led, 1);
+    server.send(405, "text/plain", "Method Not Allowed");
+    digitalWrite(led, 0);
+  } else {
+    String message = "POST form was:\n";
+ 
+    for (uint8_t i = 0; i < server.args(); i++) {
+      if(server.argName(i) == "contents"){
+        if(server.arg(i) == "0"){
+          testdrawline();
+
+        }else if(server.arg(i) == "1"){
+          testdrawrect();
+
+        }else if(server.arg(i) == "2"){
+         testfillrect();
+
+        }else if(server.arg(i) == "3"){
+          testdrawcircle();
+
+        }else if(server.arg(i) == "4"){
+          testfillcircle();
+
+        }else if(server.arg(i) == "5"){
+           testdrawroundrect();
+  
+        }else if(server.arg(i) == "6"){
+          testfillroundrect();
+
+        }else if(server.arg(i) == "7"){
+          testdrawtriangle(); 
+
+        }else if(server.arg(i) == "8"){
+          testfilltriangle();
+
+        }else if(server.arg(i) == "9"){
+          testdrawchar();
+
+        }else if(server.arg(i) == "10"){
+          testdrawstyles(); 
+
+        }else if(server.arg(i) == "11"){
+          testdrawbitmap(); 
+        }
+      }
+      
+      message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+    }
+    server.send(200, "text/plain", message);
+    
+  }
+}
+
+void handleNotFound() {
+  digitalWrite(led, 1);
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i = 0; i < server.args(); i++) {
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+  }
+  server.send(404, "text/plain", message);
+  digitalWrite(led, 0);
+}
+
+void setup(void) {
+  pinMode(led, OUTPUT);
+  digitalWrite(led, 0);
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  if (MDNS.begin("esp8266")) {
+    Serial.println("MDNS responder started");
+  }
+
+  server.on("/", handleRoot);
+  server.on("/postform/", handleForm);
+  server.onNotFound(handleNotFound);
+
+ if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+
+  // Show initial display buffer contents on the screen --
+  // the library initializes this with an Adafruit splash screen.
+  display.display();
+  delay(2000); // Pause for 2 seconds
+
+  // Clear the buffer
+  display.clearDisplay();
+
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop(void) {
+  server.handleClient();
+}
+
+void testdrawline(void) {
+  int16_t i;
+
+  display.clearDisplay(); // Clear display buffer
+
+  for(i=0; i<display.width(); i+=4) {
+    display.drawLine(0, 0, i, display.height()-1, SSD1306_WHITE);
+    display.display(); // Update screen with each newly-drawn line
+    break;
+  }
+}
+
+void testdrawrect(void) {
+  display.clearDisplay();
+
+  for(int16_t i=0; i<display.height()/2; i+=2) {
+    display.drawRect(i, i, display.width()-2*i, display.height()-2*i, SSD1306_WHITE);
+    display.display(); // Update screen with each newly-drawn rectangle
+  }
+}
+
+void testfillrect(void) {
+  display.clearDisplay();
+
+  for(int16_t i=0; i<display.height()/2; i+=3) {
+    // The INVERSE color is used so rectangles alternate white/black
+    display.fillRect(i, i, display.width()-i*2, display.height()-i*2, SSD1306_INVERSE);
+    display.display(); // Update screen with each newly-drawn rectangle
+  }
+}
+
+void testdrawcircle(void) {
+  display.clearDisplay();
+
+  for(int16_t i=0; i<max(display.width(),display.height())/2; i+=2) {
+    display.drawCircle(display.width()/2, display.height()/2, i, SSD1306_WHITE);
+    display.display();
+  }
+}
+
+void testfillcircle(void) {
+  display.clearDisplay();
+
+  for(int16_t i=max(display.width(),display.height())/2; i>0; i-=3) {
+    // The INVERSE color is used so circles alternate white/black
+    display.fillCircle(display.width() / 2, display.height() / 2, i, SSD1306_INVERSE);
+    display.display(); // Update screen with each newly-drawn circle
+  }
+}
+
+void testdrawroundrect(void) {
+  display.clearDisplay();
+
+  for(int16_t i=0; i<display.height()/2-2; i+=2) {
+    display.drawRoundRect(i, i, display.width()-2*i, display.height()-2*i,
+      display.height()/4, SSD1306_WHITE);
+    display.display();
+    break;
+  }
+}
+
+void testfillroundrect(void) {
+  display.clearDisplay();
+
+  for(int16_t i=0; i<display.height()/2-2; i+=2) {
+    // The INVERSE color is used so round-rects alternate white/black
+    display.fillRoundRect(i, i, display.width()-2*i, display.height()-2*i,
+      display.height()/4, SSD1306_INVERSE);
+    display.display();
+    break;
+  }
+}
+
+void testdrawtriangle(void) {
+  display.clearDisplay();
+
+  for(int16_t i=0; i<max(display.width(),display.height())/2; i+=5) {
+    display.drawTriangle(
+      display.width()/2  , display.height()/2-i,
+      display.width()/2-i, display.height()/2+i,
+      display.width()/2+i, display.height()/2+i, SSD1306_WHITE);
+    display.display();
+  }
+}
+
+void testfilltriangle(void) {
+  display.clearDisplay();
+
+  for(int16_t i=max(display.width(),display.height())/2; i>0; i-=5) {
+    // The INVERSE color is used so triangles alternate white/black
+    display.fillTriangle(
+      display.width()/2  , display.height()/2-i,
+      display.width()/2-i, display.height()/2+i,
+      display.width()/2+i, display.height()/2+i, SSD1306_INVERSE);
+    display.display();
+  }
+}
+
+void testdrawchar(void) {
+  display.clearDisplay();
+
+  display.setTextSize(1);      // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setCursor(0, 0);     // Start at top-left corner
+  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+
+  // Not all the characters will fit on the display. This is normal.
+  // Library will draw what it can and the rest will be clipped.
+  for(int16_t i=0; i<256; i++) {
+    if(i == '\n') display.write(' ');
+    else          display.write(i);
+  }
+
+  display.display();
+}
+
+void testdrawstyles(void) {
+  display.clearDisplay();
+
+  display.setTextSize(1);             // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  display.setCursor(0,0);             // Start at top-left corner
+  display.println(F("Hello, world!"));
+
+  display.setTextColor(SSD1306_BLACK, SSD1306_WHITE); // Draw 'inverse' text
+  display.println(3.141592);
+
+  display.setTextSize(2);             // Draw 2X-scale text
+  display.setTextColor(SSD1306_WHITE);
+  display.print(F("0x")); display.println(0xDEADBEEF, HEX);
+
+  display.display();
+}
+void testdrawbitmap(void) {
+  display.clearDisplay();
+
+  display.drawBitmap(
+    (display.width()  - LOGO_WIDTH ) / 2,
+    (display.height() - LOGO_HEIGHT) / 2,
+    logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, 1);
+  display.display();
+}

@@ -1,0 +1,377 @@
+/*
+    예제135-1 0.91인치 OLED 디스플레이(ssd1306)을 i2c핀에 연결하자!
+    wemos d1r1 보드에 d3(SCL), d4(SDA)에 각각 맞는 핀을 연결하고
+    +,-는 5v에 연결하자!
+    라이브러리에있는 예제코드를 웹브라우저에서 활용가능하도록 해보자!
+*/
+
+#include <ESP8266WiFi.h>
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 32 // OLED display height, in pixels
+
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+
+#define LOGO_HEIGHT   32
+#define LOGO_WIDTH    128
+static const unsigned char PROGMEM logo_bmp[] =
+{ 
+B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000,
+B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000,
+B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000,
+B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000,
+B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B10000000,
+B00000000, B00000000, B00000010, B00000000, B00000000, B10000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B01000000,
+B00000000, B00000000, B00000010, B00000000, B00000000, B01000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000010, B00000000, B00000000, B01000000,
+B00010000, B00000001, B11110010, B00000000, B00010000, B01000011, B11111000, B00011111, B11000000, B00000000, B00111111, B11100000, B00000010, B00000000, B00000000, B01000000,
+B00010000, B00000000, B00010010, B00001111, B10010000, B01000000, B00001000, B00010000, B00000000, B00000000, B00000010, B00000000, B11100011, B00000011, B11100000, B01000000,
+B00010000, B00000011, B11100010, B00001000, B00010000, B01000000, B00001000, B00010000, B00000000, B11100000, B00001101, B10000001, B00010001, B00000100, B00010000, B01000000,
+B00011111, B11000000, B00100011, B10001000, B00010000, B01000000, B00001000, B00011111, B11000001, B00010000, B00110000, B01100010, B00001001, B00001000, B00011000, B01000000,
+B00000010, B00000000, B01000010, B00001000, B00010000, B01100000, B00001000, B00000010, B00000001, B00010010, B00000010, B00000010, B00001001, B10001000, B00001000, B01000000,
+B01111111, B11110001, B10000010, B00001000, B00011100, B00101111, B11111110, B01111111, B11110001, B00100010, B01111111, B11110010, B00001001, B00000100, B00010000, B01000000,
+B00000000, B00000010, B00000010, B00001000, B00010000, B00100000, B01000000, B00000000, B00000000, B11000000, B00000010, B00000001, B00001001, B00000011, B11100000, B01000000,
+B00011111, B11000000, B00000010, B00001000, B00010000, B00100000, B01000000, B00011111, B11000011, B00110100, B00111111, B11100001, B00010001, B00000010, B00100000, B01000000,
+B00000000, B01000000, B10000000, B00001111, B11010000, B00000000, B01000000, B00000000, B01000010, B00001000, B00000000, B00000000, B11100001, B00000010, B00100000, B00000000,
+B00000000, B01000000, B10000000, B00000000, B00010000, B00000000, B01000000, B00000000, B01000010, B00011100, B00001111, B10000000, B00000001, B00011111, B11111100, B00000000,
+B00000000, B01000000, B10000000, B00000000, B00010000, B11000000, B01000000, B00000000, B01000001, B11100110, B00010000, B01000000, B00000001, B10000000, B00000000, B11000000,
+B00000000, B01000000, B11111111, B00000000, B00010000, B00000000, B01000000, B00000000, B01000000, B00000000, B00001111, B10000000, B00000000, B00000000, B00000000, B00000000,
+B00000000, B00000000, B00111000, B00000000, B00000000, B00000000, B00000000, B00000000, B01100000, B00000000, B00000000, B00001100, B00000000, B00000000, B00000000, B00000000,
+B00000000, B00000000, B11111110, B00000000, B10000000, B11100000, B00000001, B11000001, B11111000, B00000001, B00000000, B01111111, B00000000, B00000000, B00000011, B10000000,
+B00000001, B11100001, B11111110, B00000001, B11100011, B11111000, B00001111, B11110111, B11111100, B00000011, B11000011, B11111111, B00000000, B01111000, B00011111, B11100000,
+B00000011, B11111011, B11111110, B00000011, B11111111, B11111100, B00011111, B11111111, B11111100, B00000111, B11110111, B11111111, B10000000, B11111110, B01111111, B11100000,
+B00000111, B11111111, B11111110, B00000111, B11111111, B11111100, B00111111, B11111111, B11111100, B00001111, B11111111, B11111111, B10000001, B11111111, B11111111, B11110000,
+B00000111, B11111111, B11011110, B00001111, B11111111, B11111100, B00111111, B11111111, B00111100, B00001111, B11111111, B11000111, B10000001, B11111111, B11111110, B11110000,
+B00000111, B10111111, B10011110, B00001111, B10111111, B00111100, B00111110, B00111100, B00111100, B00001111, B01111111, B00000111, B10000001, B11110111, B11111000, B11110000,
+B00000111, B10111110, B00011110, B00001111, B10111100, B01111100, B00011111, B00011100, B00111100, B00001111, B00011110, B00011111, B10000000, B11111111, B11100001, B11110000,
+B00000111, B11011110, B00111110, B00000111, B11011101, B11111100, B00011111, B10000000, B00111100, B00001111, B11000000, B01111111, B10000000, B01111111, B11000001, B11110000,
+B00000111, B11100000, B11111100, B00000111, B11001111, B11111000, B00001111, B11000000, B01111100, B00001111, B11110000, B11111110, B00000000, B01111110, B00000011, B11100000,
+B00000011, B11110111, B11111100, B00000011, B11111111, B11110000, B00000111, B11110001, B11111100, B00000111, B11111111, B11111110, B00000000, B00111111, B00001111, B11000000,
+B00000001, B11111111, B11111000, B00000001, B11111111, B11000000, B00000011, B11111111, B11110000, B00000001, B11111111, B11111000, B00000000, B00001111, B10111111, B11000000,
+B00000000, B11111111, B11100000, B00000000, B11111111, B10000000, B00000000, B11111111, B11100000, B00000000, B00111111, B10000000, B00000000, B00000111, B11111111, B10000000
+  };
+
+
+void setup() {
+  Serial.begin(115200);
+
+  // prepare LED
+  pinMode(LED_BUILTIN, OUTPUT); //내장 LED가 출력모드로 설정됨
+  digitalWrite(LED_BUILTIN, LOW); //내장 LED를 끈다
+
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+
+  // Show initial display buffer contents on the screen --
+  // the library initializes this with an Adafruit splash screen.
+  display.display();
+  delay(2000); // Pause for 2 seconds
+
+  // Clear the buffer
+  display.clearDisplay();
+
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\n');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  //서버가 클라이언트로 받은 메시지 전문을 출력
+  while (client.available()) {
+    // byte by byte is not very efficient
+    String text = client.readStringUntil('\n');
+    Serial.println(text);
+  }
+
+  // Match the request
+
+  if (req.indexOf(F("/testdrawline/")) != -1) {
+    testdrawline();
+  } else if (req.indexOf(F("/testdrawrect/")) != -1) {
+    testdrawrect();
+  }else if (req.indexOf(F("/testfillrect/")) != -1) {
+    testfillrect();
+  }else if (req.indexOf(F("/testdrawcircle/")) != -1) {
+    testdrawcircle();
+  }else if (req.indexOf(F("/testfillcircle/")) != -1) {
+    testfillcircle();
+  }else if (req.indexOf(F("/testdrawroundrect/")) != -1) {
+    testdrawroundrect();
+
+  }else if (req.indexOf(F("/testfillroundrect/")) != -1) {
+    testfillroundrect();
+
+  }else if (req.indexOf(F("/testdrawtriangle/")) != -1) {
+    testdrawtriangle(); 
+
+  }else if (req.indexOf(F("/testfilltriangle/")) != -1) {
+    testfilltriangle();
+  }else if (req.indexOf(F("/testdrawchar/")) != -1) {
+    testdrawchar();
+
+  }else if (req.indexOf(F("/testdrawstyles/")) != -1) {
+    testdrawstyles();
+
+  }else if (req.indexOf(F("/testdrawrect/")) != -1) {
+    testdrawstyles(); 
+
+  }else if (req.indexOf(F("/testdrawbitmap/")) != -1) {
+    testdrawbitmap();
+  }
+
+
+  // read/ignore the rest of the request
+  // do not client.flush(): it is for output only, see below
+  /*while (client.available()) {
+    // byte by byte is not very efficient
+    client.read();
+  }*/
+
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>\r\n"));
+  client.print(F("<table border=1 width=500><tr><td>Nockanda ssd1306 example</td></tr><tr><td>"));
+
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/testdrawline/'>[testdrawline]</a><BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/testdrawrect/'>[testdrawrect]</a><BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/testfillrect/'>[testfillrect]</a><BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/testdrawcircle/'>[testdrawcircle]</a><BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/testfillcircle/'>[testfillcircle]</a><BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/testdrawroundrect/'>[testdrawroundrect]</a><BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/testfillroundrect/'>[testfillroundrect]</a><BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/testdrawtriangle/'>[testdrawtriangle]</a><BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/testfilltriangle/'>[testfilltriangle]</a><BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/testdrawchar/'>[testdrawchar]</a><BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/testdrawstyles/'>[testdrawstyles]</a><BR>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/testdrawbitmap/'>[testdrawbitmap]</a><BR>"));
+  client.print(F("</td></tr></html>"));
+
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}
+
+void testdrawline(void) {
+  int16_t i;
+
+  display.clearDisplay(); // Clear display buffer
+
+  for(i=0; i<display.width(); i+=4) {
+    display.drawLine(0, 0, i, display.height()-1, SSD1306_WHITE);
+    display.display(); // Update screen with each newly-drawn line
+    break;
+  }
+}
+
+void testdrawrect(void) {
+  display.clearDisplay();
+
+  for(int16_t i=0; i<display.height()/2; i+=2) {
+    display.drawRect(i, i, display.width()-2*i, display.height()-2*i, SSD1306_WHITE);
+    display.display(); // Update screen with each newly-drawn rectangle
+  }
+}
+
+void testfillrect(void) {
+  display.clearDisplay();
+
+  for(int16_t i=0; i<display.height()/2; i+=3) {
+    // The INVERSE color is used so rectangles alternate white/black
+    display.fillRect(i, i, display.width()-i*2, display.height()-i*2, SSD1306_INVERSE);
+    display.display(); // Update screen with each newly-drawn rectangle
+  }
+}
+
+void testdrawcircle(void) {
+  display.clearDisplay();
+
+  for(int16_t i=0; i<max(display.width(),display.height())/2; i+=2) {
+    display.drawCircle(display.width()/2, display.height()/2, i, SSD1306_WHITE);
+    display.display();
+  }
+}
+
+void testfillcircle(void) {
+  display.clearDisplay();
+
+  for(int16_t i=max(display.width(),display.height())/2; i>0; i-=3) {
+    // The INVERSE color is used so circles alternate white/black
+    display.fillCircle(display.width() / 2, display.height() / 2, i, SSD1306_INVERSE);
+    display.display(); // Update screen with each newly-drawn circle
+  }
+}
+
+void testdrawroundrect(void) {
+  display.clearDisplay();
+
+  for(int16_t i=0; i<display.height()/2-2; i+=2) {
+    display.drawRoundRect(i, i, display.width()-2*i, display.height()-2*i,
+      display.height()/4, SSD1306_WHITE);
+    display.display();
+    break;
+  }
+}
+
+void testfillroundrect(void) {
+  display.clearDisplay();
+
+  for(int16_t i=0; i<display.height()/2-2; i+=2) {
+    // The INVERSE color is used so round-rects alternate white/black
+    display.fillRoundRect(i, i, display.width()-2*i, display.height()-2*i,
+      display.height()/4, SSD1306_INVERSE);
+    display.display();
+    break;
+  }
+}
+
+void testdrawtriangle(void) {
+  display.clearDisplay();
+
+  for(int16_t i=0; i<max(display.width(),display.height())/2; i+=5) {
+    display.drawTriangle(
+      display.width()/2  , display.height()/2-i,
+      display.width()/2-i, display.height()/2+i,
+      display.width()/2+i, display.height()/2+i, SSD1306_WHITE);
+    display.display();
+  }
+}
+
+void testfilltriangle(void) {
+  display.clearDisplay();
+
+  for(int16_t i=max(display.width(),display.height())/2; i>0; i-=5) {
+    // The INVERSE color is used so triangles alternate white/black
+    display.fillTriangle(
+      display.width()/2  , display.height()/2-i,
+      display.width()/2-i, display.height()/2+i,
+      display.width()/2+i, display.height()/2+i, SSD1306_INVERSE);
+    display.display();
+  }
+}
+
+void testdrawchar(void) {
+  display.clearDisplay();
+
+  display.setTextSize(1);      // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setCursor(0, 0);     // Start at top-left corner
+  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+
+  // Not all the characters will fit on the display. This is normal.
+  // Library will draw what it can and the rest will be clipped.
+  for(int16_t i=0; i<256; i++) {
+    if(i == '\n') display.write(' ');
+    else          display.write(i);
+  }
+
+  display.display();
+}
+
+void testdrawstyles(void) {
+  display.clearDisplay();
+
+  display.setTextSize(1);             // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  display.setCursor(0,0);             // Start at top-left corner
+  display.println(F("Hello, world!"));
+
+  display.setTextColor(SSD1306_BLACK, SSD1306_WHITE); // Draw 'inverse' text
+  display.println(3.141592);
+
+  display.setTextSize(2);             // Draw 2X-scale text
+  display.setTextColor(SSD1306_WHITE);
+  display.print(F("0x")); display.println(0xDEADBEEF, HEX);
+
+  display.display();
+}
+void testdrawbitmap(void) {
+  display.clearDisplay();
+
+  display.drawBitmap(
+    (display.width()  - LOGO_WIDTH ) / 2,
+    (display.height() - LOGO_HEIGHT) / 2,
+    logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, 1);
+  display.display();
+}

@@ -1,0 +1,185 @@
+/*
+    예제150-1 USB선풍기를 연결한 릴레이를 사물인터넷보드인 WEMOS D1R1의
+    디지털 3번 포트에 연결했다.
+    웹브라우저를 통해서 get방식으로 넘어오는 변수를 확인해서 릴레이를 제어하라!
+*/
+
+#include <ESP8266WiFi.h>
+
+#define relay D3
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(relay,OUTPUT);
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\n');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  //서버가 클라이언트로 받은 메시지 전문을 출력
+  while (client.available()) {
+    // byte by byte is not very efficient
+    String text = client.readStringUntil('\n');
+    Serial.println(text);
+  }
+
+  // Match the request
+  int val;
+  if (req.indexOf(F("/ON")) != -1) {
+    //req의 문자열 패턴에서 /gpio/0 패턴이 검색이 된다면~
+    digitalWrite(relay,HIGH); //릴레이작동
+    val = HIGH;
+  } else if (req.indexOf(F("/OFF")) != -1) {
+    //req의 문자열 패턴에서 /gpio/1 패턴이 검색이 된다면~
+    digitalWrite(relay,LOW); //릴레이끔
+    val = LOW;
+  } else {
+    Serial.println(F("invalid request"));
+    val = digitalRead(relay);
+  }
+
+  String onoff = "";
+  String style = "";
+  if(val == HIGH){
+    onoff = "ON";
+    style = "class='set1'";
+  }else{
+    onoff = "OFF";
+    style = "";
+  }
+  // read/ignore the rest of the request
+  // do not client.flush(): it is for output only, see below
+  /*while (client.available()) {
+    // byte by byte is not very efficient
+    //client.read();
+  }*/
+
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"));
+  String response = "\
+  <!DOCTYPE html>\
+<html>\
+<head>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:-4px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:500px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 500px;\
+}\
+</style>\
+</head>\
+<body>\
+<h1>NOCKANDA RELAY EXAMPLE!</h1>\
+<table>\
+<tr id=\"c_head\">\
+<th>RESULT(ON or OFF)</th>\
+</tr>\
+<tr>\
+<td height=100 "+
+style
++"><h1>"+
+onoff
++"</h1></td>\
+</tr>\
+<tr>\
+<td>\
+    <button id=\"btn\" onclick=\"location.href='/ON'\">REALY ON</button>\
+    <button id=\"btn\" onclick=\"location.href='/OFF'\">RELAY OFF</button>\
+</td>\
+</tr>\
+</table>\
+</body>\
+</html>\
+  ";
+  client.print(response);
+  
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}

@@ -1,0 +1,40 @@
+/*
+ * 예제 153-2
+ * 버튼(택트스위치)을 2개 연결해서 아래와 같이 역할을 부여하자!
+ * 버튼1 : 정방향으로 풀파워(255)로 회전
+ * 버튼2 : 역방향으로 풀파워(255)로 회전
+ * 안누르면 : 멈춤
+ */
+
+#define control1 3
+#define control2 4
+#define power 5
+#define button1 6
+#define button2 7
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(control1,OUTPUT);
+  pinMode(control2,OUTPUT);
+  pinMode(button1, INPUT_PULLUP);
+  pinMode(button2, INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(button1) == LOW){
+    //버튼1이 눌려진것(풀업방식)
+    //정방향이라 가정 
+    digitalWrite(control1,HIGH);
+    digitalWrite(control2,LOW);
+    analogWrite(power,255);
+  }else if(digitalRead(button2) == LOW){
+    //버튼2가 눌려진것!
+    //역방향(정방향과 상대적인 개념)
+    digitalWrite(control1,LOW);
+    digitalWrite(control2,HIGH);
+    analogWrite(power,255);
+  }else{
+    analogWrite(power,0);
+  }  
+}

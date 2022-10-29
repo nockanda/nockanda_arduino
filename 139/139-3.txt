@@ -1,0 +1,127 @@
+/*
+  139-3 TM1637형 간이 음주 측정기!
+  TM1637을 CLK를 D6번에 DIO를 D7번에 연결했다!
+  MQ3에서 측정되는 PPM을 FND에 디스플레이 되도록 해보시오!
+*/
+
+//Include the library
+#include <MQUnifiedsensor.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+/************************Hardware Related Macros************************************/
+#define         Board                   ("Arduino UNO")
+#define         Pin                     (A0)  //Analog input 3 of your arduino
+/***********************Software Related Macros************************************/
+#define         Type                    ("MQ-3") //MQ3
+#define         Voltage_Resolution      (5)
+#define         ADC_Bit_Resolution      (10) // For arduino UNO/MEGA/NANO
+#define         RatioMQ3CleanAir        (60) //RS / R0 = 60 ppm 
+/*****************************Globals***********************************************/
+#define CLK 6
+#define DIO 7
+
+#define green 2
+#define yellow 3
+#define red 4
+#define button 5
+//Declare Sensor
+MQUnifiedsensor MQ3(Board, Voltage_Resolution, ADC_Bit_Resolution, Pin, Type);
+TM1637Display display(CLK, DIO);
+
+void setup() {
+  //Init the serial port communication - to debug the library
+  Serial.begin(9600); //Init serial port
+  pinMode(green,OUTPUT);
+  pinMode(yellow,OUTPUT);
+  pinMode(red,OUTPUT);
+  pinMode(button,INPUT_PULLUP);
+  display.setBrightness(0x0f);
+  //Set math model to calculate the PPM concentration and the value of constants
+  MQ3.setRegressionMethod(1); //_PPM =  a*ratio^b
+  MQ3.setA(0.3934); MQ3.setB(-1.504); // Configurate the ecuation values to get Benzene concentration
+  /*
+    Exponential regression:
+  Gas    | a      | b
+  LPG    | 44771  | -3.245
+  CH4    | 2*10^31| 19.01
+  CO     | 521853 | -3.821
+  Alcohol| 0.3934 | -1.504
+  Benzene| 4.8387 | -2.68
+  Hexane | 7585.3 | -2.849
+  */
+
+  /*****************************  MQ Init ********************************************/ 
+  //Remarks: Configure the pin of arduino as input.
+  /************************************************************************************/ 
+  MQ3.init(); 
+  
+  /* 
+    //If the RL value is different from 10K please assign your RL value with the following method:
+    MQ3.setRL(10);
+  */
+  /*****************************  MQ CAlibration ********************************************/ 
+  // Explanation: 
+  // In this routine the sensor will measure the resistance of the sensor supposing before was pre-heated
+  // and now is on clean air (Calibration conditions), and it will setup R0 value.
+  // We recomend execute this routine only on setup or on the laboratory and save on the eeprom of your arduino
+  // This routine not need to execute to every restart, you can load your R0 if you know the value
+  // Acknowledgements: https://jayconsystems.com/blog/understanding-a-gas-sensor
+  Serial.print("Calibrating please wait.");
+  float calcR0 = 0;
+  for(int i = 1; i<=10; i ++)
+  {
+    MQ3.update(); // Update data, the arduino will be read the voltage on the analog pin
+    calcR0 += MQ3.calibrate(RatioMQ3CleanAir);
+    Serial.print(".");
+  }
+  MQ3.setR0(calcR0/10);
+  Serial.println("  done!.");
+  
+  if(isinf(calcR0)) {Serial.println("Warning: Conection issue founded, R0 is infite (Open circuit detected) please check your wiring and supply"); while(1);}
+  if(calcR0 == 0){Serial.println("Warning: Conection issue founded, R0 is zero (Analog pin with short circuit to ground) please check your wiring and supply"); while(1);}
+  /*****************************  MQ CAlibration ********************************************/ 
+  MQ3.serialDebug(true);
+}
+
+bool pre_button_state = HIGH;
+float ppm = 0; //누적수치
+int count = 0;//샘플의갯수
+void loop() {
+  //1버튼을 누르고 있는 동안에 알콜메터기를 측정한다
+  //2(버튼을 누르고 있다가) 버튼을 뗀순간 결과가 출력된다.
+  bool button_state = digitalRead(button);
+  if(button_state == LOW){
+    //버튼을 누르고 있는거
+    MQ3.update();
+    ppm += MQ3.readSensor();
+    count++;
+  }else if(pre_button_state == LOW && button_state == HIGH){
+      //결과출력
+    Serial.println(ppm);
+    Serial.println(count);
+    ppm = ppm/count;
+    display.showNumberDec((int)ppm, true, 2, 0);
+    display.showNumberDec((int)(ppm*100)%100, true, 2, 2);
+    if(ppm >= 0 && ppm <= 0.03){
+      //훈방
+      digitalWrite(green, HIGH);
+      digitalWrite(yellow, LOW);
+      digitalWrite(red, LOW);
+    }else if(ppm > 0.03 && ppm <= 0.08){
+      //정지
+      digitalWrite(green, LOW);
+      digitalWrite(yellow, HIGH);
+      digitalWrite(red, LOW);
+    }else if(ppm > 0.08){
+      //취소
+      digitalWrite(green, LOW);
+      digitalWrite(yellow, LOW);
+      digitalWrite(red, HIGH);
+    }
+    
+    ppm = 0;
+    count = 0;
+  }
+  pre_button_state = button_state; //이월!
+  delay(500); //Sampling frequency
+}

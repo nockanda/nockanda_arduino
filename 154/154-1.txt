@@ -1,0 +1,183 @@
+/*
+ * 예제 154-1
+ * DS1302모듈을 CLK를 10번에 DAT를 11번에 RST를 12번에 연결했다!
+ * 2.4인치 LCD 쉴드는 아두이노와 1:1로 연결했다!
+ * RTC모듈인 DS1302에서 나오는 시간값으로 아날로그 시계를 구현하라!
+ */
+
+#include <SPFD5408_Adafruit_GFX.h>    // Core graphics library
+#include <SPFD5408_Adafruit_TFTLCD.h> // Hardware-specific library
+#include <SPFD5408_TouchScreen.h>
+#include <ThreeWire.h>  
+#include <RtcDS1302.h>
+
+#define LCD_CS A3 // Chip Select goes to Analog 3
+#define LCD_CD A2 // Command/Data goes to Analog 2
+#define LCD_WR A1 // LCD Write goes to Analog 1
+#define LCD_RD A0 // LCD Read goes to Analog 0
+#define LCD_RESET A4
+#define BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+ThreeWire myWire(11,10,12); // IO, SCLK, CE
+RtcDS1302<ThreeWire> Rtc(myWire);
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+int cen_x = 120;
+int cen_y = 120;
+int pre_s_x = 0;
+int pre_s_y = 0;
+int pre_m_x = 0;
+int pre_m_y = 0;
+int pre_h_x = 0;
+int pre_h_y = 0;
+bool is_first = true;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  Serial.print("compiled: ");
+    Serial.print(__DATE__);
+    Serial.println(__TIME__);
+
+    Rtc.Begin();
+
+    RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
+
+    Serial.println();
+
+    if (!Rtc.IsDateTimeValid()) 
+    {
+        // Common Causes:
+        //    1) first time you ran and the device wasn't running yet
+        //    2) the battery on the device is low or even missing
+
+        Serial.println("RTC lost confidence in the DateTime!");
+        Rtc.SetDateTime(compiled);
+    }
+
+    if (Rtc.GetIsWriteProtected())
+    {
+        Serial.println("RTC was write protected, enabling writing now");
+        Rtc.SetIsWriteProtected(false);
+    }
+
+    if (!Rtc.GetIsRunning())
+    {
+        Serial.println("RTC was not actively running, starting now");
+        Rtc.SetIsRunning(true);
+    }
+
+    RtcDateTime now = Rtc.GetDateTime();
+    if (now < compiled) 
+    {
+        Serial.println("RTC is older than compile time!  (Updating DateTime)");
+        Rtc.SetDateTime(compiled);
+    }
+    else if (now > compiled) 
+    {
+        Serial.println("RTC is newer than compile time. (this is expected)");
+    }
+    else if (now == compiled) 
+    {
+        Serial.println("RTC is the same as compile time! (not expected but all is fine)");
+    }
+
+  
+  tft.reset();
+  tft.begin(0x9341);
+  tft.setRotation(3); //0~3
+  //tft.width() 화면의 너비
+  //tft.height() 화면의 높이
+
+  tft.fillScreen(BLACK);
+  tft.drawCircle(cen_x, cen_y, 120, GREEN);
+
+  //degree각도에파이를 곱하고 180으로 나누면 라디안각도구나!
+  for(int i = 0;i<12;i++){
+    int x = cen_x+110 * cos((30*i-90)*PI/180);
+    int y = cen_y+110 * sin((30*i-90)*PI/180);
+    //tft.drawLine(cen_x, cen_y, x, y, GREEN);
+    tft.drawCircle(x, y, 5, GREEN);
+  }
+  tft.setCursor(220, 10);
+  tft.setTextColor(WHITE);  tft.setTextSize(1);
+  tft.println("NOCKANDA WATCH!");
+  tft.setCursor(240, 20);
+  tft.setTextSize(5);
+  if(compiled.Hour() > 12){
+    //오후
+    tft.println("PM");
+  }else{
+    //오전
+    tft.println("AM");
+  }
+  tft.setTextSize(2);
+  tft.setCursor(240, 180);
+  tft.println(compiled.Year());
+  tft.setCursor(240, 200);
+  tft.println(compiled.Month());
+  tft.setCursor(240, 220);
+  tft.println(compiled.Day());
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  RtcDateTime now = Rtc.GetDateTime();
+  draw_time(now.Hour(),now.Minute(),now.Second());
+  delay(1000);
+}
+
+void draw_time(int h,int m,int s){
+ 
+  //초침 분침 시침 바늘의 길이
+  int s_length = 100;
+  int m_length = 80;
+  int h_length = 60;
+  //초침부터 드로잉해보자!
+  //초침이 30초라는 것은 전체 60초중에 30/60 = 1/2 
+  //int s = 30;
+  int s_degree = 360*s/60;
+  int s_x = cen_x+s_length * cos((s_degree-90)*PI/180);
+  int s_y = cen_y+s_length * sin((s_degree-90)*PI/180);
+  
+  //분침
+  //int m = 20;
+  int m_degree = 360*m/60 + 6*s_degree/360;
+  int m_x = cen_x+m_length * cos((m_degree-90)*PI/180);
+  int m_y = cen_y+m_length * sin((m_degree-90)*PI/180);
+  
+  //시침
+  //시침은 12분법을 사용하니 전체 12에 대한 퍼센테이지를 구해야하죠!
+  //int h = 11;
+  int h_degree = 360*h/12 + 30*m_degree/360;
+  int h_x = cen_x+h_length * cos((h_degree-90)*PI/180);
+  int h_y = cen_y+h_length * sin((h_degree-90)*PI/180);
+  
+
+  //클리어코드
+  if(is_first){
+    is_first = false;
+  }else{
+    //값이 변화가 없는데..? 다시 그려야할 필요가 있을까?
+    if(pre_s_x != s_x || pre_s_y != s_y)
+      tft.drawLine(cen_x, cen_y, pre_s_x, pre_s_y, BLACK);
+    if(pre_m_x != m_x || pre_m_y != m_y)
+      tft.drawLine(cen_x, cen_y, pre_m_x, pre_m_y, BLACK);
+    if(pre_h_x != h_x || pre_h_y != h_y)
+      tft.drawLine(cen_x, cen_y, pre_h_x, pre_h_y, BLACK);
+  }
+  tft.drawLine(cen_x, cen_y, s_x, s_y, GREEN);
+  tft.drawLine(cen_x, cen_y, m_x, m_y, GREEN);
+  tft.drawLine(cen_x, cen_y, h_x, h_y, GREEN);
+  pre_s_x = s_x;
+  pre_s_y = s_y;
+  pre_m_x = m_x;
+  pre_m_y = m_y;
+  pre_h_x = h_x;
+  pre_h_y = h_y;
+}

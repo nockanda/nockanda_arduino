@@ -1,0 +1,213 @@
+/*
+    예제137-1 광센서(CDS)를 1k옴 저항과함께 전압분배 법칙을 이용해서 A0포트에 연결했다!
+    아날로그 값을 읽어서 html문서에 적절~하게 데이터를 담아서
+    클라이언트인 웹브라우저에게 보내주자!
+*/
+
+#include <ESP8266WiFi.h>
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+#define cds_pin A0
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+unsigned int cds_value=0;
+int cds_limit = 390;
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+IPAddress server_ip;
+String server_ip2string;
+
+void setup() {
+  Serial.begin(115200);
+
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  //목적 서버의 IP주소를 STRING으로 변환하려고함!
+  server_ip = WiFi.localIP();
+  //server_ip[0] server_ip[1] server_ip[2] server_ip[3]
+  server_ip2string = String(server_ip[0]) + "." + String(server_ip[1]) + "." + String(server_ip[2]) + "." + String(server_ip[3]);
+ 
+  // Print the IP address
+  Serial.println(server_ip2string);
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+  //데이터 측정 부분
+  cds_value = analogRead(cds_pin);
+  
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  //  "/nockanda/+100/"
+  String req = client.readStringUntil('\n');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  String sample = "/nockanda/";
+  int start_index = req.indexOf(F("/nockanda/"));
+  // Match the request
+  if (start_index != -1) {
+    //100 200 300 10 1000
+    start_index += sample.length();
+    int end_index = req.indexOf("/",start_index);
+
+    String number = req.substring(start_index,end_index);
+    int limit = number.toInt();
+    cds_limit += limit;
+    if(cds_limit < 0) cds_limit=0;
+    if(cds_limit > 1023) cds_limit=1023;
+  }
+
+  String result;
+  if(cds_value > cds_limit){
+    //day
+    result="DAY!";
+  }else{
+    //night
+    result="NIGHT!";
+  }
+  // read/ignore the rest of the request
+  // do not client.flush(): it is for output only, see below
+  /*while (client.available()) {
+    // byte by byte is not very efficient
+    client.read();
+  }*/
+
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>\r\n"));
+
+  //http://192.168.0.7/right/
+  //http://192.168.0.7/left/
+  //http://naver.com/????
+  String response = "\
+<head>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:2px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:500px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 500px;\
+}\
+</style>\
+</head>\
+<body>\
+<h1>NOCKANDA CDS(ANALOG) SENSOR EXAMPLE!</h1>\
+<table>\
+<tr id=\"c_head\">\
+<th>RAW DATA</th>\
+</tr>\
+<tr>\
+<td id=\"c_width\">"+
+String(cds_value)
++"</td>\
+</tr>\
+<tr id=\"c_head\">\
+<th>RULES</th>\
+</tr>\
+<tr>\
+<td id=\"c_width\">\
+      DAY(>"+
+      String(cds_limit)
+      +"), NIGHT(<="+
+      String(cds_limit)
+      +")<BR>\
+      <button id=\"btn\" onclick=\"location.href='http://"+
+      server_ip2string
+      +"/nockanda/-100/'\">DOWN(-100)</button>\
+      <button id=\"btn\" onclick=\"location.href='http://"+
+      server_ip2string
+      +"/nockanda/+100/'\">UP(+100)</button>\
+</td>\
+</tr>\
+<tr id=\"c_head\">\
+<th>RESULT(DAY/NIGHT)</th>\
+</tr>\
+<tr>\
+<td id=\"c_width\">"+
+result
++"</td>\
+</tr>\
+<tr>\
+<td><button id=\"btn\" onclick=\"location.href='http://"+
+server_ip2string
++"/'\">REFRESH</button></td>\
+</tr>\
+</table>\
+</body>\
+</html>\
+  ";
+  client.print(response);
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}

@@ -1,0 +1,49 @@
+/*
+ * 예제 152-3-1(master 코드)
+ * 슬레이브에 LED 1개가 장착되어있다!
+ * 마스터에서 0을보내면 LED가 꺼지고 1을 보내면 켜지도록하라!
+ * (실제 데이터) '0' 0x0D, 0x0A : LED OFF
+ * (실제 데이터) '1' 0x0D, 0x0A : LED ON
+ * 1초에 한번씩 켰다가 껏다가 해보자..!
+ */
+
+#include <SoftwareSerial.h>
+SoftwareSerial AT09(2, 3); // RX, TX
+byte cona[]={'A','T','+','C','O','N','A','5','0','3','3','8','B','F','4','1','E','A','F',0x0D,0x0A};
+byte onmessage[] = {'1',0x0D,0x0A};
+byte offmessage[] = {'0',0x0D,0x0A};
+bool onoff = false;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  AT09.begin(9600); //아두이노-블루투스모듈간 통신
+
+  //AT+CONA50338BF41EAF 페어링 명령!
+  //19개 데이터+ CR+ LF = 총 21개
+  
+
+  AT09.write(cona,sizeof(cona)); //페어링 해라!
+}
+
+unsigned long t = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(AT09.available()){
+    Serial.write(AT09.read());
+  }
+  unsigned long t2 = millis();
+  if(t2-t > 1000){
+    //1초에 한번 실행되는 부분..
+    if(onoff){
+      AT09.write(onmessage,sizeof(onmessage));
+      onoff= false;
+    }else{
+      AT09.write(offmessage,sizeof(offmessage));
+      onoff = true;
+    }
+    
+    t = t2;
+  }
+
+}

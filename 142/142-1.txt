@@ -1,0 +1,24 @@
+/*
+ * 142-1 GM65 기본 바코드 리딩 코드
+ * 바코드를 읽어서 STRING 타입으로 반환한다!
+ */
+
+#include <SoftwareSerial.h>
+SoftwareSerial GM65(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);// PC-아두이노간 통신
+  GM65.begin(9600); //GM65-아두이노간 통신
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(GM65.available()){
+    //GM65에서 아두이노로 날라오는 값이 존재한다면~
+    String barcode = GM65.readStringUntil('\n');
+    Serial.println(barcode);
+    //Serial.print((char)GM65.read());
+
+  }
+}

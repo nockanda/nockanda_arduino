@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>NOCKANDA DHT11 EXAMPLE</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+<style>
+#btn{
+border: 1px solid blue;
+background-color: rgba(0,0,0,0);
+color: blue;
+padding: 5px;
+border-top-left-radius: 5px;
+border-bottom-left-radius: 5px;
+border-top-right-radius: 5px;
+border-bottom-right-radius: 5px;
+margin-right:-4px;
+height:40px;
+}
+table {
+border-collapse: collapse;
+width:500px;
+}
+table, td, th {
+border: solid 1px #cccccc;
+}
+tr {
+height:40px;
+text-align: center;
+}
+td, th {
+padding: 5px;
+}
+.set1 {
+background-color: red;
+color: white;
+text-decoration: underline;
+font-weight: bold;
+}
+#c_head {
+height:30px;
+background-color: #eeeeee;
+}
+#c_width{
+width: 500px;
+}
+</style>
+</head>
+<body>
+<h1>NOCKANDA DUST(GP2Y) SENSOR EXAMPLE!</h1>
+<table border=0>
+<tr id="c_head"><th>DUST SENSOR</th></tr>
+<tr><td><table border=0>
+<td bgcolor="blue"><font color=white>VERY GOOD<BR>(0~30)</font></td>
+<td bgcolor="green"><font color=white>GOOD<BR>(31~80)</font></td>
+<td bgcolor="orange"><font color=white>BAD<BR>(81~150)</font></td>
+<td bgcolor="red"><font color=white>VERY BAD<BR>(151~)</font></td></table></td></tr>
+<tr id="c_head"><th>
+<div style="width:500px; height:300px;">
+<canvas id="myChart"></canvas>
+</div>
+</th></tr><tr><td>
+<div style="width:500px;">
+<canvas id="myChart2"></canvas>
+</div>
+</td></tr><tr><td align=center>
+<button id="btn" onclick="location.href=window.location.href ">REFRESH</button>
+</td></tr></table>
+<script>
+var input_value = 382.11;
+var graph_value;
+if(input_value > 200) graph_value = 200;
+else graph_value = input_value;
+var num = graph_value/200; 
+var color;
+if(input_value < 30) color = 'blue';
+else if(input_value < 80) color = 'green';
+else if(input_value < 150) color = 'orange';
+else if(input_value > 151) color ='red';
+var data = { labels: ['dust value'], datasets: [ { data: [num, 1-num], backgroundColor: [color], hoverBackgroundColor: [ color ] }] }; 
+var ctx = document.getElementById('myChart').getContext('2d');
+var chart = new Chart(ctx, {
+type: 'doughnut',
+data: data,
+options: { 
+   responsive: true, 
+   legend: { display: false }, 
+   elements: { center: { text: Math.round(num*100), fontStyle: 'Helvetica', sidePadding: 15 } }, 
+   maintainAspectRatio : false, 
+   cutoutPercentage:70, 
+   animation: {
+      onComplete: function () {
+           ctx.textAlign = 'center';
+           ctx.textBaseline = 'middle';
+           ctx.font = '80px Arial';
+           ctx.fillStyle = color;
+           ctx.fillText(input_value, chart.width/2, chart.height-90);
+           ctx.font = '30px Arial';
+           ctx.fillText("(㎍/㎥)", chart.width/2, chart.height-30);
+      }
+   }, 
+   rotation: 1 * Math.PI, 
+   circumference: 1 * Math.PI } 
+});
+var ctx2 = document.getElementById('myChart2').getContext('2d');
+var chart2 = new Chart(ctx2, {
+type: 'line',
+data: {
+labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],
+datasets: [
+{
+label: 'DUST',
+backgroundColor: 'transparent',
+borderColor: 'blue',
+data: [20, 10, 5, 2, 20, 30, 45]
+}
+]
+},
+options: {}
+});
+</script>
+</body>
+</html>
