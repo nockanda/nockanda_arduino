@@ -1,0 +1,29 @@
+/*
+ * 예제 41-2 녹색 LED(D2)가 10초에 한번씩 깜빡인다.
+ * 버튼(D4)을 누르면 주황색 LED(D3)가 켜지고
+ * 버튼(D4)을 안누르면 주황색 LED(D3)가 꺼진다.
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(2,OUTPUT); //녹색LED
+  pinMode(3,OUTPUT); //주황색LED
+  pinMode(4,INPUT_PULLUP); //버튼
+}
+int button = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  digitalWrite(2,HIGH);
+  delay(10000);
+  digitalWrite(2,LOW);
+  delay(10000);
+
+  button = digitalRead(4);
+  if(button == LOW){
+    //버튼이 눌려진경우
+    digitalWrite(3,HIGH);
+  }else{
+    //버튼이 안눌러진경우
+    digitalWrite(3,LOW);
+  }
+}

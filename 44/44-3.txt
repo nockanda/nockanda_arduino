@@ -1,0 +1,37 @@
+/*
+ * 예제44-3 솔레노이드를 버튼으로 제어해보라!
+ * 버튼을 D3에 연결해서 누르면 작동하도록 하라!
+ * 솔레노이드가 작동할때 부저음(D5)이 나도록 하라!
+ * 솔레노이드를 아두이노 디지털핀에 직접연결했더니
+ * 전류가 딸려서 작동이 안되었다.
+ * 그러므로 릴레이나 모스펫을 사용해서 제어를 해야한다.
+ * 본 예제는 D2에 모스펫의 SIG핀을 연결하고
+ * 모스펫에 +,-를 솔레노이드에 각각 연결하고 VIN과 GND를
+ * 샤오미베터리에서 외부전원으로 가져왔다.
+ */
+#define NOTE_C5  523
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,OUTPUT);
+  pinMode(3,INPUT_PULLUP);
+}
+int value = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  value = digitalRead(3);
+  if(value == LOW){
+    //버튼이 눌려진경우
+    digitalWrite(2,HIGH); //대리인 모스펫 작동
+    int noteDuration = 250;
+    tone(5, NOTE_C5, noteDuration);
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    noTone(5);
+  }else{
+    //안눌려진경우
+    digitalWrite(2,LOW);
+  }
+  delay(100);
+}

@@ -1,0 +1,26 @@
+[아두이노강의] 포로리야 공대가자 #55 OLED 0.91인치 LCD(SSD1306)
+
+ 
+
+(OLED 0.91인치 LCD)
+ssd1306/GFX
+
+
+55-1.txt
+0.00MB
+nockanda_dot.zip
+0.04MB
+라이브러리는 관리에서 ssd1306 검색!
+
+
+예제55-1 온도센서(DHT-11)을 이용해서
+ * 0.91인치 OLED디스플레이(ssd1306)에 표시해보자
+ * 온도센서는 D2에 연결했고
+ * 디스플레이는 A4(SDA)와 A5(SDL)에만 연결해야 했다.
+ * 비트맵을 사용하도록 C# 프로그램을 별첨한다.
+
+ 
+
+관련라이브러리(ssd1306)
+
+https://github.com/adafruit/Adafruit_SSD1306

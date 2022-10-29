@@ -1,0 +1,95 @@
+/*
+    FF30CF 1
+    FF18E7 2
+    FF7A85 3
+    FF10EF 4
+    FF38C7 5
+    FF5AA5 6
+    FF42BD 7
+    FF4AB5 8
+    FF52AD 9
+    FF6897 0
+    FF9867 100+
+    FFB04F 200+
+    FFE01F +
+    FFA857 -
+    FF906F EQ
+    FF22DD |◀◀
+    FF02FD ▶▶|
+    FFC23D ▶||
+    FFA25D CH-
+    FF629D CH
+    FFE21D CH+
+    */
+/*
+ * 예제46-5 (스몰프로젝트) 모스펫에 DC모터를
+ * 연결하고 power가 FND디스플레이에
+ * 표시되도록한뒤 리모컨으로 속도를 제어하라
+ * FND디스플레이는 CLK를 A0에, DIO를 A1에 연결했다.
+ * 모스펫은 D3에 연결했다.
+ * 1번을 누르면 속도를 올리고(31씩)
+ * 2번을 누르면 속도를 내리고(31씩)
+ * 3번을 누르면 최고속도로 올리고(255)
+ * 4번을 누르면 정지시켜라(0)
+ */
+
+  
+#include <IRremote.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK A0
+#define DIO A1
+
+int RECV_PIN = 2; //적외선수신기 2번핀에 연결
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+TM1637Display display(CLK, DIO);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  irrecv.enableIRIn();
+  display.setBrightness(0x0f);
+}
+
+int motor = 0; //0~255
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (irrecv.decode(&results)) {
+    
+    Serial.println(results.value, HEX);
+    
+    if(results.value == 0xFF30CF){
+      //버튼1번
+      motor+=31;
+      motor = constrain(motor,0,255);
+      //analogWrite(3,motor);
+    }else if(results.value == 0xFF18E7){
+      //버튼2번
+      motor-=31;
+      motor = constrain(motor,0,255);
+      //analogWrite(3,motor);
+    }else if(results.value == 0xFF7A85){
+      //버튼3번
+      motor = 255;
+      //analogWrite(3,motor);
+    }else if(results.value == 0xFF10EF){
+      //버튼4번
+      motor = 0;
+      
+    }else if(results.value == 0xFF38C7){
+      //버튼5번
+    }else if(results.value == 0xFF5AA5){
+      //버튼6번
+    }else if(results.value == 0xFF6897){
+      //버튼0번
+      
+    }
+    
+    irrecv.resume(); // Receive the next value
+  }
+  analogWrite(5,motor);
+  display.showNumberDec(motor, false);
+  delay(100);
+}

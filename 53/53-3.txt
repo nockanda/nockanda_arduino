@@ -1,0 +1,37 @@
+/*
+ * 예제53-3 터치센서로 FND디스플레이 업/다운카운트 해보자
+ * 터치센서 2개는 각각 아래와 같이 연결했다.
+ * 1번 터치센서 : D2
+ * 2번 터치센서 : D3
+ * FND디스플레이(TM1637) 아래와 같이 연결했다
+ * CLK : D4
+ * DIO : D5
+ */
+ #include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK 4
+#define DIO 5
+TM1637Display display(CLK, DIO);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,INPUT); //1번
+  pinMode(3,INPUT); //2번
+  display.setBrightness(0x0f);
+}
+int num = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(2) == HIGH){
+    //터치센서 1번이 눌려짐
+    num++;
+  }
+  if(digitalRead(3) == HIGH){
+    //터치센서 2번이 눌려짐
+    num--;
+  }
+  display.showNumberDec(num, false);
+  delay(100);
+  
+}

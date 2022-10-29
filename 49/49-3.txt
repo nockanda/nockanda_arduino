@@ -1,0 +1,49 @@
+/*
+ * 예제 49-3 워터펌프를 작동시켜서 유속센서의 신호를
+ * 시리얼 플로터로 관찰하자
+ * 워터펌프는 모스펫에 연결되어 있고 모스펫은 D2에
+ * 연결되어있다.
+ * 유속센서는 D3에 연결되어있다.
+ * 버튼을 누르면 이송을 시작하라!
+ * 아래식을 참조해서 유속을 시리얼로 계산해보자
+ * 1L = 5888 square waves
+ * 펌프를 무조건 작동시켜서 이송한 물의양이 100ml가되면
+ * 모터를 멈추게하라
+ * FND디스플레이를 CLK/A0, DIO/A1에 연결하고
+ * 펌프가 이송한 물의양을 표시하라
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK A0
+#define DIO A1
+TM1637Display display(CLK, DIO);
+volatile double water = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,OUTPUT);
+  pinMode(3,INPUT_PULLUP);
+  pinMode(4,INPUT_PULLUP);
+  display.setBrightness(0x0f);
+  display.showNumberDec(0, false);
+  attachInterrupt(digitalPinToInterrupt(3), flow, FALLING);
+}
+int flowsensor = 0;
+int onoff = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(4) == LOW){
+      //눌려진거
+      digitalWrite(2,HIGH);
+    }else{
+      //멈춤
+      digitalWrite(2,LOW);
+    }
+    //Serial.println(water);
+    display.showNumberDec(water, false);
+}
+
+void flow(){
+  water += (1/5888.0)*1000; //단위mL
+}

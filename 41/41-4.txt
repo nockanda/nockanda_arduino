@@ -1,0 +1,27 @@
+/*
+ * 예제 41-4 녹색 LED(D2)가 10초에 한번씩 깜빡인다.
+ * 시리얼통신으로 입력한 숫자를 프린트하자!
+ */
+ 
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,OUTPUT); //녹색LED
+  pinMode(3,OUTPUT); //주황색LED
+  pinMode(4,INPUT_PULLUP); //버튼
+}
+int value = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (Serial.available() > 0) {
+    //시리얼로 아두이노로 보낸 숫자를 
+    //그대로 반환하는 코드
+    value = Serial.parseInt();
+    Serial.println(value);
+  }
+  
+  digitalWrite(2,HIGH);
+  delay(10000);
+  digitalWrite(2,LOW);
+  delay(10000);
+}

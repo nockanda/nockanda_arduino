@@ -1,0 +1,43 @@
+/*
+ * 예제 54-1 시리얼통신으로 로또번호를 중복없이 뽑아보자
+ */
+long randNumber;
+int lotto[6] = {0};
+bool doing = true; //완료여부
+int count = 0; //추출한 숫자의 갯수
+int loopcount = 0; //루프의 횟수
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  randomSeed(analogRead(0));
+
+   
+  while(doing){
+    randNumber = random(1,46);//1~45
+    bool jungbok = false;
+    for(int i = 0;i<6;i++){
+      if(randNumber == lotto[i]){
+        jungbok = true;
+        break;
+      }
+    }
+    if(jungbok == false){
+      //중복이 없는 경우
+      lotto[count] = randNumber;
+      count++;
+      if(count > 6) doing = false;
+    }
+    loopcount++;
+  }
+
+  for(int i = 0;i<6;i++){
+    Serial.println(lotto[i]);
+  }
+  Serial.print("LOOP COUNT = ");
+  Serial.println(loopcount);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}

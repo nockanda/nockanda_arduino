@@ -1,0 +1,124 @@
+/* @file CustomKeypad.pde
+|| @version 1.0
+|| @author Alexander Brevig
+|| @contact alexanderbrevig@gmail.com
+||
+|| @description
+|| | Demonstrates changing the keypad size and key values.
+|| #
+*/
+/*
+ * 예제43-6 (스몰프로젝트) fnd디스플레이 2개와
+ * 키패드1개로 3자리 숫자야구를 구현하라!
+ * FND디스플레이(TM1637) CLK:A0, DIO:A1
+ * FND디스플레이에 연속한 4자리 숫자를 입력받아라!
+ * 숫자야구란 234, 458, 987
+ * 단 불가능 한것= 332  565
+ * 234 : 134 = 2S
+ * 234 : 287 = 1S
+ * 234 : 423 = 3B
+ * 234 : 243 = 1S 2B
+ * 234 : 234 = 3S
+ * 사용자가 3자리수를 입력하고 샵을 누른것을
+ * 입력하고 엔터친걸로 가정해보자
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+#include <Keypad.h>
+
+#define CLK A0
+#define DIO A1
+const byte ROWS = 4;
+const byte COLS = 4;
+char hexaKeys[ROWS][COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+//이쁘게생긴 키패드는 정면에서 봤을때
+//R1 R2 R3 R4 C1 C2 C3 C4 순서임
+//투박하게 생긴 키패드는 적혀있는대로 연결해면 끝!
+byte rowPins[ROWS] = {2, 3, 4, 5}; 
+byte colPins[COLS] = {6, 7, 8, 9}; 
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+TM1637Display display(CLK, DIO);
+
+int computernumber[3];
+int randNumber;
+int num_count = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  display.setBrightness(0x0f);
+  randomSeed(analogRead(A5));
+  while(true){
+    randNumber = random(1,10); //0~9
+    if(num_count == 0){
+      //첫번째 숫자
+      computernumber[0] = randNumber;
+      num_count++;
+    }else if(num_count ==1){
+      //두번째 숫자
+      if(computernumber[0] != randNumber){
+        computernumber[1] = randNumber;
+        num_count++;
+      }
+    }else if(num_count ==2){
+      if(computernumber[0] != randNumber && computernumber[1] != randNumber){
+        computernumber[2] =randNumber;
+        break;
+      }
+    }
+  }
+  
+  display.showNumberDec((computernumber[0]*100)+(computernumber[1]*10)+computernumber[2], false);
+}
+int num = 0; //0~9999
+int result = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  char customKey = customKeypad.getKey();
+  
+  if (customKey){
+    if(customKey >= '0' && customKey <= '9'){
+      //customKey : '0'  
+      num = (num*10)+(int)(customKey-'0');
+      if(num > 9999) num=num%10000;
+      //
+      display.showNumberDec(num, false);
+    }else if(customKey == '#'){
+      //판별
+      //예외는 없다고 가정
+      //사용자는 무조건 3자리를 입력하되
+      //중복이 없어야 한다.
+      //computernumber
+      //num
+      //Serial.println(num /100); //100자리
+      //Serial.println((num /10)%10); //10자리
+      //Serial.println(num %10); //1자리
+      int s=0;
+      int b=0;
+      for(int i = 0;i<3;i++){
+        if(computernumber[i] == num /100){
+          //i가 0일때 한정해서 1S
+          if(i==0) s++;
+          else b++;
+        }else if(computernumber[i] == (num /10)%10){
+          if(i==1) s++;
+          else b++;
+        }else if(computernumber[i] == num %10){
+          if(i==2) s++;
+          else b++;
+        }
+      }
+      display.clear();
+      display.showNumberDec(s, false, 1, 0);
+      display.showNumberDec(b, false, 1, 3);
+      num = 0;
+    }
+    
+    Serial.println(customKey);
+  }
+}

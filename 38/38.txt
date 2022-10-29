@@ -1,0 +1,143 @@
+/*
+ * (스몰프로젝트) 광센서의 값으로 서보모터를 제어하고,
+ * 광센서의 값을 필터링한 값으로 서보모터를 제어한뒤
+ * 결과를 비교해보자.
+ * 서보모터는 D3에 연결했다.
+ */
+#include <Servo.h>
+#define window_size 20
+#define alpha 0.9
+Servo myservo;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  myservo.attach(3);
+}
+
+
+double data = 0;
+double data_noise = 0;
+double data_moving_window = 0;
+double data_lpf = 0;
+double window[window_size];
+
+
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //가상 오리지날 신호를 구현해보자!
+  data = analogRead(A0);
+  //data = nockanda_sensor();
+  //data_noise = data + noise();
+  //data_moving_window = moving_window(data_noise);
+  data_moving_window = moving_window(data);
+
+  //로우패스필터 구현 LPF
+  //data_lpf=lpf(data_noise);
+  data_lpf=lpf(data);
+
+  //광센서 원래 값으로 서보모터 각도 제어
+  //myservo.write(map(data,0,300,0,180));
+  //무빙윈도우 결과로 서보모터 각도 제어
+  myservo.write(map(data_moving_window,0,300,0,180));
+  //로우패스필터 결과로 서보모터 각도 제어
+  //myservo.write(map(data_lpf,0,300,0,180));
+  
+  Serial.print(data); //소스
+  Serial.print(",");
+  Serial.print(data_moving_window); //이동평균
+  Serial.print(",");
+  Serial.print(data_lpf); //lpf
+  //Serial.print(",");
+  //Serial.println(data_noise); //노이즈신호
+  Serial.println();
+  delay(10);
+}
+
+int degree = 0;
+double nockanda_sensor(){
+  if(degree > 360){
+    degree = 0;
+  }else{
+    degree++;
+  }
+  return 2*sin((PI/180)*degree);
+}
+
+int noise_i = 0;
+double noise(){
+  double output = 0.2*sin((PI/180)*degree*100);
+  if(noise_i %7 == 0){
+    //10의배수마다 무슨짓을 하겠다라는 뜻
+    output = output + 5;
+  }
+  noise_i++;
+  return output;
+}
+
+int bus_number = 0;
+int bus_i = 0;
+double moving_window(double input){
+    //필터를 구현해보자!
+  double average = 0;
+  if(bus_number > window_size-1){
+    //만차가 되어서 계산하는 단계
+    //Serial.print(bus_number%window_size); //0~9
+    //Serial.println("만차");
+    window[bus_number%window_size] = input;
+    //평균을 내보자!
+    //(전체평균)    
+    for(int i = 0;i<window_size;i++){
+      average += window[i];
+    }
+    //(평균인데 최소값과 최대값을 뺴고 평균을 내자)
+    /*double window_min = window[0];
+    double window_max = window[0];
+    int window_min_i = 0;
+    int window_max_i = 0;
+    for(int i = 1;i<window_size;i++){
+       if(window_min > window[i]){
+          window_min = window[i];
+          window_min_i = i;
+       }
+       if(window_max < window[i]){
+         window_max = window[i];
+         window_max_i = i;
+       }
+    }
+    for(int i = 0;i<window_size;i++){
+      if(i == window_min_i || i == window_max_i){
+        continue;
+      }
+      average += window[i];
+    }*/
+    
+    average = average/window_size;
+  }else{
+    //버스 탑승객만 모집하는 단계
+    //Serial.print(bus_number); //0~9
+    //Serial.println("모집");
+    window[bus_number] = input;
+  }
+  bus_number++;
+
+  return average;
+}
+
+int lpf_i = 0;
+double lpf_pre_value = 0;
+double lpf(double input){
+  double lpf_now = 0;
+    if(lpf_i > 0){
+    //작동부분
+    lpf_now = (lpf_pre_value * alpha) + (input*(1-alpha));
+    lpf_pre_value = lpf_now;
+  }else{
+    //샘플1개 취득(딱 한번만 실행되는코드)
+    lpf_pre_value = input;
+    lpf_i++;
+  }
+
+  return lpf_now;
+}

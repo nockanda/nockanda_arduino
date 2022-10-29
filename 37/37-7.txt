@@ -1,0 +1,62 @@
+/*
+ * 예제 37-7 모스펫(D3)
+ * (스몰프로젝트) DC모터 선풍기에 자석을 하나 본드로
+ * 붙히고 홀센서(D2)로 RPM을 계산하고,
+ * RPM이 FND디스플레이(D4,D5)에 표시되도록하라.
+ * 그리고 다른하나의 FND디스플레이에(D6,D7)는
+ * 사용자의 희망RPM(범위:0~3000)이 표시되도록하고
+ * 포텐셔미터(A0)로 조절하도록하라.
+ * 마지막으로 DC모터의 RPM을 적절히 조절해서
+ * 약간의 오차를 감안하고 사용자가 희망한 RPM과
+ * 일치하도록 맞추어보라!
+ * 
+  */
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK 4
+#define DIO 5
+#define CLK2 6
+#define DIO2 7
+TM1637Display display(CLK, DIO);
+TM1637Display display2(CLK2, DIO2);
+
+const byte interruptPin = 2;
+int count = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  display.setBrightness(0x0f);
+  display2.setBrightness(0x0f);
+  pinMode(interruptPin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), rpm, RISING);
+}
+int fan = 0;
+int power = 0;
+int power_value = 15;
+void loop() {
+  // put your main code here, to run repeatedly:
+  double rpm = (count/2)*60; //실제 회전수
+  fan = analogRead(A0); //0~1023
+  fan = map(fan,0,1023,0,3000);
+  if(rpm > fan){
+    //속도를 내려야하는 경우
+    power -= power_value;
+    
+  }else if(rpm < fan){
+    //속도를 올려야하는경우
+    power += power_value;
+  }else{
+    //일치할때
+  }
+  power = constrain(power,0,255);
+  analogWrite(3,power);
+  //analogWrite(3,fan);
+  display.showNumberDec(rpm, false);
+  display2.showNumberDec(fan, false);
+  count = 0;
+  delay(1000);
+}
+
+void rpm() {
+  count++;
+}

@@ -1,0 +1,30 @@
+/*
+ * 예제53-2 터치센서로 LED 1개 제어해보자!
+ * 터치센서 2개는 각각 아래와 같이 연결했다.
+ * 1번 터치센서 : D2
+ * 2번 터치센서 : D3
+ * LED는 D4연결하고 1번센서를 터치하면 켜지고
+ * 2번센서를 터치하면 꺼지게 하라!
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,INPUT); //1번
+  pinMode(3,INPUT); //2번
+  pinMode(4,OUTPUT); //LED
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(2) == HIGH){
+    //터치센서 1번이 눌려짐
+    digitalWrite(4,HIGH); //LED 켬
+  }
+  if(digitalRead(3) == HIGH){
+    //터치센서 2번이 눌려짐
+    digitalWrite(4,LOW); //LED끔
+  }
+  delay(100);
+  
+}

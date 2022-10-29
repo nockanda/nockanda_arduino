@@ -1,0 +1,75 @@
+/*
+    FF30CF 1
+    FF18E7 2
+    FF7A85 3
+    FF10EF 4
+    FF38C7 5
+    FF5AA5 6
+    FF42BD 7
+    FF4AB5 8
+    FF52AD 9
+    FF6897 0
+    FF9867 100+
+    FFB04F 200+
+    FFE01F +
+    FFA857 -
+    FF906F EQ
+    FF22DD |◀◀
+    FF02FD ▶▶|
+    FFC23D ▶||
+    FFA25D CH-
+    FF629D CH
+    FFE21D CH+
+    */
+/*
+ * 예제46-4 적외선리모컨을 누르면 솔레노이드를
+ * 다음과 같이 동작시키시오!
+ * 솔레노이드 제어를 위한 모스펫은 D3에 연결했다.
+ * 1번 : 잠금
+ * 2번 : 해제
+ */
+
+  
+#include <IRremote.h>
+
+
+int RECV_PIN = 2; //적외선수신기 2번핀에 연결
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  irrecv.enableIRIn();
+  pinMode(3,OUTPUT);//모스펫
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (irrecv.decode(&results)) {
+    
+    Serial.println(results.value, HEX);
+    
+    if(results.value == 0xFF30CF){
+      //버튼1번
+      digitalWrite(3,HIGH);
+    }else if(results.value == 0xFF18E7){
+      //버튼2번
+      digitalWrite(3,LOW);
+    }else if(results.value == 0xFF7A85){
+      //버튼3번
+    }else if(results.value == 0xFF10EF){
+      //버튼4번
+    }else if(results.value == 0xFF38C7){
+      //버튼5번
+    }else if(results.value == 0xFF5AA5){
+      //버튼6번
+    }else if(results.value == 0xFF6897){
+      //버튼0번
+      
+    }
+    
+    irrecv.resume(); // Receive the next value
+  }
+  delay(100);
+}

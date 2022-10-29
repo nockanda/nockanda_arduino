@@ -1,0 +1,19 @@
+/*
+ * 예제45-2 가변저항으로 컬러제어하기
+ * RGB LED는 순서대로 9,(-),10,11에 연결했다
+ * 가변저항3개를 A0,A1,A2에 연결해서 컬러조절하기!
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+}
+int R=0;
+int G=0;
+int B=0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  analogWrite(9,map(analogRead(A0),0,1023,0,255));
+  analogWrite(10,map(analogRead(A1),0,1023,0,255));
+  analogWrite(11,map(analogRead(A2),0,1023,0,255));
+}

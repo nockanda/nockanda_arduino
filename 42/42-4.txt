@@ -1,0 +1,66 @@
+/*
+ * 예제42-4 8p 딥스위치의 상태를 2진수로 처리를해서
+ * 10진수로 변환해서 FND디스플레이(TM1637)에 출력하라!
+ * 딥스위치의 핀순서 = 87654321
+ * 입력값 예 = 00000111 = 7
+ * 입력값 예 = 11110000 = 240
+ * FND디스플레이 CLK:D10 DIO:D11
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK 10
+#define DIO 11
+TM1637Display display(CLK, DIO);
+
+byte dipsw[] = {2,3,4,5,6,7,8,9};
+int num[] = {1,2,4,8,16,32,64,128};
+int output = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  for(int i = 0;i<8;i++){
+    pinMode(dipsw[i],INPUT_PULLUP);
+  }
+  display.setBrightness(0x0f);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //???????1  2^0 pow(2,0);
+  //??????1?  2^1 pow(2,1);
+  //?????1??  2^2 pow(2,2);
+  //????1???  2^3 pow(2,3);
+  //???1????  2^4 pow(2,4);
+  //??1?????  2^5 pow(2,5);
+  //?1??????  2^6 pow(2,6);
+  //1???????  2^7 pow(2,7);
+  
+  output = 0;
+  
+  for(int i = 0;i<8;i++){
+    int temp = 1;
+    if(digitalRead(dipsw[i]) == LOW){
+      //스위치가 ON이다
+      //output += num[i]; //case1 쉬운방법..
+      output += (temp<<i); //case2 골때리는방법
+      //case2 설명
+      //0000 0001
+      //temp << 0  // 0000 0001 = 1
+      //temp << 1  // 0000 0010 = 2
+      //temp << 2  // 0000 0100 = 4
+      //temp << 3  // 0000 1000 = 8
+      //temp << 4  // 0001 0000 = 16
+      //....
+      //temp << 7  // 1000 0000 = 128
+    }else{
+      //스위치가 OFF다
+      //0이니까 아무것도 안해두 됨!
+    }
+  }
+  
+  display.showNumberDec(output, false);
+  //Serial.println(output);
+  
+  delay(1000);
+}

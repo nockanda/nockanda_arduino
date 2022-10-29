@@ -1,0 +1,25 @@
+/*
+ * 예제45-1 시리얼통신으로 3개의 값(0~255)을 보내서
+ * 그값으로 RGB LED를 작동시켜보자!
+ * RGB LED는 순서대로 9,(-),10,11에 연결했다
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+}
+int R=0;
+int G=0;
+int B=0;
+void loop() {
+  // put your main code here, to run repeatedly:
+   if (Serial.available() > 0) {
+      R = Serial.parseInt();
+      G = Serial.parseInt();
+      B = Serial.parseInt();
+
+      analogWrite(9,R);
+      analogWrite(10,G);
+      analogWrite(11,B);
+   }
+}

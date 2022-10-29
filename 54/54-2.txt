@@ -1,0 +1,83 @@
+/*
+ * 예제 54-2 시리얼통신으로 로또번호를 중복없이 뽑아보자
+ * (어떻게든 비복원추출로 한번 해보자)
+ * 배열로 한번 접근해보자
+ */
+long randNumber;
+int lotto[6] = {0};
+int num[45] = {0};
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  randomSeed(analogRead(0));
+  for(int i = 0;i<45;i++){
+    num[i] = i+1;
+    //1부터 45까지(숫자)
+    //0부터 44까지(배열방번호)
+  }
+  //randNumber = random(하한,상한);하한~(상한-1)
+  for(int i = 0;i<6;i++){
+    randNumber = random(0,45-i); //0~44
+   
+    //배열 숫자 옮기기 작업
+    lotto[i] = num[randNumber];
+    Serial.println(lotto[i]);
+    if(randNumber == 44-i){
+      //제일 끝인경우
+      //아무것도 안함..
+      /*
+      Serial.print(randNumber);
+      Serial.print(" 와 ");
+      Serial.print(44-i);
+      Serial.println("는 같으므로 제일 마지막요소이다.");
+      for(int j = 0;j<45;j++){
+        Serial.print(num[j]);
+        Serial.print(",");
+      }
+     Serial.println("---------------");
+     */
+    }else{
+      /*
+      Serial.print(randNumber);
+      Serial.print(" 와 ");
+      Serial.print(44-i);
+      Serial.println("는 다르므로 스왑을 진행한다.");
+      Serial.print(num[randNumber]);
+      Serial.print(" 는 ");
+      Serial.print(num[44-i]);
+      Serial.println("값으로 바뀐다");
+      for(int j = 0;j<45;j++){
+        Serial.print(num[j]);
+        Serial.print(",");
+      }
+      Serial.println("---------------");
+      */
+      num[randNumber] = num[44-i];
+      /*
+      for(int j = 0;j<45;j++){
+        Serial.print(num[j]);
+        Serial.print(",");
+      }
+      Serial.println("---------------");
+      */
+    }
+    //만약에 뽑은 숫자가 제일 마지막거면 어찌되나?
+    //randNumber =43
+    //num[43] = num[44-0]
+ 
+    //0 1 2 3 5 9 6 7 8 9 //배열방번호
+    //1 2 3 4 5 6 7 8 9 10  // length=10
+    //--------------2 loop
+    //0 1 2 3 4 5  6 7 8 9 //배열방번호
+    //1 2 3 4 5 10 7 8 9  // length=9
+    //--------------3 loop
+    //0 1 2 3 4 5 6 7 8 9 //배열방번호
+    //1 2 3 4 5 9 7 8   // length=8
+    
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}

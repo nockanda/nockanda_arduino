@@ -1,0 +1,62 @@
+/*
+ * 예제56-5 8*32도트매트릭스에
+ * 점하나를 조이스틱으로 자유롭게 이동하는 코드
+ * 조이스틱은 x축을 A0, y축을 A1에 연결했다.
+ */
+
+#include "LedControl.h"
+LedControl lc=LedControl(12,11,10,4);
+
+byte point_x = 0; //0~32
+byte point_y = 0; //0~8
+int joy_x = 0;
+int joy_y = 0;
+void setup() {
+  Serial.begin(9600);
+  for(int i = 0;i<lc.getDeviceCount();i++){
+    lc.shutdown(i,false);
+    lc.setIntensity(i,8);
+    lc.clearDisplay(i);
+  }
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  joy_x = analogRead(A0);//x축 0~1023
+  joy_y = analogRead(A1);//y축 0~1023
+  if(joy_x > 700){
+    //우측으로 제낀거
+    point_x++;
+  }else if(joy_x < 300){
+    //좌측으로 제낀거
+    point_x--;
+  }
+  if(joy_y > 700){
+    //아래
+    point_y++;
+  }else if(joy_y <300){
+    //위
+    point_y--;
+  }
+  if(point_x > 31) point_x=31;
+  if(point_x < 0)point_x=0;
+  if(point_y > 7) point_y=7;
+  if(point_y < 0)point_y=0;
+  //point_x = constrain(point_x,0,31); //32개
+  //point_y = constrain(point_y,0,7); //8개
+  //lc.setLed(0,row,col,true);
+  //3 2 1 0
+  //0   15
+  //(point)%8 = device
+  //point/8 = led_num
+  //0~7 8~15 16~23 24~31
+  //24~31 16~23 8~15 0~7
+  for(int i = 0;i<lc.getDeviceCount();i++){
+    lc.clearDisplay(i);
+  }
+  lc.setLed(3-point_x/8,point_y,point_x%8,true);
+  
+  //Serial.print(point_x);
+  //Serial.print(",");
+  //Serial.println(point_y);
+  delay(100);
+}

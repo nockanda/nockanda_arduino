@@ -1,0 +1,29 @@
+/*
+ * 예제53-4 터치센서로 솔레노이드를 작동시켜보자
+ * 터치센서 2개는 각각 아래와 같이 연결했다.
+ * 1번 터치센서 : D2
+ * 2번 터치센서 : D3
+ * 솔레노이드는 직접 제어가 힘들어서 모스펫으로 해보자
+ * 모스펫의 시그널핀을 D4에 연결했다
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,INPUT); //1번
+  pinMode(3,INPUT); //2번
+  pinMode(4,OUTPUT); //모스펫
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(2) == HIGH){
+    //터치센서 1번이 눌려짐
+    digitalWrite(4,HIGH);//모스펫 작똥
+  }
+  if(digitalRead(3) == HIGH){
+    //터치센서 2번이 눌려짐
+    digitalWrite(4,LOW);//모스펫 멈춤
+  }
+  delay(100);
+  
+}

@@ -1,0 +1,21 @@
+/*
+ * 예제 37-4
+ * 모스펫(D3) 선풍기를 아날로그적으로 작동해보기
+ * 0에서 255까지 1씩 강도를 올렸다가 내렸다가 해보기
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  for(int i = 0;i<=255;i++){
+    analogWrite(3,i);
+    delay(100);
+  }
+  for(int i = 255;i>=0;i--){
+    analogWrite(3,i);
+    delay(100);
+  }
+}

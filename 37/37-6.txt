@@ -1,0 +1,24 @@
+/*
+ * 예제 37-6
+ * 모스펫(D3) 가변저항/포텐셔미터(A0)로 선풍기 강약 조절해보기
+ * FND디스플레이(TM1637)(CLK:D4, DIO:D5)로 강도 표시해보기
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK 4
+#define DIO 5
+TM1637Display display(CLK, DIO);
+
+void setup() {
+  // put your setup code here, to run once:
+  display.setBrightness(0x0f);
+}
+int fan = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  fan = analogRead(A0); //0~1023
+  fan = map(fan,0,1023,0,255);
+  analogWrite(3,fan);
+  display.showNumberDec(fan, false);
+  delay(100);
+}

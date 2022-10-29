@@ -1,0 +1,27 @@
+/*
+ * 예제 37-2
+ * 모스펫(D3) 선풍기를 시리얼통신으로 제어해보기
+ * 시리얼로 1을 보내면 작동, 2를보내면 멈춤
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(3,OUTPUT); //모스펫신호
+}
+
+int fan=0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (Serial.available() > 0) {
+     fan = Serial.parseInt();
+     if(fan == 1)
+     {
+        //작동
+        digitalWrite(3,HIGH);
+     }else if(fan==2){
+        //멈춤
+        digitalWrite(3,LOW);
+     }
+  }
+}

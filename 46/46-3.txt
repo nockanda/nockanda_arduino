@@ -1,0 +1,95 @@
+/*
+    FF30CF 1
+    FF18E7 2
+    FF7A85 3
+    FF10EF 4
+    FF38C7 5
+    FF5AA5 6
+    FF42BD 7
+    FF4AB5 8
+    FF52AD 9
+    FF6897 0
+    FF9867 100+
+    FFB04F 200+
+    FFE01F +
+    FFA857 -
+    FF906F EQ
+    FF22DD |◀◀
+    FF02FD ▶▶|
+    FFC23D ▶||
+    FFA25D CH-
+    FF629D CH
+    FFE21D CH+
+    */
+/*
+ * 예제46-3 적외선리모컨을 누르면 서보모터를
+ * 다음과 같이 동작시키시오!
+ * 서보모터는 팬틸트 프레임을 사용하고 서보2개가 달려있다.
+ * 첫번쨰 서보는 D5에 연결하고 두번쨰 서보는 D에 연결했다.
+ * 1번버튼을 누르면 첫번째 서보의 각도가 증가하고
+ * 2번버튼을 누르면 첫번째 서보의 각도가 감소한다.
+ * 3번버튼을 누르면 두번쨰 서보의 각도가 증가하고
+ * 4번버튼을 누르면 두번째 서보의 각도가 감소한다.
+ */
+    
+#include <IRremote.h>
+#include <Servo.h>
+Servo myservo1;
+Servo myservo2;
+int RECV_PIN = 2; //적외선수신기 2번핀에 연결
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  irrecv.enableIRIn();
+  myservo1.attach(5); 
+  myservo2.attach(6); 
+  myservo1.write(0);
+  myservo2.write(0);
+}
+int deg1=0;
+int deg2=0;
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (irrecv.decode(&results)) {
+    
+    Serial.println(results.value, HEX);
+    
+    if(results.value == 0xFF30CF){
+      //버튼1번
+      deg1+=10;
+      deg1 = constrain(deg1,0,180);
+      myservo1.write(deg1); 
+    }else if(results.value == 0xFF18E7){
+      //버튼2번
+      deg1-=10;
+      deg1 = constrain(deg1,0,180);
+      myservo1.write(deg1); 
+    }else if(results.value == 0xFF7A85){
+      //버튼3번
+      deg2+=10;
+      deg2 = constrain(deg2,0,180);
+      myservo2.write(deg2); 
+    }else if(results.value == 0xFF10EF){
+      //버튼4번
+      deg2-=10;
+      deg2 = constrain(deg2,0,180);
+      myservo2.write(deg2); 
+    }else if(results.value == 0xFF38C7){
+      //버튼5번
+    }else if(results.value == 0xFF5AA5){
+      //버튼6번
+    }else if(results.value == 0xFF6897){
+      //버튼0번
+      deg1 = 0;
+      deg2 = 0;
+      myservo1.write(deg1); 
+      myservo2.write(deg2); 
+    }
+    
+    irrecv.resume(); // Receive the next value
+  }
+  delay(100);
+}

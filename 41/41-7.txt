@@ -1,0 +1,55 @@
+/*
+ * 예제 41-7 FND디스플레이 2개를
+ * 이용한 업/다운 카운트 예제
+ * 1번디스플레이는 50부터 다운카운트
+ * 2번 디스플레이는 0부터 업카운트
+ * 1번디스플레이 딜레이는 10초, 2번디스플레이는 1초
+ * 첫번쨰 FND디스플레이는 CLK를 D2에 DIO를 D3에 연결
+ * 두번째 FND디스플레이는 CLK를 D4에 DIO를 D5에 연결
+ * (blinkwithoutdelay 예제를 활용해서 구현한다.
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK1 2 //첫번째 FND디스플레이
+#define DIO1 3 //첫번째 FND디스플레이
+#define CLK2 4 //두번째 FND디스플레이
+#define DIO2 5 //두번째 FND디스플레이
+
+TM1637Display display1(CLK1, DIO1);
+TM1637Display display2(CLK2, DIO2);
+
+//첫번째 FND디스플레이 제어를 위한 변수
+unsigned long previousMillis1 = 0;
+const long interval1 = 5000; //10초
+//두번째 FND디스플레이 제어를 위한 변수
+unsigned long previousMillis2 = 0;
+const long interval2 = 1000; //1초
+
+int num1 = 50;
+int num2 = 0;
+
+ 
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  display1.setBrightness(0x0f);
+  display2.setBrightness(0x0f);
+  display1.showNumberDec(num1, false);
+  display2.showNumberDec(num2, false);
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis1 >= interval1) {
+     previousMillis1 = currentMillis;
+     num1--;
+     display1.showNumberDec(num1, false);
+     
+  }
+  if (currentMillis - previousMillis2 >= interval2) {
+     previousMillis2 = currentMillis;
+     num2++;
+     display2.showNumberDec(num2, false);
+  }
+}

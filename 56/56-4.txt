@@ -1,0 +1,33 @@
+/*
+ * 예제56-4 8*32도트매트릭스에
+ * 패턴을 만들어서 순서대로 출력하는 코드
+ * (검색) LED Matrix Sprite Generator Created By Miro Božík
+ */
+
+#include "LedControl.h"
+LedControl lc=LedControl(12,11,10,4);
+
+byte char1[4][8] = {
+{B01000000,B01000000,B01111100,B00010000,B01111100,B00000000,B01111100,B00000100}, //녹
+{B01111010,B00001010,B00001010,B01111011,B00001010,B00000000,B01000000,B01111110},//칸
+{B11111010,B10000010,B10000010,B10000010,B10000011,B10000010,B10000010,B11111010},//다
+{B00011000,B00011000,B00011000,B11111111,B01111110,B00111100,B00100100,B01100110}
+};
+
+void setup() {
+  for(int i = 0;i<lc.getDeviceCount();i++){
+    lc.shutdown(i,false);
+    lc.setIntensity(i,8);
+    lc.clearDisplay(i);
+  }
+  for(int device=0;device<4;device++){
+    for(int i = 0;i<8;i++){
+      lc.setRow(3-device,i,char1[device][i]);
+    }
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  
+}

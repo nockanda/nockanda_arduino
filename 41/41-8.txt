@@ -1,0 +1,70 @@
+/*
+ * 예제 41-8 (스몰프로젝트) 딜레이없는 예제에서
+ * 모터 RPM 측정하기(최대한 정성스럽게)
+ * 첫번쨰 FND디스플레이는 CLK를 D2에 DIO를 D3에 연결
+ * 두번째 FND디스플레이는 CLK를 D4에 DIO를 D5에 연결
+ * 홀센서는 D2에 연결해서 자석하고 상견례를하면 LOW
+ * 모스펫은 PWM을 써야하니까 D9에 연결했다.
+ * 모스펫의 외부전원은 샤오미베터리를 사용했다.
+ * 모스펫의 PWM제어를 위해서 슬라이드 가변저항을 사용했다.
+ * 슬라이드가변저항은 A0에 연결했다.
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK1 3 //첫번째 FND디스플레이
+#define DIO1 4 //첫번째 FND디스플레이
+#define CLK2 5 //두번째 FND디스플레이
+#define DIO2 6 //두번째 FND디스플레이
+
+TM1637Display display1(CLK1, DIO1);
+TM1637Display display2(CLK2, DIO2);
+
+unsigned long previousMillis = 0;
+const long interval = 1000;
+
+int num1 = 50;
+int num2 = 0;
+
+const byte interruptPin = 2;
+volatile int count = 0;
+double rpm=0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  display1.setBrightness(0x0f);
+  display2.setBrightness(0x0f);
+  display1.showNumberDec(num1, false);
+  display2.showNumberDec(num2, false);
+  pinMode(interruptPin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), rpm_counter, FALLING);
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval) {    
+     detachInterrupt(digitalPinToInterrupt(interruptPin));
+     //1초에 한번 실행이 된다..
+     //초당 회전수+알파
+     //실제 count는 홀센서와 자석이 마주친 횟수인데
+     //모듈형태의 홀센서는 false hamonics라는 현상이
+     //있다고 구글에서 보았음..
+     //녹칸다가 사용하는 센서는 3배 많이 측정이되므로
+     //3을 나누어줘야 참값이라고 할 수 있음.
+     rpm = ((double)count/3)*60; //rpm
+     //count : 1초당 회전수
+     //계산
+     display1.showNumberDec(rpm, false);
+     count =0;
+     previousMillis = currentMillis;
+     attachInterrupt(digitalPinToInterrupt(interruptPin), rpm_counter, FALLING);
+  }
+  //모스펫코드는 여기에 짜면 되겠군...
+  analogWrite(9,map(analogRead(A0),0,1023,0,255));
+  //A0포트에 연결된 슬라이드 저항값은 0~1023의 범위를 가지므로
+  //map함수를 사용해서 0에서 255범위로 조정하고
+  //9번핀에 pwm값으로 사용한다.
+}
+void rpm_counter() {
+  count++;
+}

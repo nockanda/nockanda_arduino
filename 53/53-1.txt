@@ -1,0 +1,23 @@
+/*
+ * 예제53-1 터치센서의 동작을 시리얼플로터로 관찰하자
+ * 터치센서 2개는 각각 아래와 같이 연결했다.
+ * 1번 터치센서 : D2
+ * 2번 터치센서 : D3
+ * (결과 눌렀을때 HIGH)
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,INPUT);
+  pinMode(3,INPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  Serial.print(digitalRead(2));
+  Serial.print(" ");
+  Serial.println(digitalRead(3));
+  delay(100);
+  
+}

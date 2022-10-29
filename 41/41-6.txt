@@ -1,0 +1,35 @@
+/*
+ * 예제 41-6 FND디스플레이 2개를
+ * 이용한 업/다운 카운트 예제(인터발 1초)
+ * 1번디스플레이는 50부터 다운카운트
+ * 2번 디스플레이는 0부터 업카운트
+ * 첫번쨰 FND디스플레이는 CLK를 D2에 DIO를 D3에 연결
+ * 두번째 FND디스플레이는 CLK를 D4에 DIO를 D5에 연결
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK1 2 //첫번째 FND디스플레이
+#define DIO1 3 //첫번째 FND디스플레이
+#define CLK2 4 //두번째 FND디스플레이
+#define DIO2 5 //두번째 FND디스플레이
+
+TM1637Display display1(CLK1, DIO1);
+TM1637Display display2(CLK2, DIO2);
+
+int num1 = 50;
+int num2 = 0;
+ 
+void setup() {
+  // put your setup code here, to run once:
+  display1.setBrightness(0x0f);
+  display2.setBrightness(0x0f);
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  display1.showNumberDec(num1, false);
+  num1--;
+  display2.showNumberDec(num2, false);
+  num2++;
+  delay(1000);
+}

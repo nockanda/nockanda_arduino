@@ -1,0 +1,35 @@
+/*
+ * 예제48-2 모스펫에 워터펌프를 +,-를 구분해서 잘 연결하고
+ * 모스펫의 신호선을 D2에 연결한다음에
+ * 시리얼통신으로 1을 보내면 작동
+ * 2를 보내면 멈추게 해보자!
+ * 작동을 시작한 시간에서 멈춘시간을 뺴면
+ * 펌프가 작동한 시간이 된다.
+ * 물을 100,200,300ml 이송하는데 필요한 시간을 측정해보자
+ * 100ml : 13814
+ * 200ml : 29047
+ * 100미리당..14초 걸리는군....
+ * 
+ */
+unsigned long time;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,OUTPUT); //mosfet
+}
+int pump = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available() > 0){
+    pump = Serial.parseInt();
+    if(pump == 1){
+      digitalWrite(2,HIGH);//작동
+      time = millis();
+    }
+    else if(pump == 2){
+      digitalWrite(2,LOW);//멈춤
+      time = millis() - time;
+      Serial.println(time);
+    }
+  }
+}

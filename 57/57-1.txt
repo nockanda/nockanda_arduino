@@ -1,0 +1,56 @@
+/*
+ * 예제57-1 i2c통신으로 고도센서(BMP180)과
+ * 0.91인치 OLED디스플레이를 병렬로 연결해서
+ * 고도센서의 값을 OLED디스플레이에 표시하시오!
+ * 아두이노의 I2C핀은 SDA:A4/SCL:A5이다.
+ * 
+ */
+#include <Wire.h>
+#include <Adafruit_BMP085.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+Adafruit_BMP085 bmp;
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 32
+ #define OLED_RESET     4
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  if (!bmp.begin()) {
+  Serial.println("Could not find a valid BMP085 sensor, check wiring!");
+  while (1) {}
+  }
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+  display.clearDisplay(); 
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+    
+    display.clearDisplay();
+    display.setTextSize(1);             // Normal 1:1 pixel scale
+    display.setTextColor(SSD1306_WHITE);        // Draw white text
+    display.setCursor(0,0);             // Start at top-left corner
+    
+    display.print("Temp. = ");
+    display.print(bmp.readTemperature());
+    display.println(" *C");
+    
+    display.print("Press. = ");
+    display.print(bmp.readPressure());
+    display.println(" Pa");
+    display.print("Alti. = ");
+    display.print(bmp.readAltitude());
+    display.println(" meters");
+
+    display.print("sealevel = ");
+    display.print(bmp.readSealevelPressure());
+    display.println(" Pa");
+    display.display();
+    delay(500);
+}

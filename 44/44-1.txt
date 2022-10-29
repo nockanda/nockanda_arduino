@@ -1,0 +1,31 @@
+/*
+ * 예제44-1 솔레노이드(D2)를 시리얼통신으로 제어해보라!
+ * 숫자1을보내면 작동하고 숫자2를 보내면 작동안되게하라!
+ * 솔레노이드를 아두이노 디지털핀에 직접연결했더니
+ * 전류가 딸려서 작동이 안되었다.
+ * 그러므로 릴레이나 모스펫을 사용해서 제어를 해야한다.
+ * 본 예제는 D2에 모스펫의 SIG핀을 연결하고
+ * 모스펫에 +,-를 솔레노이드에 각각 연결하고 VIN과 GND를
+ * 샤오미베터리에서 외부전원으로 가져왔다.
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,OUTPUT);
+}
+int value = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (Serial.available() > 0) {
+    value = Serial.parseInt();
+    if(value == 1){
+      Serial.println("작동!");
+      digitalWrite(2,HIGH);
+    }
+    else{
+      Serial.println("NO작동!");
+      digitalWrite(2,LOW);
+    }
+  }
+}

@@ -1,0 +1,74 @@
+/*
+ * 예제44-4 (스몰프로젝트) 4x4키패드, 솔레노이드,
+ * 부저(D5)를 이용해서 디지털 도어락을 구현하라
+ * 버튼을 누르면 무조건 LOCK된다.
+ * 4x4키패드는 D6~D13까지 순서대로 연결했다.
+ * 비밀번호를 누르면 FND디스플레이(CLK:A0,DIO:A1)에 표시된다.
+ * 비밀번호가 일치하면 UNLOCK된다.
+ * LOCK에서 UNLOCK으로 변경될때 부저음이 난다.
+ */
+#include <Keypad.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK A0
+#define DIO A1
+
+const byte ROWS = 4; //four rows
+const byte COLS = 4; //four columns
+char hexaKeys[ROWS][COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+byte rowPins[ROWS] = {6, 7, 8, 9};
+byte colPins[COLS] = {10, 11, 12, 13};
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+TM1637Display display(CLK, DIO);
+#define NOTE_C5  523
+#define NOTE_F5  698
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,OUTPUT);
+  pinMode(3,INPUT_PULLUP); //버튼
+  display.setBrightness(0x0f);
+  display.showNumberDec(0, true);
+}
+int button = 0;
+int PW = 1234;
+int input=0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  char customKey = customKeypad.getKey();
+  button = digitalRead(3);
+  if(button == LOW){
+    //버튼이 눌려진경우
+    digitalWrite(2,LOW);
+  }
+  if (customKey >= '0' && customKey <= '9'){
+    //0~9 숫자일때만 작동시키겠다!
+    input = input*10 + (customKey-'0');
+    display.showNumberDec(input, false);
+  }else if(customKey == '#'){
+    if(PW == input){
+      //비밀번호가 일치하는경우
+      digitalWrite(2,HIGH); //모스펫 작동!
+      int noteDuration = 250;
+      tone(5, NOTE_C5, noteDuration);
+      int pauseBetweenNotes = noteDuration * 1.30;
+      delay(pauseBetweenNotes);
+      noTone(5);
+      display.showNumberDec(0, true);
+    }else{
+      int noteDuration = 250;
+      tone(5, NOTE_F5, noteDuration);
+      int pauseBetweenNotes = noteDuration * 1.30;
+      delay(pauseBetweenNotes);
+      noTone(5);
+    }
+    input = 0;
+  }
+  
+}

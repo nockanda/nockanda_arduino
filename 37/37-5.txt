@@ -1,0 +1,15 @@
+/*
+ * 예제 37-5
+ * 모스펫(D3) 가변저항/포텐셔미터(A0)로 선풍기 강약 조절해보기
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+}
+int fan = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  fan = analogRead(A0); //0~1023
+  analogWrite(3,map(fan,0,1023,0,255));
+  delay(100);
+}

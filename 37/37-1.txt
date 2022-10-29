@@ -1,0 +1,19 @@
+/*
+ * 예제 37-1
+ * 모스펫으로(D3) DC모터에 선풍기 달아서 디지털로 작동해보기
+ * 외부전원은 샤오미베터리(5V)를 사용했다.
+ * 3초간격으로 켰다 껏다를 해보라!
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(3,OUTPUT); //모스펫신호
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  digitalWrite(3,HIGH);
+  delay(3000);
+  digitalWrite(3,LOW);
+  delay(3000);
+}

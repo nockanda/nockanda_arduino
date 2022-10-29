@@ -1,0 +1,31 @@
+/*
+ * 예제53-5 첫번쨰 터치센서를 누르면 LED가 점점 밝아지고
+ * 두번쨰 터치센서를 누르면 LED가 점점 어두워지게하라!
+ * 터치센서 2개는 각각 아래와 같이 연결했다.
+ * 1번 터치센서 : D2
+ * 2번 터치센서 : D3
+ * LED는 D5에 연결했다.(PWM포트이기 때문)
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,INPUT); //1번
+  pinMode(3,INPUT); //2번
+}
+int value =0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(2) == HIGH){
+    //터치센서 1번이 눌려짐
+    value+=16;
+  }
+  if(digitalRead(3) == HIGH){
+    //터치센서 2번이 눌려짐
+    value-=16;
+  }
+  value = constrain(value,0,255);
+  analogWrite(5,value);//LED 밝기조절
+  delay(100);
+  
+}

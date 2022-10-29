@@ -1,0 +1,22 @@
+[아두이노강의] 포로리야 공대가자 #57 GY68/BMP180 기압센서
+
+GY68/BMP180 기압센서
+
+
+57-1.txt
+0.00MB
+
+예제57-1 i2c통신으로 고도센서(BMP180)과
+ * 0.91인치 OLED디스플레이를 병렬로 연결해서
+ * 고도센서의 값을 OLED디스플레이에 표시하시오!
+ * 아두이노의 I2C핀은 SDA:A4/SCL:A5이다.
+
+ 
+
+관련라이브러리(BMP180)
+
+https://github.com/adafruit/Adafruit-BMP085-Library
+
+관련라이브러리(ssd1306)
+
+https://github.com/adafruit/Adafruit_SSD1306

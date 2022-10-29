@@ -1,0 +1,90 @@
+/*
+    FF30CF 1
+    FF18E7 2
+    FF7A85 3
+    FF10EF 4
+    FF38C7 5
+    FF5AA5 6
+    FF42BD 7
+    FF4AB5 8
+    FF52AD 9
+    FF6897 0
+    FF9867 100+
+    FFB04F 200+
+    FFE01F +
+    FFA857 -
+    FF906F EQ
+    FF22DD |◀◀
+    FF02FD ▶▶|
+    FFC23D ▶||
+    FFA25D CH-
+    FF629D CH
+    FFE21D CH+
+    */
+/*
+ * 예제46-2 적외선리모컨을 누르면 RGB LED를
+ * 다음과 같이 동작시키시오!
+ * RGB LED는 R:D3, G:D5, B:D6에 연결했다.
+ * 1,4 버튼은 각각 R의 밝기 증가와 감소
+ * 2,5 버튼은 각각 G의 밝기 증가와 감소
+ * 3,6 버튼은 각각 B의 밝기 증가와 감소
+ */
+    
+#include <IRremote.h>
+int RECV_PIN = 2; //적외선수신기 2번핀에 연결
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  irrecv.enableIRIn();
+}
+int R=0,G=0,B=0;
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (irrecv.decode(&results)) {
+    
+    Serial.println(results.value, HEX);
+    
+    if(results.value == 0xFF30CF){
+      //버튼1번
+      R+=31;
+      R = constrain(R,0,255); //상한제한
+      analogWrite(3,R);
+    }else if(results.value == 0xFF18E7){
+      //버튼2번
+      G+=31;
+      G = constrain(G,0,255); //상한제한
+      analogWrite(5,G);
+    }else if(results.value == 0xFF7A85){
+      //버튼3번
+      B+=31;
+      B = constrain(B,0,255); //상한제한
+      analogWrite(6,G);
+    }else if(results.value == 0xFF10EF){
+      //버튼4번
+      R-=31;
+      R = constrain(R,0,255); //하한제한
+      analogWrite(3,R);
+    }else if(results.value == 0xFF38C7){
+      //버튼5번
+      G-=31;
+      G = constrain(G,0,255); //상한제한
+      analogWrite(5,G);
+    }else if(results.value == 0xFF5AA5){
+      //버튼6번
+      B-=31;
+      B = constrain(B,0,255); //상한제한
+      analogWrite(6,B);
+    }
+    Serial.print(R);
+    Serial.print(",");
+    Serial.print(G);
+    Serial.print(",");
+    Serial.print(B);
+    Serial.println();
+    irrecv.resume(); // Receive the next value
+  }
+  delay(100);
+}

@@ -1,0 +1,33 @@
+/*
+ * 예제56-3 8*32도트매트릭스에
+ * 행과열을 확인하는 코드
+ */
+
+#include "LedControl.h"
+LedControl lc=LedControl(12,11,10,4);
+
+
+void setup() {
+  for(int i = 0;i<lc.getDeviceCount();i++){
+    lc.shutdown(i,false);
+    lc.setIntensity(i,8);
+    lc.clearDisplay(i);
+  }
+  for(int device=0;device<4;device++){
+    for(int i = 0;i<8;i++){
+      lc.setRow(device,i,B11111111);
+      delay(100);
+    }
+    lc.clearDisplay(device);
+    for(int i = 0;i<8;i++){
+      lc.setColumn(device,i,B11111111);
+      delay(100);
+    }
+    lc.clearDisplay(device);
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  
+}

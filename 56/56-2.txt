@@ -1,0 +1,30 @@
+/*
+ * 예제56-2 8*32도트매트릭스에
+ * 모든점을 하나씩 확인할수 있는 코드
+ */
+
+#include "LedControl.h"
+LedControl lc=LedControl(12,11,10,4);
+
+
+void setup() {
+  for(int i = 0;i<lc.getDeviceCount();i++){
+    lc.shutdown(i,false);
+    lc.setIntensity(i,8);
+    lc.clearDisplay(i);
+  }
+  for(int device=0;device<4;device++){
+    for(int i = 0;i<8;i++){
+     for(int j = 0;j<8;j++){
+       lc.setLed(device,i,j,true);
+       delay(100);
+     }
+    }
+    lc.clearDisplay(device);
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  
+}

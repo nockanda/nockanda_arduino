@@ -1,0 +1,59 @@
+/*
+    FF30CF 1
+    FF18E7 2
+    FF7A85 3
+    FF10EF 4
+    FF38C7 5
+    FF5AA5 6
+    FF42BD 7
+    FF4AB5 8
+    FF52AD 9
+    FF6897 0
+    FF9867 100+
+    FFB04F 200+
+    FFE01F +
+    FFA857 -
+    FF906F EQ
+    FF22DD |◀◀
+    FF02FD ▶▶|
+    FFC23D ▶||
+    FFA25D CH-
+    FF629D CH
+    FFE21D CH+
+    */
+/*
+ * 예제46-1 적외선리모컨의 1번버튼을 누르면 LED가 켜지고
+ * 2번버튼을 누르면 LED가 꺼지도록 해보시오!
+ * LED는 D3에 연결하시오!
+ */
+    
+#include <IRremote.h>
+int RECV_PIN = 2; //적외선수신기 2번핀에 연결
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  irrecv.enableIRIn();
+  pinMode(3,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (irrecv.decode(&results)) {
+    
+    Serial.println(results.value, HEX);
+    
+    if(results.value == 0xFF30CF){
+      //버튼1번
+      digitalWrite(3,HIGH);
+      Serial.println("1번버튼");
+    }else if(results.value == 0xFF18E7){
+      //버튼2번
+      digitalWrite(3,LOW);
+      Serial.println("2번버튼");
+    }
+    irrecv.resume(); // Receive the next value
+  }
+  delay(100);
+}
