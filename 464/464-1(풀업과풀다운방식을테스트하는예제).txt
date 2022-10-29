@@ -1,0 +1,17 @@
+#define btn1 2 //풀업
+#define btn2 3 //풀다운
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(btn1,INPUT);
+  pinMode(btn2,INPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  Serial.print(digitalRead(btn1));
+  Serial.print("\t");
+  Serial.println(digitalRead(btn2));
+  delay(100);
+}

@@ -1,0 +1,123 @@
+#define ch1 2
+#define ch2 3
+#define ch3 4
+#define ch4 5
+
+int old_ch1 = LOW;
+int old_ch2 = LOW;
+int old_ch3 = LOW;
+int old_ch4 = LOW;
+
+bool btn1_pressed = false;
+bool btn2_pressed = false;
+bool btn3_pressed = false;
+bool btn4_pressed = false;
+
+unsigned long t1 = 0;
+unsigned long t2 = 0;
+unsigned long t3 = 0;
+unsigned long t4 = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 시리얼 통신 할거야~
+  pinMode(ch1,INPUT);
+  pinMode(ch2,INPUT);
+  pinMode(ch3,INPUT);
+  pinMode(ch4,INPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int now_ch1 = digitalRead(ch1);
+  int now_ch2 = digitalRead(ch2);
+  int now_ch3 = digitalRead(ch3);
+  int now_ch4 = digitalRead(ch4);
+  //버튼 1개씩 눌렀을때 개별적으로 작동하고
+  //버튼 2개를 조합했을때 독특한 커맨드를 날릴수 있도록 하시오!
+  if(now_ch1 == HIGH && old_ch1 == LOW){
+    //안누른 상태에서 누른것
+    btn1_pressed = false;
+    //시간측정
+    t1 = millis();
+  }else if(now_ch1 == LOW && old_ch1 == HIGH){
+    //눌렀다가 땐거!
+    if(millis() - t1 > 100){
+      btn1_pressed = true;
+    }else{
+      btn1_pressed = false;  
+    }
+  }else{
+    btn1_pressed = false;
+  }
+  
+  if(now_ch2 == HIGH && old_ch2 == LOW){
+    //안누른 상태에서 누른것
+    btn2_pressed = false;
+    //시간측정
+    t2 = millis();
+  }else if(now_ch2 == LOW && old_ch2 == HIGH){
+    //눌렀다가 땐거!
+    if(millis() - t2 > 100){
+      btn2_pressed = true;
+    }else{
+      btn2_pressed = false;  
+    }
+  }else{
+    btn2_pressed = false;
+  }
+  if(now_ch3 == HIGH && old_ch3 == LOW){
+    //안누른 상태에서 누른것
+    btn3_pressed = false;
+    //시간측정
+    t3 = millis();
+  }else if(now_ch3 == LOW && old_ch3 == HIGH){
+    //눌렀다가 땐거!
+    if(millis() - t3 > 100){
+      btn3_pressed = true;
+    }else{
+      btn3_pressed = false;  
+    }
+  }else{
+    btn3_pressed = false;
+  }
+  if(now_ch4 == HIGH && old_ch4 == LOW){
+    //안누른 상태에서 누른것
+    btn4_pressed = false;
+    //시간측정
+    t4 = millis();
+  }else if(now_ch4 == LOW && old_ch4 == HIGH){
+    //눌렀다가 땐거!
+    if(millis() - t4 > 100){
+      btn4_pressed = true;
+    }else{
+      btn4_pressed = false;  
+    }
+  }else{
+    btn4_pressed = false;
+  }
+
+  if(btn1_pressed && btn2_pressed){
+    Serial.println("버튼1과 2가 동시에 눌러졌다!");
+  }else if(btn3_pressed && btn4_pressed){
+    Serial.println("버튼3과 4가 동시에 눌러졌다!");
+  }else if(btn1_pressed && btn3_pressed){
+    Serial.println("버튼1과 3가 동시에 눌러졌다!");
+  }else if(btn2_pressed && btn4_pressed){
+    Serial.println("버튼2과 4가 동시에 눌러졌다!");
+  }else if(btn1_pressed){
+    Serial.println("버튼1 단독으로 눌려짐");
+  }else if(btn2_pressed){
+    Serial.println("버튼2 단독으로 눌려짐");
+  }else if(btn3_pressed){
+    Serial.println("버튼3 단독으로 눌려짐");
+  }else if(btn4_pressed){
+    Serial.println("버튼4 단독으로 눌려짐");
+  }
+  
+  //여기 위지점이 해야할거 다한 지점이다
+  old_ch1 = now_ch1;
+  old_ch2 = now_ch2;
+  old_ch3 = now_ch3;
+  old_ch4 = now_ch4;
+}

@@ -1,0 +1,72 @@
+#define LOAD 2
+#define CLK 3
+#define CE 4
+#define DIN 5
+
+#define DS595 6 //데이터핀
+#define LATCH595 7 //래치핀
+#define CLK595 8 //클락핀
+
+byte relay_state = 0xFF;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(LOAD,OUTPUT);
+  pinMode(CE,OUTPUT);
+  pinMode(DIN,INPUT);
+  pinMode(CLK,OUTPUT);
+
+  pinMode(DS595,OUTPUT);
+  pinMode(LATCH595,OUTPUT);
+  pinMode(CLK595,OUTPUT);
+
+  //제일 첫 데이터에 노이즈가 있는것 같다! 일단 하나의 데이터를 뺸다!
+  digitalWrite(LOAD,LOW);
+  delayMicroseconds(5);
+  digitalWrite(LOAD,HIGH);
+  delayMicroseconds(5);
+
+  digitalWrite(CLK,HIGH);
+  digitalWrite(CE,LOW);
+  shiftIn(DIN,CLK,MSBFIRST);
+  digitalWrite(CE,HIGH);
+
+  //초기 8채널릴레이가 모두 OFF가 되도록 해아한다!
+  //74HC595쪽으로 전송
+  digitalWrite(LATCH595,LOW);
+  shiftOut(DS595,CLK595,MSBFIRST,0xFF);
+  digitalWrite(LATCH595,HIGH);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  digitalWrite(LOAD,LOW);
+  delayMicroseconds(5);
+  digitalWrite(LOAD,HIGH);
+  delayMicroseconds(5);
+
+  digitalWrite(CLK,HIGH);
+  digitalWrite(CE,LOW);
+  byte data = shiftIn(DIN,CLK,MSBFIRST);
+  digitalWrite(CE,HIGH);
+
+  for(int i =0;i<8;i++){
+    if(bitRead(data, i) == 0){
+      Serial.print(i+1);
+      Serial.println("번버튼이 눌려졌습니다!");
+      //relay_state
+      if(bitRead(relay_state, i)){
+        //릴레이가 현재 OFF상태이다!(1->0)
+        bitWrite(relay_state, i, 0);
+      }else{
+        //릴레이가 현재 ON상태이다!(0->1)
+        bitWrite(relay_state, i, 1);
+      }
+      digitalWrite(LATCH595,LOW);
+      shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+      digitalWrite(LATCH595,HIGH);
+    }
+  }
+  delay(100);
+}

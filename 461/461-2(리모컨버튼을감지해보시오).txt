@@ -1,0 +1,32 @@
+#define ch1 2
+#define ch2 3
+#define ch3 4
+#define ch4 5
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 시리얼 통신 할거야~
+  pinMode(ch1,INPUT);
+  pinMode(ch2,INPUT);
+  pinMode(ch3,INPUT);
+  pinMode(ch4,INPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int now_ch1 = digitalRead(ch1);
+  int now_ch2 = digitalRead(ch2);
+  int now_ch3 = digitalRead(ch3);
+  int now_ch4 = digitalRead(ch4);
+  if(now_ch1 == HIGH){
+    Serial.println("채널 1번 버튼이 눌려졌다!");
+  }else if(now_ch2 == HIGH){
+      Serial.println("채널 2번 버튼이 눌려졌다!");
+  }else if(now_ch3 == HIGH){
+      Serial.println("채널 3번 버튼이 눌려졌다!");
+  }else if(now_ch4 == HIGH){
+      Serial.println("채널 4번 버튼이 눌려졌다!");
+  }
+  
+  delay(50);
+}

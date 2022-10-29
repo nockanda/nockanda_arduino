@@ -1,0 +1,79 @@
+esphome:
+  name: nockanda
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+switch:
+  - platform: gpio
+    pin:
+      number: 5
+      inverted: true
+    name: "ch1"
+    id: motor1
+  - platform: gpio
+    pin:
+      number: 4
+      inverted: true
+    name: "ch2"
+    id: motor2
+      
+button:
+  - platform: template
+    name: "STOP"
+    on_press:
+      then:
+        - switch.turn_off: motor1
+        - switch.turn_off: motor2
+  - platform: template
+    name: "UP"
+    on_press:
+      then:
+        - switch.turn_on: motor1
+        - switch.turn_off: motor2
+  - platform: template
+    name: "DOWN"
+    on_press:
+      then:
+        - switch.turn_off: motor1
+        - switch.turn_on: motor2
+ 
+cover:
+  - platform: time_based
+    name: "Time-Based Cover"
+
+    open_action:
+      - switch.turn_on: motor1
+      - switch.turn_off: motor2
+    open_duration: 10s
+
+    close_action:
+      - switch.turn_off: motor1
+      - switch.turn_on: motor2
+    close_duration: 10s
+
+    stop_action:
+      - switch.turn_off: motor1
+      - switch.turn_off: motor2
+      
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "4de48bf22b324332a2421c7a316ecad8"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Nockanda Fallback Hotspot"
+    password: "fVTDpvCSyniQ"
+
+captive_portal:
+    
+

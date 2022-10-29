@@ -1,0 +1,67 @@
+#define ch1 2
+#define ch2 3
+#define ch3 4
+#define ch4 5
+
+#define ENB 6 //아날로그제어
+#define IN4 7 //디지털제어(출력)
+#define IN3 8 //디지털제어(출력)
+
+int old_ch1 = LOW;
+int old_ch2 = LOW;
+int old_ch3 = LOW;
+int old_ch4 = LOW;
+
+int speed = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 시리얼 통신 할거야~
+  pinMode(ch1,INPUT);
+  pinMode(ch2,INPUT);
+  pinMode(ch3,INPUT);
+  pinMode(ch4,INPUT);
+  pinMode(IN4,OUTPUT);
+  pinMode(IN3,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int now_ch1 = digitalRead(ch1);
+  int now_ch2 = digitalRead(ch2);
+  int now_ch3 = digitalRead(ch3);
+  int now_ch4 = digitalRead(ch4);
+  if(now_ch1 == HIGH && old_ch1 == LOW){
+    //속도를 올리는버튼(+32)
+    speed += 32;
+    if(speed > 255) speed = 255;
+
+    Serial.print("속도업 = ");
+    Serial.println(speed);
+    analogWrite(ENB,speed);
+  }else if(now_ch2 == HIGH && old_ch2 == LOW){
+    //속도를 내리는버튼(-32)
+    speed -= 32;
+    if(speed < 0) speed = 0;
+
+    Serial.print("속도다운 = ");
+    Serial.println(speed);
+    analogWrite(ENB,speed);
+  }else if(now_ch3 == HIGH && old_ch3 == LOW){
+    //정방향
+    Serial.println("정방향");
+    digitalWrite(IN3,HIGH);
+    digitalWrite(IN4,LOW);
+  }else if(now_ch4 == HIGH && old_ch4 == LOW){
+    //역방향
+    Serial.println("정방향");
+    digitalWrite(IN3,LOW);
+    digitalWrite(IN4,HIGH);
+  }
+  
+  //여기 위지점이 해야할거 다한 지점이다
+  old_ch1 = now_ch1;
+  old_ch2 = now_ch2;
+  old_ch3 = now_ch3;
+  old_ch4 = now_ch4;
+}

@@ -1,0 +1,86 @@
+esphome:
+  name: nockanda3
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+sensor:
+  - platform: adc
+    pin: A0
+    name: "Wind Vain Raw Data"
+    update_interval: 1s
+    unit_of_measurement: "°"
+    filters:
+      - multiply: 3.3
+      - lambda: |-
+          if(x < 0.2412) return 112.5;
+          else if(x < 0.2850) return 67.5;
+          else if(x < 0.3539) return 90;
+          else if(x < 0.5014) return 157.5;
+          else if(x < 0.6918) return 135;
+          else if(x < 0.8572) return 202.5;
+          else if(x < 1.1172) return 180;
+          else if(x < 1.3976) return 22.5;
+          else if(x < 1.7093) return 45;
+          else if(x < 1.9813) return 247.5;
+          else if(x < 2.1478) return 225;
+          else if(x < 2.3987) return 337.5;
+          else if(x < 2.5997) return 0;
+          else if(x < 2.7631) return 292.5;
+          else if(x < 2.9528) return 315;
+          else return 270;
+  - platform: pulse_counter
+    pin:
+      number: 5
+      mode:
+        input: true
+        pullup: true
+    name: "Wind Speed"
+    update_interval: 1s
+    unit_of_measurement: "m/s"
+    filters:
+    - multiply: 0.111111
+  - platform: pulse_counter
+    pin:
+      number: 4
+      mode:
+        input: true
+        pullup: true
+    name: "Rain Fall Sensor"
+    update_interval: 1s
+    unit_of_measurement: "mm/s"
+    filters:
+    - multiply: 0.00466
+    total:
+      unit_of_measurement: 'mm'
+      name: 'Total Rain Fall'
+      filters:
+        - multiply: 0.2794
+  - platform: dht
+    pin: 14
+    temperature:
+      name: "Temperature"
+    humidity:
+      name: "Humidity"
+    update_interval: 2s
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "8660fe78aa19453b9651e7f114b306a1"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Nockanda3 Fallback Hotspot"
+    password: "2j86coaOfvZP"
+
+captive_portal:
+    

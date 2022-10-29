@@ -1,0 +1,64 @@
+#define LOAD 2
+#define CLK 3
+#define CE 4
+#define DIN 5
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(LOAD,OUTPUT);
+  pinMode(CE,OUTPUT);
+  pinMode(DIN,INPUT);
+  pinMode(CLK,OUTPUT);
+
+  //제일 첫 데이터에 노이즈가 있는것 같다! 일단 하나의 데이터를 뺸다!
+  digitalWrite(LOAD,LOW);
+  delayMicroseconds(5);
+  digitalWrite(LOAD,HIGH);
+  delayMicroseconds(5);
+
+  digitalWrite(CLK,HIGH);
+  digitalWrite(CE,LOW);
+  shiftIn(DIN,CLK,MSBFIRST);
+  digitalWrite(CE,HIGH);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  digitalWrite(LOAD,LOW);
+  delayMicroseconds(5);
+  digitalWrite(LOAD,HIGH);
+  delayMicroseconds(5);
+
+  digitalWrite(CLK,HIGH);
+  digitalWrite(CE,LOW);
+  byte data = shiftIn(DIN,CLK,MSBFIRST);
+  digitalWrite(CE,HIGH);
+
+  if(bitRead(data, 0) == 0){
+    Serial.println("1번버튼이 눌려졌습니다!");
+  }
+  if(bitRead(data, 1) == 0){
+    Serial.println("2번버튼이 눌려졌습니다!");
+  }
+  if(bitRead(data, 2) == 0){
+    Serial.println("3번버튼이 눌려졌습니다!");
+  }
+  if(bitRead(data, 3) == 0){
+    Serial.println("4번버튼이 눌려졌습니다!");
+  }
+  if(bitRead(data, 4) == 0){
+    Serial.println("5번버튼이 눌려졌습니다!");
+  }
+  if(bitRead(data, 5) == 0){
+    Serial.println("6번버튼이 눌려졌습니다!");
+  }
+  if(bitRead(data, 6) == 0){
+    Serial.println("7번버튼이 눌려졌습니다!");
+  }
+  if(bitRead(data, 7) == 0){
+    Serial.println("8번버튼이 눌려졌습니다!");
+  }
+  
+  delay(100);
+}

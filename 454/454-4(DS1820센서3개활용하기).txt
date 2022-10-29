@@ -1,0 +1,43 @@
+esphome:
+  name: nockanda
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+
+dallas:
+  - pin: 5
+    update_interval: 1s
+
+sensor:
+  - platform: dallas
+    address: 0xe43c01f095123428
+    name: "TEMP1"
+  - platform: dallas
+    address: 0x380300a2794b9228
+    name: "TEMP2"
+  - platform: dallas
+    address: 0x793c01f0954ba928
+    name: "TEMP3"
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "4de48bf22b324332a2421c7a316ecad8"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Nockanda Fallback Hotspot"
+    password: "fVTDpvCSyniQ"
+
+captive_portal:
+    
+

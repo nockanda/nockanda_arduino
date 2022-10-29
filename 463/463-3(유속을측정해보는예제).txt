@@ -1,0 +1,30 @@
+#define btn1 4
+#define btn2 5
+
+#define pump 2
+
+unsigned long t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+  pinMode(pump,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(btn1) == LOW){
+    //펌프가 켜지고 시작시간을 측정하고
+    digitalWrite(pump,HIGH);
+    t = millis();
+    delay(300);
+  }
+  if(digitalRead(btn2) == LOW){
+    //펌프가 꺼지면서 시작시간과 종류시간사이의 걸린 시간을 측정한다!
+    digitalWrite(pump,LOW);
+    Serial.println(millis() - t);
+    delay(300);
+  }
+}

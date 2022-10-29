@@ -1,0 +1,151 @@
+#define LOAD 2
+#define CLK 3
+#define CE 4
+#define DIN 5
+
+#define DS595 6 //데이터핀
+#define LATCH595 7 //래치핀
+#define CLK595 8 //클락핀
+
+byte relay_state = 0xFF;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(LOAD,OUTPUT);
+  pinMode(CE,OUTPUT);
+  pinMode(DIN,INPUT);
+  pinMode(CLK,OUTPUT);
+
+  pinMode(DS595,OUTPUT);
+  pinMode(LATCH595,OUTPUT);
+  pinMode(CLK595,OUTPUT);
+
+  //제일 첫 데이터에 노이즈가 있는것 같다! 일단 하나의 데이터를 뺸다!
+  digitalWrite(LOAD,LOW);
+  delayMicroseconds(5);
+  digitalWrite(LOAD,HIGH);
+  delayMicroseconds(5);
+
+  digitalWrite(CLK,HIGH);
+  digitalWrite(CE,LOW);
+  shiftIn(DIN,CLK,MSBFIRST);
+  digitalWrite(CE,HIGH);
+
+  //초기 8채널릴레이가 모두 OFF가 되도록 해아한다!
+  //74HC595쪽으로 전송
+  digitalWrite(LATCH595,LOW);
+  shiftOut(DS595,CLK595,MSBFIRST,0xFF);
+  digitalWrite(LATCH595,HIGH);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  digitalWrite(LOAD,LOW);
+  delayMicroseconds(5);
+  digitalWrite(LOAD,HIGH);
+  delayMicroseconds(5);
+
+  digitalWrite(CLK,HIGH);
+  digitalWrite(CE,LOW);
+  byte data = shiftIn(DIN,CLK,MSBFIRST);
+  digitalWrite(CE,HIGH);
+
+  if(bitRead(data, 0) == 0){
+    Serial.println("1번버튼이 눌려졌습니다!");
+    for(int i = 0;i<8;i++){
+      byte temp = 0xFF;
+      bitWrite(temp, i, 0);
+      relay_state = temp;
+      digitalWrite(LATCH595,LOW);
+      shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+      digitalWrite(LATCH595,HIGH);
+      delay(1000);
+    }
+    relay_state = 0xFF;
+    digitalWrite(LATCH595,LOW);
+    shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+    digitalWrite(LATCH595,HIGH);
+  }
+  if(bitRead(data, 1) == 0){
+    Serial.println("2번버튼이 눌려졌습니다!");
+    for(int i = 7;i>=0;i--){
+      byte temp = 0xFF;
+      bitWrite(temp, i, 0);
+      relay_state = temp;
+      digitalWrite(LATCH595,LOW);
+      shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+      digitalWrite(LATCH595,HIGH);
+      delay(1000);
+    }
+    relay_state = 0xFF;
+    digitalWrite(LATCH595,LOW);
+    shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+    digitalWrite(LATCH595,HIGH);
+  }
+  if(bitRead(data, 2) == 0){
+    Serial.println("3번버튼이 눌려졌습니다!");
+    //relay_state
+    relay_state = 0b01010101;
+    digitalWrite(LATCH595,LOW);
+    shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+    digitalWrite(LATCH595,HIGH);
+    delay(1000);
+    relay_state = 0b11111111;
+    digitalWrite(LATCH595,LOW);
+    shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+    digitalWrite(LATCH595,HIGH);
+  }
+  if(bitRead(data, 3) == 0){
+    Serial.println("4번버튼이 눌려졌습니다!");
+    relay_state = 0b10101010;
+    digitalWrite(LATCH595,LOW);
+    shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+    digitalWrite(LATCH595,HIGH);
+    delay(1000);
+    relay_state = 0b11111111;
+    digitalWrite(LATCH595,LOW);
+    shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+    digitalWrite(LATCH595,HIGH);
+  }
+  if(bitRead(data, 4) == 0){
+    Serial.println("5번버튼이 눌려졌습니다!");
+    //relay_state
+    relay_state = 0b00001111;
+    digitalWrite(LATCH595,LOW);
+    shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+    digitalWrite(LATCH595,HIGH);
+    delay(1000);
+    relay_state = 0b11111111;
+    digitalWrite(LATCH595,LOW);
+    shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+    digitalWrite(LATCH595,HIGH);
+  }
+  if(bitRead(data, 5) == 0){
+    Serial.println("6번버튼이 눌려졌습니다!");
+    relay_state = 0b11110000;
+    digitalWrite(LATCH595,LOW);
+    shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+    digitalWrite(LATCH595,HIGH);
+    delay(1000);
+    relay_state = 0b11111111;
+    digitalWrite(LATCH595,LOW);
+    shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+    digitalWrite(LATCH595,HIGH);
+  }
+  if(bitRead(data, 6) == 0){
+    Serial.println("7번버튼이 눌려졌습니다!");
+    relay_state = 0b00000000;
+    digitalWrite(LATCH595,LOW);
+    shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+    digitalWrite(LATCH595,HIGH);
+  }
+  if(bitRead(data, 7) == 0){
+    Serial.println("8번버튼이 눌려졌습니다!");
+    relay_state = 0b11111111;
+    digitalWrite(LATCH595,LOW);
+    shiftOut(DS595,CLK595,MSBFIRST,relay_state);
+    digitalWrite(LATCH595,HIGH);
+  }
+  delay(100);
+}

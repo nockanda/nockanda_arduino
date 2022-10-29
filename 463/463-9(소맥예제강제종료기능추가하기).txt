@@ -1,0 +1,106 @@
+#include "Timer.h"  
+
+#define pump1 2
+#define pump2 3
+#define btn1 4
+#define btn2 5
+#define btn3 6
+
+float pump_flow = 3.64;
+float cup_size = 200;
+
+Timer t1; //2초마다 한번씩 녹칸다를 출력한다
+Timer t2; //3초마다 한번씩 포에버를 출력한다!
+bool t1_run = false;
+bool t2_run = false;
+//t1이 해야할일을 함수로 구성한다!(리턴이 없는 함수)
+
+void job1(){
+  digitalWrite(pump1,LOW);
+  t1_run = false;
+}
+
+void job2(){
+  digitalWrite(pump2,LOW);
+  t2_run = false;
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(pump1,OUTPUT);
+  pinMode(pump2,OUTPUT);
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+  pinMode(btn3,INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  t1.update();
+  t2.update();
+  
+  
+  if(digitalRead(btn1) == LOW){
+    //버튼1이 눌려짐
+    //3:7
+    digitalWrite(pump1,HIGH);
+    digitalWrite(pump2,HIGH);
+
+    float sample1 = cup_size * 0.3;
+    float sample2 = cup_size * 0.7;
+    
+    unsigned long t1_delay = (sample1/pump_flow) * 1000;
+    unsigned long t2_delay = (sample2/pump_flow) * 1000;
+    if(!t1_run && !t2_run){
+      t1.every(t1_delay,job1,1);
+      t1_run = true;
+      t2.every(t2_delay,job2,1);
+      t2_run = true;
+      Serial.println("펌프 작동을 시작합니다!");
+    }else{
+      Serial.println("이미 펌프가 작동중입니다!");
+    }
+    
+    Serial.println(t1_delay);
+    Serial.println(t2_delay);
+    delay(300); //임시로~~~
+  }
+  if(digitalRead(btn2) == LOW){
+    //버튼2가 눌려짐!
+    //2:8
+    digitalWrite(pump1,HIGH);
+    digitalWrite(pump2,HIGH);
+
+    float sample1 = cup_size * 0.2;
+    float sample2 = cup_size * 0.8;
+    
+    unsigned long t1_delay = (sample1/pump_flow) * 1000;
+    unsigned long t2_delay = (sample2/pump_flow) * 1000;
+    if(!t1_run && !t2_run){
+      t1.every(t1_delay,job1,1);
+      t1_run = true;
+      t2.every(t2_delay,job2,1);
+      t2_run = true;
+      Serial.println("펌프 작동을 시작합니다!");
+    }else{
+      Serial.println("이미 펌프가 작동중입니다!");
+    }
+    Serial.println(t1_delay);
+    Serial.println(t2_delay);
+    delay(300); //임시로~~~
+  }
+  if(digitalRead(btn3) == LOW){
+    Serial.println("모든 펌프를 강제로 멈춥니다!!");
+      if(t1_run){
+        t1.stop(0);
+        digitalWrite(pump1,LOW);
+        t1_run = false;
+      }
+      if(t2_run){
+        t2.stop(0);
+        digitalWrite(pump2,LOW);
+        t2_run = false;
+      }
+  }
+}

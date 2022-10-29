@@ -1,0 +1,29 @@
+#include "Timer.h"  
+
+Timer t1; //2초마다 한번씩 녹칸다를 출력한다
+Timer t2; //3초마다 한번씩 포에버를 출력한다!
+
+//t1이 해야할일을 함수로 구성한다!(리턴이 없는 함수)
+
+void job1(){
+  Serial.print(millis());
+  Serial.println(" 녹칸다");
+}
+
+void job2(){
+  Serial.print(millis());
+  Serial.println(" 포에버");
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  t1.every(2000,job1);
+  t2.every(3000,job2);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  t1.update();
+  t2.update();
+}

@@ -1,0 +1,87 @@
+esphome:
+  name: nockanda4
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+switch:
+  - platform: gpio
+    pin: 5
+    name: "SOJU PUMP"
+    id: soju
+  - platform: gpio
+    pin: 4
+    name: "MACJU PUMP"
+    id: macju
+
+button:
+  - platform: template
+    name: "Make SoMac"
+    on_press:
+      - then:
+        - switch.turn_on: soju
+        - delay: !lambda |- 
+            return  ((id(cup_size).state * (id(ratio).state/10))/3.64)*1000;
+        - switch.turn_off: soju
+      - then:
+        - switch.turn_on: macju
+        - delay: !lambda |- 
+            return  ((id(cup_size).state * ((10-id(ratio).state)/10))/3.64)*1000;
+        - switch.turn_off: macju
+
+number:
+  - platform: template
+    id: cup_size
+    name: "Cup size"
+    optimistic: true
+    min_value: 100
+    max_value: 500
+    step: 50
+  - platform: template
+    id: ratio
+    name: "SoMac Ratio"
+    optimistic: true
+    min_value: 1
+    max_value: 9
+    step: 1
+
+text_sensor:
+  - platform: template
+    name: "Soju Pump State"
+    lambda: |-
+        if(id(soju).state){
+            return {"작동중!"};
+        }else{
+            return {"정지!"};
+        }
+    update_interval: 1s
+  - platform: template
+    name: "Macju Pump State"
+    lambda: |-
+        if(id(macju).state){
+            return {"작동중!"};
+        }else{
+            return {"정지!"};
+        }
+    update_interval: 1s
+
+ota:
+  password: "5540bdfe29301d5b64f04029f61c5a67"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Nockanda4 Fallback Hotspot"
+    password: "CIS6Smn8RFHb"
+
+captive_portal:
+    

@@ -1,0 +1,98 @@
+#include "Timer.h"  
+
+#define pump1 2
+#define pump2 3
+#define btn1 4
+#define btn2 5
+
+float pump_flow = 3.64;
+
+Timer t1; //2초마다 한번씩 녹칸다를 출력한다
+Timer t2; //3초마다 한번씩 포에버를 출력한다!
+
+//t1이 해야할일을 함수로 구성한다!(리턴이 없는 함수)
+
+void job1(){
+  digitalWrite(pump1,LOW);
+}
+
+void job2(){
+  digitalWrite(pump2,LOW);
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(pump1,OUTPUT);
+  pinMode(pump2,OUTPUT);
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  t1.update();
+  t2.update();
+  
+  if(Serial.available()){
+    String data = Serial.readStringUntil('\r');
+    //data = 500,7,3
+    int first_comma = data.indexOf(','); //3
+    int second_comma = data.indexOf(',',first_comma+1); //5
+    String data1 = data.substring(0,first_comma);
+    String data2 = data.substring(first_comma+1,second_comma);
+    String data3 = data.substring(second_comma+1,data.length());
+
+    int total = data1.toInt();
+    int sample1_ratio = data2.toInt();
+    int sample2_ratio = data3.toInt();
+
+    float sample1 = total * (sample1_ratio/10.0);
+    float sample2 = total * (sample2_ratio/10.0);
+
+    Serial.println(total);
+    Serial.println(sample1_ratio);
+    Serial.println(sample2_ratio);
+    Serial.println(sample1);
+    Serial.println(sample2);
+    unsigned long t1_delay = (sample1/pump_flow) * 1000;
+    unsigned long t2_delay = (sample2/pump_flow) * 1000; //38,567
+    Serial.println(t1_delay);
+    Serial.println(t2_delay);
+    
+    digitalWrite(pump1,HIGH);
+    digitalWrite(pump2,HIGH);
+    
+    t1.every(t1_delay,job1,1);
+    t2.every(t2_delay,job2,1);
+    
+    
+    
+  }
+  /*
+  if(digitalRead(btn1) == LOW){
+    //버튼1이 눌려짐
+    digitalWrite(pump1,HIGH);
+    digitalWrite(pump2,HIGH);
+    int t1_delay = (50/pump_flow) * 1000;
+    int t2_delay = (100/pump_flow) * 1000;
+    t1.every(t1_delay,job1,1);
+    t2.every(t2_delay,job2,1);
+    Serial.println(t1_delay);
+    Serial.println(t2_delay);
+    delay(300); //임시로~~~
+  }
+  if(digitalRead(btn2) == LOW){
+    //버튼2가 눌려짐!
+    digitalWrite(pump1,HIGH);
+    digitalWrite(pump2,HIGH);
+    int t1_delay = (80/pump_flow) * 1000;
+    int t2_delay = (120/pump_flow) * 1000;
+    t1.every(t1_delay,job1,1);
+    t2.every(t2_delay,job2,1);
+    Serial.println(t1_delay);
+    Serial.println(t2_delay);
+    delay(300); //임시로~~~
+  }
+  */
+}

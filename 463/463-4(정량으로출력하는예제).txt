@@ -1,0 +1,38 @@
+#define btn1 4
+#define btn2 5
+
+#define pump 2
+
+unsigned long t = 0;
+
+float pump_flow = 3.64;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+  pinMode(pump,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(btn1) == LOW){
+    //100ml
+    float target = 100;
+    float tt = (target/pump_flow) * 1000;
+    digitalWrite(pump,HIGH); //펌프 ON
+    delay(tt);
+    digitalWrite(pump,LOW); //펌프 OFF
+    
+  }
+  if(digitalRead(btn2) == LOW){
+    //150ml
+    float target = 150;
+    float tt = (target/pump_flow) * 1000;
+    digitalWrite(pump,HIGH); //펌프 ON
+    delay(tt);
+    digitalWrite(pump,LOW); //펌프 OFF
+    
+  }
+}

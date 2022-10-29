@@ -1,0 +1,107 @@
+esphome:
+  name: nockanda3
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+globals:
+   - id: automode
+     type: bool
+     initial_value: 'false'
+
+switch:
+  - platform: gpio
+    pin: 5
+    name: "Humi control"
+    id: irf520
+  - platform: template
+    name: "Auto mode"
+    lambda: |-
+      if (id(automode)) {
+        return true;
+      } else {
+        return false;
+      }
+    turn_on_action:
+      - lambda: |-
+         id(automode) = true;
+    turn_off_action:
+      - lambda: |-
+         id(automode) = false;
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      inverted: true
+      number: 4
+      mode:
+        input: true
+        pullup: true
+    name: "Manual Switch"
+    on_press:
+      then:
+        - switch.toggle: irf520
+        - lambda: |-
+            id(automode) = false;
+
+sensor:
+  - platform: dht
+    pin: 14
+    temperature:
+      name: "Temperature"
+    humidity:
+      name: "Humidity"
+      on_value:
+        then:
+          - lambda: |-
+              if(id(automode)){
+                if(x < id(min_humi).state){
+                  //켜야하는 상황
+                  id(irf520).turn_on();
+                }else if(x > id(max_humi).state){
+                  //꺼야하는 상황
+                  id(irf520).turn_off();
+                }
+              }
+    update_interval: 2s
+    
+           
+
+number:
+  - platform: template
+    name: "min humi"
+    id: min_humi
+    optimistic: true
+    min_value: 0
+    max_value: 100
+    initial_value : 30
+    step: 1
+  - platform: template
+    name: "max humi"
+    id: max_humi
+    optimistic: true
+    min_value: 0
+    max_value: 100
+    initial_value : 60
+    step: 1
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "8660fe78aa19453b9651e7f114b306a1"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Nockanda3 Fallback Hotspot"
+    password: "2j86coaOfvZP"
+
+captive_portal:
+    

@@ -1,0 +1,59 @@
+#include "Timer.h"  
+
+#define led1 2
+#define led2 3
+#define btn1 4
+#define btn2 5
+
+Timer t1; //2초마다 한번씩 녹칸다를 출력한다
+Timer t2; //3초마다 한번씩 포에버를 출력한다!
+
+//t1이 해야할일을 함수로 구성한다!(리턴이 없는 함수)
+
+void job1(){
+  Serial.print(millis());
+  Serial.println("LED1이 꺼진다!");
+  digitalWrite(led1,LOW);
+}
+
+void job2(){
+  Serial.print(millis());
+  Serial.println("LED2가 꺼진다!");
+  digitalWrite(led2,LOW);
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  t1.update();
+  t2.update();
+
+  if(digitalRead(btn1) == LOW){
+    //버튼1이 눌려짐
+    Serial.println("LED1이 켜졌다!!!!");
+    Serial.println("LED2가 켜졌다!!!!");
+    digitalWrite(led1,HIGH);
+    digitalWrite(led2,HIGH);
+    t1.every(2000,job1,1);
+    t2.every(8000,job2,1);
+    delay(300); //임시로~~~
+  }
+  if(digitalRead(btn2) == LOW){
+    //버튼2가 눌려짐!
+    Serial.println("LED1이 켜졌다!!!!");
+    Serial.println("LED2가 켜졌다!!!!");
+    digitalWrite(led1,HIGH);
+    digitalWrite(led2,HIGH);
+    t1.every(3000,job1,1);
+    t2.every(7000,job2,1);
+    delay(300); //임시로~~~
+  }
+}

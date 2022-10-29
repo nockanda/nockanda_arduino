@@ -1,0 +1,247 @@
+#define ch1 D6 //릴레이Ch1 연결핀?
+#define ch2 D7
+
+//#define btn1 4
+//#define btn2 5
+//#define btn3 6
+
+//#define open_limit 7
+//#define close_limit 8
+
+//#define remote1 9
+//#define remote2 10
+//#define remote3 11
+
+int direction = 0; //0이면 멈춤, 1이면 정방향, 2면 역방향
+
+unsigned long open_t = 15000; //완전닫힘에서 완전열림까지 걸리는 시간?
+unsigned long close_t = 12000; //완전열림에서 완전닫힘까지 걸리는 시간?
+
+float my_pos = 0;
+bool is_auto_mode = false;
+bool is_manual_mode = false;
+unsigned long time_span = 0; //열리고 닫히는데 걸리는 시간을 계산한다
+unsigned long time_span_control = 0; //아두이노 내부의 시간값을 컨트롤
+unsigned long loop_time = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //나 PC하고 시리얼통신 할거야~
+  pinMode(ch1,OUTPUT);
+  pinMode(ch2,OUTPUT);
+  //pinMode(btn1,INPUT_PULLUP); //버튼을 안누르면 HIGH, 버튼을 누르면 LOW
+  //pinMode(btn2,INPUT_PULLUP);
+  //pinMode(btn3,INPUT_PULLUP);
+  //pinMode(open_limit,INPUT_PULLUP); //LOW면 자석이 리미트스위치에 도달한것이다!
+  //pinMode(close_limit,INPUT_PULLUP);
+  //pinMode(remote1,INPUT);//안누르면 LOW 누르면 HIGH
+  //pinMode(remote2,INPUT);
+  //pinMode(remote3,INPUT);
+  digitalWrite(ch1, HIGH); //채널1 off
+  digitalWrite(ch2, HIGH); //채널2 off
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  if(Serial.available()){
+    String pos = Serial.readStringUntil('\r'); //시리얼모니터에 설정을 해줘야함!
+    int input_pos = pos.toInt();
+
+    //블라인드 제어함수~!
+    cover_control(input_pos);
+    
+  }
+
+  //자동으로 위치를 보정하는 부분
+  if(direction != 0 && is_auto_mode){
+    //모터가 정회전/ 역회전 들중 하나를 수행하고 있음!
+    if(direction == 1){
+      //열리고 있는중
+      //time_span
+      if(millis() - time_span_control > time_span){
+        //유저가 입력한 시간이 경과한 상황
+        Serial.println("열기 작업완료");
+        digitalWrite(ch1, HIGH);
+        digitalWrite(ch2, HIGH);
+        is_auto_mode = false;
+      }else{
+        //열리고 있는 중
+        //현재 위치를 계산해야하는 지점!
+        //루프의 회전시간을 측정한다
+        unsigned long t = millis();
+        if(t - loop_time > 100){
+          //t - loop_time
+          my_pos = my_pos + ((t - loop_time)/(float)open_t)*100;
+          Serial.println(my_pos);
+          
+          loop_time = t;
+        }
+      }
+    }else if(direction == 2){
+      //닫히고있는중
+      //time_span
+      if(millis() - time_span_control > time_span){
+        //유저가 입력한 시간이 경과한 상황
+        Serial.println("닫기 작업완료");
+        digitalWrite(ch1, HIGH);
+        digitalWrite(ch2, HIGH);
+        is_auto_mode = false;
+      }else{
+        //닫히고 있는 중
+        //현재 위치를 계산해야하는 지점!
+        //루프의 회전시간을 측정한다
+        unsigned long t = millis();
+        if(t - loop_time > 100){
+          //t - loop_time
+          my_pos = my_pos - ((t - loop_time)/(float)close_t)*100;
+          Serial.println(my_pos);
+          
+          loop_time = t;
+        }
+      }
+    }
+  }
+
+  /*
+  //유저가 수동으로 제어를 했을떄 위치를 보정하는 부분
+  if(is_manual_mode){
+    if(direction == 1){
+      //정회전
+      unsigned long t = millis();
+      if(t - loop_time > 100){
+        //t - loop_time
+        my_pos = my_pos + ((t - loop_time)/(float)open_t)*100;
+        Serial.println(my_pos);
+        
+        loop_time = t;
+      }
+    }else if(direction == 2){
+      //역회전
+      unsigned long t = millis();
+      if(t - loop_time > 100){
+        //t - loop_time
+        my_pos = my_pos - ((t - loop_time)/(float)close_t)*100;
+        Serial.println(my_pos);
+        
+        loop_time = t;
+      }
+    }
+  }
+  */
+  /*
+  if(digitalRead(open_limit) == LOW){
+    //끝까지 다 열린경우!
+    if(direction == 1){
+      direction = 0;
+      my_pos = 100;
+      digitalWrite(ch1, HIGH);
+      digitalWrite(ch2, HIGH);
+    }
+  }
+  if(digitalRead(close_limit) == LOW){
+    if(direction == 2){
+      direction = 0;
+      my_pos = 0;
+      digitalWrite(ch1, HIGH);
+      digitalWrite(ch2, HIGH);
+    }
+  }
+  
+  if(digitalRead(btn1) == LOW){
+    //정회전
+    is_manual_mode = true;
+    is_auto_mode = false;
+    direction = 1;
+    digitalWrite(ch1, LOW);
+    digitalWrite(ch2, HIGH);
+
+    loop_time = millis();
+  }
+  if(digitalRead(btn2) == LOW){
+    //멈춤
+    direction = 0;
+    is_auto_mode = false;
+    is_manual_mode = false;
+    digitalWrite(ch1, HIGH);
+    digitalWrite(ch2, HIGH);
+  }
+  if(digitalRead(btn3) == LOW){
+    //역회전
+    is_manual_mode = true;
+    is_auto_mode = false;
+    direction = 2;
+    digitalWrite(ch1, HIGH);
+    digitalWrite(ch2, LOW);
+
+    loop_time = millis();
+  }
+
+  if(digitalRead(remote1) == HIGH){
+    is_manual_mode = true;
+    is_auto_mode = false;
+    direction = 1;
+    digitalWrite(ch1, LOW);
+    digitalWrite(ch2, HIGH);
+
+    loop_time = millis();
+  }
+  if(digitalRead(remote2) == HIGH){
+    direction = 0;
+    is_auto_mode = false;
+    is_manual_mode = false;
+    digitalWrite(ch1, HIGH);
+    digitalWrite(ch2, HIGH);
+  }
+  if(digitalRead(remote3) == HIGH){
+    is_manual_mode = true;
+    is_auto_mode = false;
+    direction = 2;
+    digitalWrite(ch1, HIGH);
+    digitalWrite(ch2, LOW);
+
+    loop_time = millis();
+  }
+  */
+}
+
+
+void cover_control(int input_pos){
+  //자동으로 작동해라~
+    is_manual_mode = false;
+
+    //my_pos ??  input_pos ??
+    if(my_pos == input_pos){
+      //아무것도 할필요가 없는 상황
+    }else if(my_pos > input_pos){
+      //셔터가 아래쪽으로 내려가야함을 의미한다
+      //모터가 역회전해야하는 상황
+      //모터를 회전시키는 작업만 여기서 진행
+      digitalWrite(ch1, HIGH);
+      digitalWrite(ch2, LOW);
+      direction = 2;
+      is_auto_mode = true;
+      //닫히는 속도를 기준으로 시간을 계산한다!
+      int dist = my_pos - input_pos; //30
+      //close_t
+      time_span = close_t*(dist/100.0);
+      Serial.println(time_span);
+      time_span_control = millis();
+      loop_time = millis();
+    }else if(my_pos < input_pos){
+      //셔텨가 위쪽으로 올라가야함을 의미한다!
+      //모터가 정회전하는 상황
+      //모터를 회전시키는 작업만 여기서 진행
+      digitalWrite(ch1, LOW);
+      digitalWrite(ch2, HIGH);
+      direction = 1;
+      is_auto_mode = true;
+      //열리는 속도를 기준으로 시간을 계산한다!
+      int dist = input_pos - my_pos; //30
+      //close_t
+      time_span = open_t*(dist/100.0);
+      Serial.println(time_span);
+      time_span_control = millis();
+      loop_time = millis();
+    }
+}

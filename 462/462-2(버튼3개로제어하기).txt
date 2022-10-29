@@ -1,0 +1,37 @@
+#define ch1 2
+#define ch2 3
+
+#define btn1 4
+#define btn2 5
+#define btn3 6
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 PC하고 시리얼통신 할거야~
+  pinMode(ch1,OUTPUT);
+  pinMode(ch2,OUTPUT);
+  pinMode(btn1,INPUT_PULLUP); //버튼을 안누르면 HIGH, 버튼을 누르면 LOW
+  pinMode(btn2,INPUT_PULLUP);
+  pinMode(btn3,INPUT_PULLUP);
+  digitalWrite(ch1, HIGH); //채널1 off
+  digitalWrite(ch2, HIGH); //채널2 off
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(btn1) == LOW){
+    //정회전
+    digitalWrite(ch1, LOW);
+    digitalWrite(ch2, HIGH);
+  }
+  if(digitalRead(btn2) == LOW){
+    //멈춤
+    digitalWrite(ch1, HIGH);
+    digitalWrite(ch2, HIGH);
+  }
+  if(digitalRead(btn3) == LOW){
+    //역회전
+    digitalWrite(ch1, HIGH);
+    digitalWrite(ch2, LOW);
+  }
+}

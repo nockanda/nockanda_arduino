@@ -1,0 +1,113 @@
+esphome:
+  name: nockanda3
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+globals:
+   - id: automode
+     type: bool
+     initial_value: 'false'
+
+
+switch:
+  - platform: gpio
+    pin: 5
+    name: "Air Cleaner"
+    id: irf520
+  - platform: template
+    name: "Automode"
+    lambda: |-
+      if (id(automode)) {
+        return true;
+      } else {
+        return false;
+      }
+    turn_on_action:
+      - lambda: |-
+          id(automode) = true;
+    turn_off_action:
+      - lambda: |-
+          id(automode) = false;
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      inverted: true
+      number: 4
+      mode:
+        input: true
+        pullup: true
+    name: "manual btn"
+    on_press:
+      then:
+        - switch.toggle: irf520
+        - lambda: |-
+            id(automode) = false;
+
+# Example configuration entry
+uart:
+  rx_pin: 14
+  baud_rate: 9600
+
+sensor:
+  - platform: pmsx003
+    type: PMSX003
+    pm_1_0:
+      name: "PM1.0"
+    pm_2_5:
+      name: "PM2.5"
+      on_value:
+        then:
+          - lambda: |-
+             if(id(automode)){
+               //오토모드이다!
+               if(x > id(max_value).state){
+                  //작동시점
+                  id(irf520).turn_on();
+               }else if(x < id(min_value).state){
+                 //멈춤시점
+                 id(irf520).turn_off();
+               }
+             }
+    pm_10_0:
+      name: "PM10.0"
+
+number:
+  - platform: template
+    name: "MIN VALUE"
+    id: min_value
+    optimistic: true
+    min_value: 0
+    max_value: 500
+    step: 10
+    initial_value: 100
+  - platform: template
+    name: "MAX VALUE"
+    id: max_value
+    optimistic: true
+    min_value: 0
+    max_value: 500
+    step: 10
+    initial_value: 300
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "8660fe78aa19453b9651e7f114b306a1"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Nockanda3 Fallback Hotspot"
+    password: "2j86coaOfvZP"
+
+captive_portal:
+    

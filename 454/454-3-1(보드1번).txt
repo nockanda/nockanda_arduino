@@ -1,0 +1,40 @@
+esphome:
+  name: nockanda
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+
+# Example configuration entry
+binary_sensor:
+  - platform: gpio
+    pin:
+      inverted: true
+      number: 5
+      mode:
+        input: true
+        pullup: true
+    name: "LED SWITCH"
+
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "4de48bf22b324332a2421c7a316ecad8"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Nockanda Fallback Hotspot"
+    password: "fVTDpvCSyniQ"
+
+captive_portal:
+    
+

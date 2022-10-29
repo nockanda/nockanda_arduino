@@ -1,0 +1,29 @@
+#define LOAD 2
+#define CLK 3
+#define CE 4
+#define DIN 5
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(LOAD,OUTPUT);
+  pinMode(CE,OUTPUT);
+  pinMode(DIN,INPUT);
+  pinMode(CLK,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  digitalWrite(LOAD,LOW);
+  delayMicroseconds(5);
+  digitalWrite(LOAD,HIGH);
+  delayMicroseconds(5);
+
+  digitalWrite(CLK,HIGH);
+  digitalWrite(CE,LOW);
+  byte data = shiftIn(DIN,CLK,MSBFIRST);
+  digitalWrite(CE,HIGH);
+
+  Serial.println(data,BIN);
+  delay(100);
+}
