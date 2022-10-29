@@ -1,0 +1,67 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<title>NOCKANDA DOT MATRIX(MAX7219) EXAMPLE</title>
+<style>
+#btn{
+border: 1px solid blue;
+background-color: rgba(0,0,0,0);
+color: blue;
+padding: 5px;
+border-top-left-radius: 5px;
+border-bottom-left-radius: 5px;
+border-top-right-radius: 5px;
+border-bottom-right-radius: 5px;
+margin-right:-4px;
+height:40px;
+}
+table {
+border-collapse: collapse;
+width:800px;
+}
+table, td, th {
+border: solid 1px #cccccc;
+}
+tr {
+height:40px;
+text-align: center;
+}
+td, th {
+padding: 5px;
+}
+.set1 {
+background-color: red;
+color: white;
+text-decoration: underline;
+font-weight: bold;
+}
+#c_head {
+height:30px;
+background-color: #eeeeee;
+}
+#c_width{
+width: 800px;
+}
+</style>
+</head>
+<body>
+<h1>NOCKANDA DOT MATRIX(MAX7219) EXAMPLE!</h1>
+<form method="post" enctype="application/x-www-form-urlencoded" action="/nockandaform/">
+<table border=0>
+<tr id="c_head"><th>8*32 DOT STATE</th></tr>
+<tr id="c_head"><th>
+     <table><tr>
+         <td>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR></td>
+         <td>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR></td>
+         <td>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR></td>
+         <td>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR>00000000<BR></td>
+     </tr></table>
+</th>
+<tr>
+<td>
+   <input type="submit" value="Submit">
+</td>
+</tr>
+</table>
+</form>
+</html>

@@ -1,0 +1,77 @@
+/*
+ * 예제171-1 바코드리더기(GM65)를 soft serail로 TX를 D2에 RX를 D3에 연결했다!
+ * SD카드모듈은 SPI핀에 연결하고 cs핀을 D4에 연결했다!
+ * SD카드의 디렉토리구조로 바코드정보가 txt파일로 저장되어 있다!
+ * 바코드정보는 plain text로 저장이 되어있는데 바코드 리딩이 되면 text를 그대로 출력해보라!
+ */
+
+#include <SoftwareSerial.h>
+#include <SPI.h>
+#include <SD.h>
+
+File myFile;
+SoftwareSerial GM65(2, 3);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신
+  GM65.begin(9600); //아두이노-바코드리더간 통신
+  Serial.print("Initializing SD card...");
+
+  if (!SD.begin(4)) {
+    Serial.println("initialization failed!");
+    while (1);
+  }
+  Serial.println("initialization done.");
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(GM65.available()){
+    String barcode = GM65.readStringUntil(0x0d); //readline
+    Serial.println(barcode);
+    //국가코드3자리 회사코드4자리 상품코드5(+1)=6자리
+    //0 1 2 / 3 4 5 6 / 7 8 9 10 11 12
+    String part1 = barcode.substring(0,3);//A이상~ B미만
+    String part2 = barcode.substring(3,7);
+    String part3 = barcode.substring(7,13);
+    
+    String path = part1 + "/" + part2 + "/" + part3 + ".txt";
+
+    //모든 바코드 정보 파일은 3줄로 되어있고
+    //첫번째 줄은 상품명 두번째줄은 가격 세번째줄은 설명이다
+    myFile = SD.open(path);
+    if (myFile) {
+      Serial.println(path);
+      String result;
+      int count = 0;
+      while (myFile.available()) {
+        //CR+LF
+        //녹칸다1(0x0d 0x0a)
+        //녹칸다2(0x0d 0x0a)
+        //녹칸다3()
+        char c = myFile.read();
+        if(c == 0x0d){
+          //CR
+          //아무것도안함
+        }else if(c==0x0a){
+          //LF
+          Serial.print(count+1);
+          Serial.print("=");
+          Serial.println(result);
+          result = "";
+          count++;
+        }else{
+          //data
+          result += String(c);
+        }
+      }
+      Serial.println(result);
+      myFile.close();
+    } else {
+      Serial.println("error opening test.txt");
+    }
+    
+  }
+}

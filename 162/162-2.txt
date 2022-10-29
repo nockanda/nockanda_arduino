@@ -1,0 +1,145 @@
+/*
+ * 예제 162-2 직전 예제에 부저를 하나더 달아서 특정값이상일때 비프음을 작동시키시오!
+ * 특정값 = 100 ppm
+ * 부저는 D10에 연결했다!
+ */
+
+#include <SPFD5408_Adafruit_GFX.h>
+#include <SPFD5408_Adafruit_TFTLCD.h>
+#include <SPFD5408_TouchScreen.h>
+#include <MQUnifiedsensor.h>
+
+#define buzzer 10
+#define placa "Arduino UNO"
+#define Voltage_Resolution 5
+#define pin A5 //Analog input 0 of your arduino
+#define type "MQ-6" //MQ6
+#define ADC_Bit_Resolution 10 // For arduino UNO/MEGA/NANO
+#define RatioMQ6CleanAir 10 
+
+#define LCD_CS A3
+#define LCD_CD A2
+#define LCD_WR A1
+#define LCD_RD A0
+#define LCD_RESET A4
+#define BLACK   0x0000
+#define BLUE    0x001F //민감군영향
+#define RED     0xF800 //나쁨
+#define GREEN   0x07E0 //(좋음)
+#define CYAN    0x07FF //매우나쁨
+#define MAGENTA 0xF81F ///위험
+#define YELLOW  0xFFE0 //(보통)
+#define WHITE   0xFFFF
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+MQUnifiedsensor MQ6(placa, Voltage_Resolution, ADC_Bit_Resolution, pin, type);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  MQ6.setRegressionMethod(1); //_PPM =  a*ratio^b
+  MQ6.setA(2127.2); MQ6.setB(-2.526);
+  MQ6.init();
+  Serial.print("Calibrating please wait.");
+  float calcR0 = 0;
+  for(int i = 1; i<=10; i ++)
+  {
+    MQ6.update(); // Update data, the arduino will be read the voltage on the analog pin
+    calcR0 += MQ6.calibrate(RatioMQ6CleanAir);
+    Serial.print(".");
+  }
+  MQ6.setR0(calcR0/10);
+  Serial.println("  done!.");
+  
+  tft.reset();
+  tft.begin(0x9341); // SDFP5408
+  tft.setRotation(3);
+  tft.fillScreen(BLACK);
+
+}
+
+void loop() {
+  
+  
+  // put your main code here, to run repeatedly:
+  MQ6.update(); // Update data, the arduino will be read the voltage on the analog pin
+  float data = MQ6.readSensor(); // Sensor will read PPM concentration using the model and a and b values setted before or in the setup
+  Serial.println(data);
+  //더미데이터
+  //int num = random(361); //0~360
+  if(data > 100){
+    tone(buzzer, 2093);  
+  }else{
+    noTone(buzzer);  
+  }
+  
+  mq6sensor(data);
+  delay(1000);
+  
+}
+
+void fillArc(int arc_center_x,int arc_center_y,int arc_r,float arc_start_angle,float arc_angle,int arc_tick, uint16_t color){ 
+
+  int degree = 15;
+  for(float i = arc_start_angle; i<=arc_angle; i+=degree){
+     if(i == arc_angle){
+        //마지막것
+        float arc_x1_1 = arc_center_x+arc_r * cos(i*(PI/180.0));
+        float arc_y1_1 = arc_center_y-arc_r * sin(i*(PI/180.0));
+        float arc_x1_2 = arc_center_x+(arc_r-arc_tick) * cos(i*(PI/180.0));
+        float arc_y1_2 = arc_center_y-(arc_r-arc_tick) * sin(i*(PI/180.0));   
+        //tft.fillCircle(arc_x, arc_y, 1, YELLOW);
+        //tft.fillCircle(arc_x2, arc_y2, 1, GREEN);
+        tft.drawLine(arc_x1_1, arc_y1_1, arc_x1_2, arc_y1_2, color);
+     }else{
+      //첫번째 line
+       float arc_x1_1 = arc_center_x+arc_r * cos(i*(PI/180.0));
+      float arc_y1_1 = arc_center_y-arc_r * sin(i*(PI/180.0));
+      float arc_x1_2 = arc_center_x+(arc_r-arc_tick) * cos(i*(PI/180.0));
+      float arc_y1_2 = arc_center_y-(arc_r-arc_tick) * sin(i*(PI/180.0));   
+      //tft.fillCircle(arc_x, arc_y, 1, YELLOW);
+      //tft.fillCircle(arc_x2, arc_y2, 1, GREEN);
+      tft.drawLine(arc_x1_1, arc_y1_1, arc_x1_2, arc_y1_2, color);
+      //두번째 line
+       float arc_x2_1 = arc_center_x+arc_r * cos((i+degree)*(PI/180.0));
+      float arc_y2_1 = arc_center_y-arc_r * sin((i+degree)*(PI/180.0));
+      float arc_x2_2 = arc_center_x+(arc_r-arc_tick) * cos((i+degree)*(PI/180.0));
+      float arc_y2_2 = arc_center_y-(arc_r-arc_tick) * sin((i+degree)*(PI/180.0));   
+      tft.drawLine(arc_x1_1, arc_y1_1, arc_x2_1, arc_y2_1, color);
+      tft.drawLine(arc_x1_2, arc_y1_2, arc_x2_2, arc_y2_2, color);
+
+      //대각선을 연결해보자
+      tft.drawLine(arc_x1_1, arc_y1_1, arc_x2_2, arc_y2_2, color);
+
+      //2개의 삼각형을 색칠해보자
+      tft.fillTriangle(arc_x1_1, arc_y1_1,arc_x2_2, arc_y2_2,arc_x1_2, arc_y1_2,color);
+      tft.fillTriangle(arc_x1_1, arc_y1_1,arc_x2_2, arc_y2_2,arc_x2_1, arc_y2_1,color);
+    }
+  }
+}
+
+void mq6sensor(float value){
+  uint16_t color;
+  float label = value;
+  if(value > 360) value= 360;
+  //컬러를 어떻게 할까?
+  //0~30 클린 : 녹색
+  //31~100 누출 : 노란색
+  //101~200 위험 : 빨간색
+  if(value <= 30) color = GREEN;
+  else if(value <= 100) color = YELLOW;
+  else if(value > 101) color = RED;
+
+  tft.fillScreen(BLACK);
+  tft.setCursor((tft.width()/2)-80,(tft.height()/2)-20);
+  tft.setTextSize(5);
+  tft.setTextColor(color);
+  tft.println(label);
+  tft.setCursor((tft.width()/2)-30,(tft.height()/2)+30);
+  tft.setTextSize(3);
+  tft.setTextColor(color);
+  tft.println("PPM");
+  tft.drawCircle(tft.width()/2, tft.height()/2, tft.height()/2, color);
+  tft.drawCircle(tft.width()/2, tft.height()/2, (tft.height()/2)-10, color); 
+  fillArc(tft.width()/2,tft.height()/2,tft.height()/2,0,value,10,color);
+  
+}

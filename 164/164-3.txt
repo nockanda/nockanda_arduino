@@ -1,0 +1,67 @@
+/*
+ * 예제 164-3 미세먼지센서(GP2Y10)을 D3과 A0을 이용해서 연결했다!
+ * 미세먼지센서에서 측정되는 미세먼지값을 SD카드모듈을 연결해서 SD카드에 기록해보도록하자!
+ */
+
+#include <SPI.h>
+#include <SD.h>
+const int chipSelect = 4;
+
+int measurePin = A0; //Connect dust sensor to Arduino A0 pin
+int ledPower = 3;   //Connect 3 led driver pins of dust sensor to Arduino D2
+
+int samplingTime = 280;
+int deltaTime = 40;
+int sleepTime = 9680;
+
+ 
+float voMeasured = 0;
+float calcVoltage = 0;
+float dustDensity = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  Serial.print("Initializing SD card...");
+
+  // see if the card is present and can be initialized:
+  if (!SD.begin(chipSelect)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    while (1);
+  }
+  Serial.println("card initialized.");
+  pinMode(ledPower,OUTPUT);
+}
+
+void loop() {
+  File dataFile = SD.open("164-3.txt", FILE_WRITE);
+
+  if (dataFile) {
+    float dust = misemonge();
+    dataFile.println(String(dust)); //mg/m3
+    dataFile.close();
+    Serial.println(String(dust));
+  }
+  else {
+    Serial.println("error opening datalog.txt");
+  }
+  delay(1000);
+}
+
+float misemonge(){
+  digitalWrite(ledPower,LOW); // power on the LED
+  delayMicroseconds(samplingTime);
+  voMeasured = analogRead(measurePin); // read the dust value
+  delayMicroseconds(deltaTime);
+  digitalWrite(ledPower,HIGH); // turn the LED off
+  delayMicroseconds(sleepTime);
+  // 0 - 5V mapped to 0 - 1023 integer values
+  // recover voltage
+  calcVoltage = voMeasured * (5.0 / 1024.0);
+
+  // linear eqaution taken from http://www.howmuchsnow.com/arduino/airquality/
+  // Chris Nafis (c) 2012
+  dustDensity = 0.17 * calcVoltage - 0.1;
+  return dustDensity; // unit: mg/m3
+}

@@ -1,0 +1,38 @@
+/*
+ * 예제 174-1 사물인터넷보드(wemos d1r1)에 워터펌프와 플로우센서를 연결했다!
+ * 워터펌프는 모스펫이나 릴레이를 이용해서 D4에 연결하고
+ * 플로우센서는 D3에 연결했다!
+ * 버튼을 눌렀을때 워터펌프가 작동하도록 하기 위해서 D5에 버튼을 달았다!
+ * 이번강의의 핵심은 사물인터넷보드에 인터럽트가 작동되는지 하는 것이다!
+ * 결론적으로 인터럽트로 호출되는 함수앞에 ICACHE_RAM_ATTR를 붙혀주면 된다!
+ */
+volatile double water = 0;
+
+#define pump D4 //MOSFET or Relay
+#define flowsensor D3
+#define button D5
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(flowsensor,INPUT);
+  pinMode(pump,OUTPUT);
+  pinMode(button,INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(flowsensor), flow, FALLING);
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(button) == LOW){
+    //버튼이 눌려진것!
+    digitalWrite(pump,HIGH);
+  }else{
+    //버튼이 안눌려진것!
+    digitalWrite(pump,LOW);
+  }
+  Serial.println(water);
+  delay(100);
+}
+
+ICACHE_RAM_ATTR void flow(){
+  water += (1/5888.0)*1000; //단위mL
+}

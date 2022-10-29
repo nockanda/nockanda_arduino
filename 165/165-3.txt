@@ -1,0 +1,61 @@
+/*
+  예제 165-3 이산화탄소센서(MH-Z19B)를 Rx핀을 D3에 Tx핀을 D2에 연결했다!
+  SD카드 모듈을 H/W SPI 통신핀에 적절히 연결하고 CS핀은 D4에 연결했다!
+  이산화탄소센서에서 측정되는 이산화탄소농도와 온도값을 SD카드에 기록하라!
+*/
+
+#include <SPI.h>
+#include <SD.h>
+#include <SoftwareSerial.h>
+#include <MHZ19.h>
+
+SoftwareSerial ss(2,3); //RX, TX
+MHZ19 mhz(&ss);
+const int chipSelect = 4;
+
+void setup() {
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600);
+  ss.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+  Serial.print("Initializing SD card...");
+  // see if the card is present and can be initialized:
+  if (!SD.begin(chipSelect)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    while (1);
+  }
+  Serial.println("card initialized.");
+
+  
+}
+
+void loop() {
+  File dataFile = SD.open("165-3.txt", FILE_WRITE);
+  String co2;
+  if (dataFile) {
+    MHZ19_RESULT response = mhz.retrieveData();
+    if (response == MHZ19_RESULT_OK)
+    {
+       co2 = String(mhz.getCO2()) + "," + String(mhz.getTemperature());
+
+    }
+    else
+    {
+      Serial.print(F("Error, code: "));
+      Serial.println(response);
+    }
+  
+    dataFile.println(co2); //SD카드에 기록
+    dataFile.close();
+    // print to the serial port too:
+    Serial.println(co2); //시리얼모니터 확인용!
+  }
+  else {
+    Serial.println("error opening datalog.txt");
+  }
+
+  delay(1000);
+}

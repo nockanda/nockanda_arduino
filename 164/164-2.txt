@@ -1,0 +1,45 @@
+/*
+ * 예제 164-2 온습도센서(DHT11)을 D3에 연결했다!
+ * 온습도센서에서 측정되는 온도와 습도값을 SD카드모듈을 연결해서 SD카드에 기록해보도록하자!
+ */
+
+#include <SPI.h>
+#include <SD.h>
+#include "DHT.h"
+#define DHTPIN 3 
+#define DHTTYPE DHT11
+const int chipSelect = 4;
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  Serial.print("Initializing SD card...");
+
+  // see if the card is present and can be initialized:
+  if (!SD.begin(chipSelect)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    while (1);
+  }
+  Serial.println("card initialized.");
+  dht.begin();
+}
+
+void loop() {
+  File dataFile = SD.open("164-2.txt", FILE_WRITE);
+
+  if (dataFile) {
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+    String data = String(h) + "," + String(t);
+    dataFile.println(data);
+    dataFile.close();
+    Serial.println(data);
+  }
+  else {
+    Serial.println("error opening datalog.txt");
+  }
+
+  delay(1000);
+}

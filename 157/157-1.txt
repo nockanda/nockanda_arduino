@@ -1,0 +1,277 @@
+/*
+    예제157-1 이산화탄소센서 MH-Z19B를 사물인터넷 보드인 wemos d1r1에 연결했다!
+    이산화탄소센서의 Tx핀을 D3에, Rx핀을 D4에 연결했다!
+    이산화탄소센서에서 출력되는 값을 웹브라우저에서 확인할 수 있도록 예제를 만들어보자!
+*/
+
+#include <ESP8266WiFi.h>
+#include <SoftwareSerial.h>
+#include <MHZ19.h>
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+SoftwareSerial ss(D3,D4); //Rx Tx
+MHZ19 mhz(&ss);
+
+float co2_set[7];
+float temp_set[7];
+
+void setup() {
+  Serial.begin(115200);
+  ss.begin(9600);
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  MHZ19_RESULT result = mhz.retrieveData();
+  float co2 = 0; //이산화탄소농도
+  float temp = 0; //온도
+  if (result == MHZ19_RESULT_OK)
+  {
+    co2 = mhz.getCO2();
+    temp= mhz.getTemperature();
+  }
+  //데이터 누적 시작
+  //co2_set temp_set
+  for(int i = 0;i<6;i++){
+    co2_set[i] = co2_set[i+1];
+    temp_set[i] = temp_set[i+1];
+  }
+  co2_set[6] = co2;
+  temp_set[6] = temp;
+  String co2_string;
+  String temp_string;
+  for(int i = 0;i<6;i++){
+    co2_string += String(co2_set[i]) + ",";
+    temp_string += String(temp_set[i]) + ",";
+  }
+  co2_string += co2_set[6];
+  temp_string += temp_set[6];
+  
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\n');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  //서버가 클라이언트로 받은 메시지 전문을 출력
+  while (client.available()) {
+    // byte by byte is not very efficient
+    String text = client.readStringUntil('\n');
+    Serial.println(text);
+  }
+
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"));
+  String response = "\
+  <!DOCTYPE html>\
+<html>\
+<head>\
+<title>NOCKANDA MHZ19B EXAMPLE</title>\
+<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js\"></script>\
+<script type=\"text/javascript\" charset=\"utf-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js\"></script>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:-4px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:500px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 500px;\
+}\
+</style>\
+</head>\
+<body>\
+<h1>NOCKANDA MHZ19B SENSOR EXAMPLE!</h1>\
+<table>\
+<tr id=\"c_head\"><th>Co2(PPM)</th><th>Temperature('C)</th></tr>\
+<tr id=\"c_head\">\
+   <th>\
+     <div style=\"width:250px; height:200px;\">\
+       <canvas id=\"donut1\"></canvas>\
+     </div>\
+    </th>\
+   <th>\
+     <div style=\"width:250px; height:200px;\">\
+       <canvas id=\"donut2\"></canvas>\
+     </div>\
+    </th>\
+</tr><tr><td colspan=2>\
+<div style=\"width:500px;\">\
+<canvas id=\"line1\"></canvas>\
+</div>\
+</td></tr><tr><td colspan=2 align=center>\
+<button id=\"btn\" onclick=\"location.href=window.location.href\">REFRESH</button>\
+</td></tr></table>\
+<script>\
+var t_value = "+
+String(co2)
++";\
+var t_color = \"red\";\
+var num = t_value /5000; \
+var data = { labels: [ \"Co2\" ], datasets: [ { data: [num, 1-num], backgroundColor: [t_color ], hoverBackgroundColor: [t_color] }] }; \
+var ctx2 = document.getElementById('donut1').getContext('2d');\
+var chart2 = new Chart(ctx2, {\
+type: 'doughnut',\
+data: data,\
+options: { \
+   responsive: true, \
+   legend: { display: false }, \
+   elements: { center: { text: Math.round(num*100), fontStyle: 'Helvetica', sidePadding: 15 } }, \
+   maintainAspectRatio : false, \
+   cutoutPercentage:70, \
+   animation: {\
+      onComplete: function () {\
+           ctx2.textAlign = 'center';\
+           ctx2.textBaseline = 'middle';\
+           ctx2.font = '50px Arial';\
+           ctx2.fillStyle = t_color;\
+           ctx2.fillText(t_value , chart2.width/2, chart2.height-70);\
+           ctx2.font = '20px Arial';\
+           ctx2.fillText(\"(PPM)\", chart2.width/2, chart2.height-40);\
+      }\
+   }, \
+   rotation: 1 * Math.PI, \
+   circumference: 1 * Math.PI } \
+});\
+var h_value = "+
+String(temp)
++";\
+var h_color = \"blue\";\
+var num2 = (h_value+50)/100; \
+var data2 = { labels: [ \"Temperature\" ], datasets: [ { data: [num2, 1-num2], backgroundColor: [ h_color ], hoverBackgroundColor: [ h_color] }] }; \
+var ctx3 = document.getElementById('donut2').getContext('2d');\
+var chart3 = new Chart(ctx3, {\
+type: 'doughnut',\
+data: data2,\
+options: { \
+   responsive: true, \
+   legend: { display: false }, \
+   elements: { center: { text: Math.round(num2*100), fontStyle: 'Helvetica', sidePadding: 15 } }, \
+   maintainAspectRatio : false, \
+   cutoutPercentage:70, \
+   animation: {\
+      onComplete: function () {\
+           ctx3.textAlign = 'center';\
+           ctx3.textBaseline = 'middle';\
+           ctx3.font = '50px Arial';\
+           ctx3.fillStyle = h_color;\
+           ctx3.fillText(h_value, chart3.width/2, chart3.height-70);\
+           ctx3.font = '20px Arial';\
+           ctx3.fillText(\"('C)\", chart3.width/2, chart3.height-40);\
+      }\
+   }, \
+   rotation: 1 * Math.PI, \
+   circumference: 1 * Math.PI } \
+});\
+var ctx = document.getElementById('line1').getContext('2d');\
+var chart = new Chart(ctx, {\
+type: 'line',\
+data: {\
+labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+datasets: [\
+{\
+label: 'Co2(PPM)',\
+backgroundColor: 'transparent',\
+borderColor: t_color,\
+data: ["+
+co2_string
++"]\
+},\
+{\
+label: 'Temperature',\
+backgroundColor: 'transparent',\
+borderColor: h_color,\
+data: ["+
+temp_string
++"]\
+}\
+]\
+},\
+options: {}\
+});\
+</script>\
+</body>\
+</html>\
+  ";
+
+  client.print(response);
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}

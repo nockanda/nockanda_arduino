@@ -1,0 +1,338 @@
+/*
+ * 예제 169-3 온습도센서가 달려있다고 가정하고 데이터를 디스플레이해보자!
+ * 한글을 불러오는데 시간이 꽤나 걸리므로 setup에서 배경화면처럼 띄워놓고 화면에서 변경되는 값인 온도와 습도값만 클리어하면서 한글을 다시 띄우는데 필요한 시간을 최소화 하는 예제~!
+*/
+
+// *** SPFD5408 change -- Begin
+#include <SPFD5408_Adafruit_GFX.h>    // Core graphics library
+#include <SPFD5408_Adafruit_TFTLCD.h> // Hardware-specific library
+#include <SPFD5408_TouchScreen.h>
+#include <SPI.h>
+#include <SD.h>
+// *** SPFD5408 change -- End
+
+// The control pins for the LCD can be assigned to any digital or
+// analog pins...but we'll use the analog pins as this allows us to
+// double up the pins with the touch screen (see the TFT paint example).
+#define LCD_CS A3 // Chip Select goes to Analog 3
+#define LCD_CD A2 // Command/Data goes to Analog 2
+#define LCD_WR A1 // LCD Write goes to Analog 1
+#define LCD_RD A0 // LCD Read goes to Analog 0
+
+#define LCD_RESET A4 // Can alternately just connect to Arduino's reset pin
+
+// When using the BREAKOUT BOARD only, use these 8 data lines to the LCD:
+// For the Arduino Uno, Duemilanove, Diecimila, etc.:
+//   D0 connects to digital pin 8  (Notice these are
+//   D1 connects to digital pin 9   NOT in order!)
+//   D2 connects to digital pin 2
+//   D3 connects to digital pin 3
+//   D4 connects to digital pin 4
+//   D5 connects to digital pin 5
+//   D6 connects to digital pin 6
+//   D7 connects to digital pin 7
+// For the Arduino Mega, use digital pins 22 through 29
+// (on the 2-row header at the end of the board).
+
+// Assign human-readable names to some common 16-bit color values:
+#define  BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+// If using the shield, all control and data lines are fixed, and
+// a simpler declaration can optionally be used:
+// Adafruit_TFTLCD tft;
+
+// -- Setup
+
+#define FONT16 32
+#define FONT24 72
+#define FONT36 128
+#define FONT40 200
+
+
+byte nockanda[6][FONT24];
+File myFile;
+void setup() {
+  //Initialize serial and wait for port to open:
+  Serial.begin(9600);
+  tft.reset();
+  tft.begin(0x9341); // SDFP5408
+
+  tft.setRotation(3);
+  tft.fillScreen(BLACK);
+
+  Serial.print(F("Initializing SD card..."));
+
+  if (!SD.begin(10)) {
+    Serial.println(F("initialization failed!"));
+    while (1);
+  }
+  Serial.println(F("initialization done."));
+
+
+  hangul2utf8(0,0,F("안녕하세요!"),WHITE,24);
+  hangul2utf8(0,24,F("녹칸다의 온습도센서입니다!"),WHITE,24);
+
+  hangul2utf8(0,50,F("온도 = "),WHITE,24);
+  hangul2utf8(0,74,F("습도 = "),WHITE,24);
+
+  /*
+  set_hangul(F("녹"),24,nockanda[0]);
+  set_hangul(F("칸"),24,nockanda[1]);
+  set_hangul(F("다"),24,nockanda[2]);
+  set_hangul(F("포"),24,nockanda[3]);
+  set_hangul(F("에"),24,nockanda[4]);
+  set_hangul(F("버"),24,nockanda[5]);
+  */
+  
+  //tft.fillScreen(BLACK);
+//16은 2바이트 24는 3바이트! 3바이트마다 개행
+
+                 
+  randomSeed(analogRead(0));
+}//setup
+
+int pre_t=0;
+int pre_h=0;
+void loop() {
+  //1 5x7//2 10x14 //3 15x21
+  tft.setTextSize(3);
+  tft.setTextColor(BLACK);
+  tft.setCursor(150, 50);
+  tft.print(pre_t);
+  tft.print("'C");
+  tft.setCursor(150, 74);
+  tft.print(pre_h);
+  tft.print("%");
+  tft.setTextColor(WHITE);
+  int t = random(30); //0~29
+  int h = random(50); //0~29
+  tft.setCursor(150, 50);
+  tft.print(t);
+  tft.print("'C");
+  tft.setCursor(150, 74);
+  tft.print(h);
+  tft.print("%");
+  pre_t= t;
+  pre_h= h;
+  delay(1000);
+}
+
+void draw_hangul(int x,int y, String utf8code,uint16_t color,int font_size){
+  
+  int font_array_count = 0;
+  String direct;
+
+  if(font_size == 16) {font_array_count=2;direct=F("nock16/");}
+  else if(font_size == 24) {font_array_count=3;direct=F("nock24/");}
+  else if(font_size == 32) {font_array_count=4;direct=F("nock32/");}
+  else if(font_size == 40) {font_array_count=5;direct=F("nock40/");}
+
+  //파일불러오기
+  myFile = SD.open(direct+utf8code+F(".txt"));
+  String output;
+  if (myFile) {
+    while (myFile.available()) {
+      output += String((char)myFile.read());
+    }
+    //Serial.println(output);
+    myFile.close();
+  } else {
+    Serial.println("NO FILE");
+    return;
+  }
+
+  int count = 1;
+  //4개가 1line
+  for(int i =0;i<output.length();i+=2){
+    //Serial.println();
+    //Serial.println(i);
+    byte value = shex2hex(output[i], output[i+1]);
+
+    for(int j =0;j<8;j++){
+        byte temp = (128>>j);
+        if((value & temp) == temp){
+          //해당 bit가 1인것!
+              tft.drawPixel(x,y,color);
+              //Serial.print("1");
+          }else{
+              //Serial.print("0");
+          }
+          x++;
+    }
+
+   if(count % font_array_count ==0){
+    //한라인구분
+    //Serial.println();
+    if(i == output.length()-2){
+      y++;
+      y-=font_size;
+      
+    }else{
+      y++;
+      x-=font_size;
+    }
+    //Serial.print("(");
+    //Serial.print(i);
+    //Serial.print(",");
+    //Serial.print(x);
+    //Serial.print(",");
+    //Serial.print(y);
+    //Serial.println(")");
+   }
+    count++;
+  }//for
+  tft.setCursor(x, y);
+}
+
+void draw_hangul2(int x,int y, byte hexcode[],uint16_t color,int font_size){
+  int font_array_count;
+  int loop_size = font_size*font_size/8;
+  if(font_size == 16) {font_array_count=2;}
+  else if(font_size == 24) {font_array_count=3;}
+  else if(font_size == 32) {font_array_count=4;}
+  else if(font_size == 40) {font_array_count=5;}
+  int count = 1;
+  //4개가 1line
+  for(int i =0;i<loop_size;i++){
+    //Serial.println();
+    //Serial.println(i);
+    byte value = hexcode[i];
+
+    for(int j =0;j<8;j++){
+        byte temp = (128>>j);
+        if((value & temp) == temp){
+          //해당 bit가 1인것!
+              tft.drawPixel(x,y,color);
+              //Serial.print("1");
+          }else{
+              //Serial.print("0");
+          }
+          x++;
+    }
+
+   if(count % font_array_count ==0){
+    //한라인구분
+    //Serial.println();
+    if(i == loop_size-2){
+      y++;
+      y-=font_size;
+      
+    }else{
+      y++;
+      x-=font_size;
+    }
+    //Serial.print("(");
+    //Serial.print(i);
+    //Serial.print(",");
+    //Serial.print(x);
+    //Serial.print(",");
+    //Serial.print(y);
+    //Serial.println(")");
+   }
+    count++;
+  }//for
+}
+
+byte shex2hex(char data1, char data2){
+//3F
+//숫자는 -'0' 하면 숫자로된다
+//a~f 는 -'a'+10 하면 숫자로된다
+  byte output;
+
+  int a,b;
+  if(data1 >= '0' && data1 <= '9'){
+   a = data1-'0';
+  }else if(data1 >= 'a' && data1 <= 'f'){
+   a = data1-'a'+10;
+  }else if(data1 >= 'A' && data1 <= 'F'){
+   a = data1-'A'+10; 
+  }
+  if(data2 >= '0' && data2 <= '9'){
+   b = data2-'0';
+  }else if(data2 >= 'a' && data2 <= 'f'){
+   b = data2-'a'+10;
+  }else if(data2 >= 'A' && data2 <= 'F'){
+   b = data2-'A'+10; 
+  }
+
+  return a*16+b;
+
+}
+
+void hangul2utf8(int x,int y, String text,uint16_t color,int fontsize){
+  tft.setTextColor(color); 
+  if(fontsize == 16) tft.setTextSize(2);
+  if(fontsize == 24) tft.setTextSize(3);
+  
+  tft.setCursor(x, y);
+  for(int i = 0;i<text.length();){
+    if((text[i] & 0xFF00) == 0xFF00){
+      //한글
+      //Serial.println("한글");
+      String output = String(text[i]&0xFF,HEX);
+      output += String(text[i+1]&0xFF,HEX);
+      output += String(text[i+2]&0xFF,HEX);
+      i+=3;
+      //Serial.println(output);
+      //이전 커서값을 가져와야한다..
+      
+      draw_hangul(tft.getCursorX(),tft.getCursorY(),output,color,fontsize);
+
+    }else{
+      //ascii
+      //Serial.println("아스키");
+      //Serial.println(text[i]);
+       tft.print(text[i]);
+      i++;
+    }
+
+  }
+}
+
+void set_hangul(String hangul,int font_size,byte data[]){
+  String output;
+  if((hangul[0] & 0xFF00) == 0xFF00){
+    //한글
+    //Serial.println("한글");
+    output = String(hangul[0]&0xFF,HEX);
+    output += String(hangul[1]&0xFF,HEX);
+    output += String(hangul[2]&0xFF,HEX);
+  }else{
+    //한글이 아닙니다~!
+    return;
+  }
+  String direct;
+  if(font_size == 16) {direct=F("nock16/");}
+  else if(font_size == 24) {direct=F("nock24/");}
+  else if(font_size == 32) {direct=F("nock32/");}
+  else if(font_size == 40) {direct=F("nock40/");}
+  //Serial.println(hangul);
+  //Serial.println(direct+output+".txt");
+  myFile = SD.open(direct+output+F(".txt"));
+
+  int count = 0;
+  char temp[2];
+  if (myFile) {
+    while (myFile.available()) {
+      //data += String((char)myFile.read());
+      myFile.readBytes(temp,2);
+      data[count] = shex2hex(temp[0],temp[1]);
+      count++;
+    }
+    //Serial.println(output);
+    myFile.close();
+  } else {
+    Serial.println("NO FILE");
+    return;
+  }
+
+  return data;
+}

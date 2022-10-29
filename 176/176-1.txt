@@ -1,0 +1,89 @@
+/*
+ * 176-1 녹칸다의 블로그 RSS FEED를 이용해서 최신글 최대 15개를
+ * 2.4인치 SPI LCD(ILI9341)에 출력해보는 예제!
+ */
+
+#include <ESP8266WiFi.h>
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+//https://bota.tistory.com/rss
+const char* host = "bota.tistory.com";
+const int httpsPort = 80;
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println();
+  Serial.print("connecting to ");
+  Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  // Use WiFiClientSecure class to create TLS connection
+  WiFiClient client;
+  Serial.print("connecting to ");
+  Serial.println(host);
+
+  //클라이언트와 서버와 커넥트
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("connection failed");
+    return;
+  }
+
+  String url = "/rss";
+  Serial.print("requesting URL: ");
+  Serial.println(url);
+
+  //사물인터넷보드에서 RSS서버로 보내는 요청!
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long t = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - t > 10000) break;
+  }
+
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+
+  int count = 0;
+  while(client.available()){
+    //String data = "<title> tes nockanda </title>";
+    String data = client.readStringUntil('\n'); //readline();
+    if(data.length() < 200){
+      int s = data.indexOf("<title>"); //
+      int e = data.lastIndexOf("</title>"); //
+      if(s != -1 && e != -1){
+       String output = data.substring(s+7,e);
+       Serial.println(output); //output에 담긴 문자열을 PC에 시리얼 모니터에 출력해라~
+       count++;
+      }
+
+      if(count >= 10) break; //테스트용
+    }
+  }
+  Serial.println("DONE");
+}
+
+void loop() {
+}

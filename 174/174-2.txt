@@ -1,0 +1,191 @@
+/*
+    예제174-2 사물인터넷보드(wemos d1r1)에 사물인터넷 기본코드를 웹서버모드로 올리고
+    174-1에서 구현한 결과를 이용해서 노트북이나 스마트폰의 웹브라우저에서 워터펌프를 제어할 수 있도록 해보자!
+*/
+
+#include <ESP8266WiFi.h>
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+#define pump D4 //MOSFET or Relay
+#define flowsensor D3
+#define button D5
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+
+volatile double water = 0;
+bool pump_state = false;
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(flowsensor,INPUT);
+  pinMode(pump,OUTPUT);
+  pinMode(button,INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(flowsensor), flow, FALLING);
+
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\n');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  //서버가 클라이언트로 받은 메시지 전문을 출력
+  while (client.available()) {
+    // byte by byte is not very efficient
+    String text = client.readStringUntil('\n');
+    Serial.println(text);
+  }
+
+  // Match the request
+  int val;
+  if (req.indexOf(F("/ON")) != -1) {
+    pump_state = HIGH;
+  } else if (req.indexOf(F("/OFF")) != -1) {
+    pump_state = LOW;
+  } else if (req.indexOf(F("/CLEAR")) != -1) {
+    water = 0;
+  } else {
+    pump_state = digitalRead(pump);
+  }
+
+  String onoff;
+  if(pump_state == HIGH){
+    onoff = "ON";
+  }else{
+    onoff = "OFF";
+  }
+  digitalWrite(pump,pump_state);
+  // read/ignore the rest of the request
+  // do not client.flush(): it is for output only, see below
+  /*while (client.available()) {
+    // byte by byte is not very efficient
+    //client.read();
+  }*/
+
+  // Send the response to the client
+  // it is OK for multiple small client.print/write,
+  // because nagle algorithm will group them into one single packet
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"));
+  String response = "\
+<!DOCTYPE html>\
+<html>\
+<head>\
+<meta charset=\"utf-8\">\
+<title>녹칸다의 워터펌프&플로우센서 예제</title>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:-4px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:500px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 500px;\
+}\
+</style>\
+</head>\
+<body>\
+<h1>녹칸다의 워터펌프&플로우센서 예제</h1>\
+<table>\
+<tr id=\"c_head\" ><th><h1>워터펌프 작동상태</h1><BR><button id=\"btn\" onclick=\"location.href='/ON'\">워터펌프작동</button>\
+   <button id=\"btn\" onclick=\"location.href='/OFF'\">워터펌프멈춤</button></th></tr>\
+<tr align=center><th><h1>"+
+onoff
++"</h1></th></tr>\
+<tr id=\"c_head\" ><th><h1>전체 토출량(플로우센서)</h1><BR><button id=\"btn\" onclick=\"location.href='/CLEAR'\">초기화</button></th></tr>\
+<tr align=center>\
+   <th><h1>"+
+   String(water)
+   +"ml</h1></th>\
+</tr>\
+<tr><th><button id=\"btn\" onclick=\"location.href='/R'\">새로고침</button></th></tr>\
+</table>\
+</body>\
+</html>\
+  ";
+
+  client.print(response);
+
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}
+ICACHE_RAM_ATTR void flow(){
+  water += (1/5888.0)*1000; //단위mL
+}

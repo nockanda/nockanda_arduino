@@ -1,0 +1,31 @@
+/*
+ * 예제167-1 블루투스모듈(AT09)를 마스터모드로 해서 TX를 D2에 연결하고 Rx를 D3에 연결했다!
+ * 소프트웨어 시리얼로 블루투스 모듈을 연결했다!
+ * 마스터아두이노에 버튼을 D4에 달아서 버튼을 눌렀을때 슬레이브에게 접속할 수 있는 기능을 구현한 예제이다!
+ */
+
+#include <SoftwareSerial.h>
+#define conn_button 4
+              
+SoftwareSerial AT09(2, 3); // RX, TX
+
+//0x50338BF41EAF (녹칸다의 슬레이브 MAC ADDRESS)
+void setup() {
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600); //PC-아두이노간 통신
+  AT09.begin(9600); //아두이노-블루투스간 통신
+  pinMode(conn_button,INPUT_PULLUP);
+}
+
+void loop() { // run over and over
+  if(digitalRead(conn_button) == LOW){
+    //버튼이 눌려진것!
+    //마스터쪽에서 슬레이브에게 접속명령을 내리자!
+    //보내고자 하는 text뒤에 CR+LF 2개를 붙혀서 보낼것!(제조사규칙)
+    AT09.println("AT+CONA50338BF41EAF");
+    delay(100);
+  }
+  if (AT09.available()) {
+    Serial.write(AT09.read());
+  }
+}

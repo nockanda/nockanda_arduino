@@ -1,0 +1,85 @@
+/*
+ * 예제171-2 바코드 정보를 담고있는 txt파일에 structed text로 내용을 구성하라!
+ * 예를들면 xml형태로 만들어서 저장한다음에 핸들링하는 방법을 제시해보라!
+ */
+
+#include <SoftwareSerial.h>
+#include <SPI.h>
+#include <SD.h>
+
+File myFile;
+SoftwareSerial GM65(2, 3);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신
+  GM65.begin(9600); //아두이노-바코드리더간 통신
+  Serial.print("Initializing SD card...");
+
+  if (!SD.begin(4)) {
+    Serial.println("initialization failed!");
+    while (1);
+  }
+  Serial.println("initialization done.");
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(GM65.available()){
+    String barcode = GM65.readStringUntil(0x0d); //readline
+    Serial.println(barcode);
+    //국가코드3자리 회사코드4자리 상품코드5(+1)=6자리
+    //0 1 2 / 3 4 5 6 / 7 8 9 10 11 12
+    String part1 = barcode.substring(0,3);//A이상~ B미만
+    String part2 = barcode.substring(3,7);
+    String part3 = barcode.substring(7,13);
+    
+    String path = part1 + "/" + part2 + "/" + part3 + ".txt";
+
+    //상품정보는 xml형태로 되어있는데 필드의 이름은 아래와 같다
+    //<name>상품명</name>
+    //<price>가격</price>
+    //<content>설명</content>
+    myFile = SD.open(path);
+    if (myFile) {
+      Serial.println(path);
+      String result;
+      while (myFile.available()) {
+        result += String((char)myFile.read());
+      }
+      //Serial.println(result);
+
+      //상품명을 분리해보자!
+      String target = "<name>";
+      int c_start = result.indexOf(target) + target.length();
+      int c_end = result.indexOf(F("</name>"));
+      
+      String c_name = result.substring(c_start,c_end);
+
+      //가격을 분리해보자!
+      target = "<price>";
+      c_start = result.indexOf(target) + target.length();
+      c_end = result.indexOf(F("</price>"));
+      String c_price = result.substring(c_start,c_end);
+
+      //상품설명을 분리해보자!
+      target = "<cotent>";
+      c_start = result.indexOf(target) + target.length();
+      c_end = result.indexOf(F("</content>"));
+      String c_content = result.substring(c_start,c_end);
+
+      Serial.print("상품명=");
+      Serial.println(c_name);
+      Serial.print("금액=");
+      Serial.println(c_price);
+      Serial.print("설명=");
+      Serial.println(c_content);
+      
+      myFile.close();
+    } else {
+      Serial.println("error opening test.txt");
+    }
+    
+  }
+}

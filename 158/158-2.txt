@@ -1,0 +1,107 @@
+/*
+ * 예제158-2 모터드라이브(L298N)를 아두이노에 연결했다!
+ * 방향제어핀 2개를 D4,D5에 연결하고 속도제어핀 1개를 D3에 연결했다!
+ * 적외선(IR) 수신기를 D10에 연결해서 리모컨 키값을 이용해서 DC모터를 제어하라!
+ * key - map
+ * FFE01F -  : 속도내림
+   FFA857 +  : 속도올림
+   FF22DD |◀◀  : 속도 최하
+   FF02FD ▶▶|  : 숙도 최상
+   FFA25D CH- : backward
+   FFE21D CH+ : forward
+ */
+/*
+    FF30CF 1
+    FF18E7 2
+    FF7A85 3
+    FF10EF 4
+    FF38C7 5
+    FF5AA5 6
+    FF42BD 7
+    FF4AB5 8
+    FF52AD 9
+    FF6897 0
+    FF9867 100+
+    FFB04F 200+
+    FFE01F -
+    FFA857 +
+    FF906F EQ
+    FF22DD |◀◀
+    FF02FD ▶▶|
+    FFC23D ▶||
+    FFA25D CH-
+    FF629D CH
+    FFE21D CH+
+    */
+#include <IRremote.h>
+
+//IN3 IN4 ENB : D5, D4, D3
+#define sp 3 //물결표잇는 핀에서 analogWrite가능
+#define d1 4 
+#define d2 5
+
+int RECV_PIN = 10;
+
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+
+int motor_power = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(d1,OUTPUT);
+  pinMode(d2,OUTPUT);
+
+  Serial.println("Enabling IRin");
+  irrecv.enableIRIn(); // Start the receiver
+  Serial.println("Enabled IRin");
+
+  digitalWrite(d1,HIGH);
+  digitalWrite(d2,LOW);
+  analogWrite(sp,0); //0~255
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (irrecv.decode(&results)) {
+    Serial.println(results.value, HEX);
+
+    if(results.value == 0xFFE01F){
+      //FFE01F -  : 속도내림
+      motor_power-=32;
+      if(motor_power < 0) motor_power=0;
+      analogWrite(sp,motor_power);
+      Serial.println("속도내림");
+      Serial.println(motor_power);
+    }else if(results.value == 0xFFA857){
+      // FFA857 +  : 속도올림
+      motor_power+=32;
+      if(motor_power > 255) motor_power = 255;
+      analogWrite(sp,motor_power);
+      Serial.println("속도올림");
+      Serial.println(motor_power);
+    }else if(results.value == 0xFF22DD){
+      //FF22DD |◀◀  : 속도 최하
+      analogWrite(sp,0);
+      Serial.println("속도최하");
+    }else if(results.value == 0xFF02FD){
+      //FF02FD ▶▶|  : 숙도 최상
+      analogWrite(sp,255);
+      Serial.println("속도최상");
+    }else if(results.value == 0xFFA25D){
+      //FFA25D CH- : backward
+      digitalWrite(d1,HIGH);
+      digitalWrite(d2,LOW);
+      Serial.println("역방향");
+    }else if(results.value == 0xFFE21D){
+      //FFE21D CH+ : forward
+      digitalWrite(d1,LOW);
+      digitalWrite(d2,HIGH);
+      Serial.println("정방향");
+    }
+    irrecv.resume(); // Receive the next value
+  }
+  delay(100);
+  
+  
+}

@@ -1,0 +1,54 @@
+/*
+ * 예제155-1
+ * GM65를 아두이노에 적절히 연결해서 soft serial통신을 해보자!
+ * GM65로 리딩된 바코드를 dictionary 자료구조를 사용해보자!
+ * 그런데 제대로된 dictionary는 없다!
+ * 그냥 dictionary를 이렇게 사용할 수 있구나~ 하는데 의미를 두자!
+ */
+
+#include <SoftwareSerial.h>
+#include <Arduino.h>
+//There might be an issue with arduino Strings ; that's why I have included the Arduino.h here
+#include <Dictio.h>
+
+SoftwareSerial GM65(2, 3); //RX TX
+Dictio myDictio;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //아두이노-PC간 시리얼통신
+  GM65.begin(9600); //아두이노-바코드리더간 시리얼통신
+  //상품정보를 등록
+  /*
+   8801045520117 라면
+  8809055546219 생수
+  8801048101023 소주
+  2851690029004 셀카봉
+  8801043015653 컵라면
+   */
+  myDictio.addVar(F("8801045520117"));
+  myDictio.addVar(F("8809055546219"));
+  myDictio.addVar(F("8801048101023"));
+  myDictio.addVar(F("2851690029004"));
+  myDictio.addVar(F("8801043015653"));
+  myDictio.addVar(F("8801008700129"));
+ 
+  myDictio.setVar(F("8801045520117"), F("라면"));
+  myDictio.setVar(F("8809055546219"), F("생수"));
+  myDictio.setVar(F("8801048101023"), F("소주"));
+  myDictio.setVar(F("2851690029004"), F("셀카봉"));
+  myDictio.setVar(F("8801043015653"), F("컵라면"));
+  myDictio.setVar(F("8801008700129"), F("구강세정제"));
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(GM65.available()){
+    //종료문자가 CR(캐리지리턴이구나!)
+    String c =GM65.readStringUntil(0x0D);
+    Serial.println(c);
+    //바코드(key)에 대한 value를 가지고 오너라!
+    Serial.println(myDictio.getValue(c));
+  }
+}

@@ -1,0 +1,50 @@
+/*
+ * 예제168-2-2 블루투스모듈(AT09)를 슬레이브모드로 해서 TX를 D2에 연결하고 Rx를 D3에 연결했다!
+ * 소프트웨어 시리얼로 블루투스 모듈을 연결했다!
+ * 슬레이브에 스탭모터가 D4~D7에 연결되어있다!
+ * 마스터쪽에서 0을 수신하면 각도를 32스탭씩 줄이고 1을 수신하면 32씩 증가시켜라!
+ * (실제 날라오는 데이터) '0','\r','\n'
+ * (실제 날라오는 데이터) '1','\r','\n'
+ */
+
+#include <SoftwareSerial.h>
+#include <Stepper.h>
+
+const int stepsPerRevolution = 2048;
+                                    //1234:7654
+                                    //IN4 IN2 IN3 IN1
+Stepper myStepper(stepsPerRevolution, 4, 6, 5, 7);             
+SoftwareSerial AT09(2, 3); // RX, TX
+
+
+//0x50338BF41EAF (녹칸다의 슬레이브 MAC ADDRESS)
+void setup() {
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600); //PC-아두이노간 통신
+  AT09.begin(9600); //아두이노-블루투스간 통신
+  myStepper.setSpeed(10);
+}
+
+void loop() { // run over and over
+ 
+  if (AT09.available()) {
+    //마스터쪽에서 슬레이브 아두이노로 뭔가 날린값이 존재한다면~
+    byte data[3];
+    AT09.readBytes(data,3);
+    Serial.println(data[0]);
+    Serial.println(data[1]);
+    Serial.println(data[2]);
+    
+    if(data[0] == '0'){
+      //감소
+      //1바퀴=360도=2048스탭  360:2048
+      //스탭모터 최소스탭수는 32스탭
+      myStepper.step(-32);
+      //myStepper.step(-2048);
+    }else if(data[0] == '1'){
+      //증가
+      myStepper.step(32);
+      //myStepper.step(2048);
+    }
+  }
+}

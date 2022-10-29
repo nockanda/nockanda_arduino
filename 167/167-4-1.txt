@@ -1,0 +1,62 @@
+/*
+ * 예제167-4-1 블루투스모듈(AT09)를 마스터모드로 해서 TX를 D2에 연결하고 Rx를 D3에 연결했다!
+ * 소프트웨어 시리얼로 블루투스 모듈을 연결했다!
+ * 마스터아두이노에 버튼을 D4에 달아서 버튼을 눌렀을때 슬레이브에게 접속할 수 있는 기능을 구현한 예제이다!
+ * 마스터에 온습도센서(DHT-11)을 D5에 연결했다!
+ * DHT11에서 출력되는 온도와 습도정보를 슬레이브로 전송하시오!
+ * (온도) 는 음수가 발생할 여지가 있어서 100을 더해서 보낸다!(-100~+100)
+ * 온도1byte 습도1byte
+ */
+
+#include <SoftwareSerial.h>
+#include "DHT.h"
+#define conn_button 4
+#define DHTPIN 5
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);              
+SoftwareSerial AT09(2, 3); // RX, TX
+
+unsigned long t = 0;
+
+//0x50338BF41EAF (녹칸다의 슬레이브 MAC ADDRESS)
+void setup() {
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600); //PC-아두이노간 통신
+  AT09.begin(9600); //아두이노-블루투스간 통신
+  pinMode(conn_button,INPUT_PULLUP);
+  dht.begin();
+}
+
+void loop() { // run over and over
+  if(digitalRead(conn_button) == LOW){
+    //버튼이 눌려진것!
+    //마스터쪽에서 슬레이브에게 접속명령을 내리자!
+    //보내고자 하는 text뒤에 CR+LF 2개를 붙혀서 보낼것!(제조사규칙)
+    AT09.println("AT+CONA50338BF41EAF");
+    delay(100);
+  }
+
+  if (AT09.available()) {
+    Serial.write(AT09.read());
+  }
+  
+  //2000ms에 한번 실행되는데 멈추지 않는코드!
+  unsigned long t2 = millis(); //스탑워치
+  if(t2 - t > 2000){
+    t = t2; 
+    float h = dht.readHumidity(); //습도
+    float t = dht.readTemperature(); //온도
+    Serial.print(t);
+    Serial.print(",");
+    Serial.println(h);
+    
+    byte data[4];
+    data[0] = (int)t+100;
+    data[1] = (int)h;
+    data[2] = 0x0D; //CR
+    data[3] = 0x0A; //LF
+    AT09.write(data,4);
+    
+    
+  }
+}

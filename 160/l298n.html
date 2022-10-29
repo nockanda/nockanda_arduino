@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>NOCKANDA L298N EXAMPLE</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+<style>
+#btn{
+border: 1px solid blue;
+background-color: rgba(0,0,0,0);
+color: blue;
+padding: 5px;
+border-top-left-radius: 5px;
+border-bottom-left-radius: 5px;
+border-top-right-radius: 5px;
+border-bottom-right-radius: 5px;
+margin-right:-4px;
+height:40px;
+}
+table {
+border-collapse: collapse;
+width:500px;
+}
+table, td, th {
+border: solid 1px #cccccc;
+}
+tr {
+height:40px;
+text-align: center;
+}
+td, th {
+padding: 5px;
+}
+.set1 {
+background-color: red;
+color: white;
+text-decoration: underline;
+font-weight: bold;
+}
+#c_head {
+height:30px;
+background-color: #eeeeee;
+}
+#c_width{
+width: 500px;
+}
+</style>
+</head>
+<body>
+<h1>NOCKANDA L298N MOTOR DRIVER EXAMPLE!</h1>
+<table>
+<tr id="c_head"><th>MOTOR1</th><th>MOTOR2</th></tr>
+<tr><th>DIRECTION (+)</th><th>DIRECTION (+)</th></tr>
+<tr id="c_head">
+   <th>
+     <div style="width:250px; height:200px;">
+       <canvas id="donut1"></canvas>
+     </div>
+    </th>
+   <th>
+     <div style="width:250px; height:200px;">
+       <canvas id="donut2"></canvas>
+     </div>
+    </th>
+</tr>
+<tr>
+   <td><button id="btn" onclick="location.href='/M1D+'">M1 DIRECTION +</button></td>
+   <td><button id="btn" onclick="location.href='/M2D+'">M2 DIRECTION +</button></td>
+</tr>
+<tr>
+   <td><button id="btn" onclick="location.href='/M1D-'">M1 DIRECTION -</button></td>
+   <td><button id="btn" onclick="location.href='/M2D-'">M2 DIRECTION -</button></td>
+</tr>
+<tr>
+   <td><button id="btn" onclick="location.href='/M1UP'">M1 POWER UP</button></td>
+   <td><button id="btn" onclick="location.href='/M2UP'">M2 POWER UP</button></td>
+</tr>
+<tr>
+   <td><button id="btn" onclick="location.href='/M1DOWN'">M1 POWER DOWN</button></td>
+   <td><button id="btn" onclick="location.href='/M2DOWN'">M2 POWER DOWN</button></td>
+</tr>
+<tr>
+   <td><button id="btn" onclick="location.href='/M1MAX'">M1 POWER MAX</button></td>
+   <td><button id="btn" onclick="location.href='/M2MAX'">M2 POWER MAX</button></td>
+</tr>
+<tr>
+   <td><button id="btn" onclick="location.href='/M1MIN'">M1 POWER MIN</button></td>
+   <td><button id="btn" onclick="location.href='/M2MIN'">M2 POWER MIN</button></td>
+</tr>
+</table>
+<script>
+var t_value = 812;
+var t_color = "red";
+var num = t_value /1023; 
+var data = { labels: [ "Co2" ], datasets: [ { data: [num, 1-num], backgroundColor: [t_color ], hoverBackgroundColor: [t_color] }] }; 
+var ctx2 = document.getElementById('donut1').getContext('2d');
+var chart2 = new Chart(ctx2, {
+type: 'doughnut',
+data: data,
+options: { 
+   responsive: true, 
+   legend: { display: false }, 
+   elements: { center: { text: Math.round(num*100), fontStyle: 'Helvetica', sidePadding: 15 } }, 
+   maintainAspectRatio : false, 
+   cutoutPercentage:70, 
+   animation: {
+      onComplete: function () {
+           ctx2.textAlign = 'center';
+           ctx2.textBaseline = 'middle';
+           ctx2.font = '50px Arial';
+           ctx2.fillStyle = t_color;
+           ctx2.fillText(Math.round(num*100), chart2.width/2, chart2.height-70);
+           ctx2.font = '20px Arial';
+           ctx2.fillText("(%)", chart2.width/2, chart2.height-40);
+      }
+   }, 
+   rotation: 1 * Math.PI, 
+   circumference: 1 * Math.PI } 
+});
+var h_value = 20;
+var h_color = "blue";
+var num2 = h_value /1023; 
+var data2 = { labels: [ "Temperature" ], datasets: [ { data: [num2, 1-num2], backgroundColor: [ h_color ], hoverBackgroundColor: [ h_color] }] }; 
+var ctx3 = document.getElementById('donut2').getContext('2d');
+var chart3 = new Chart(ctx3, {
+// 챠트 종류를 선택
+type: 'doughnut',
+data: data2,
+options: { 
+   responsive: true, 
+   legend: { display: false }, 
+   elements: { center: { text: Math.round(num2*100), fontStyle: 'Helvetica', sidePadding: 15 } }, 
+   maintainAspectRatio : false, 
+   cutoutPercentage:70, 
+   animation: {
+      onComplete: function () {
+           ctx3.textAlign = 'center';
+           ctx3.textBaseline = 'middle';
+           ctx3.font = '50px Arial';
+           ctx3.fillStyle = h_color;
+           ctx3.fillText(Math.round(num2*100), chart3.width/2, chart3.height-70);
+           ctx3.font = '20px Arial';
+           ctx3.fillText("(%)", chart3.width/2, chart3.height-40);
+      }
+   }, 
+   rotation: 1 * Math.PI, 
+   circumference: 1 * Math.PI } 
+});
+</script>
+</body>
+</html>

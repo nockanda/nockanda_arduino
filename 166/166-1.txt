@@ -1,0 +1,58 @@
+/*
+ * 예제 166-1 지문센서(FPM10A)의 TX를 D2에 연결하고 RX를 D3에 연결해서 soft serail통신을 하자!
+ * SD카드모듈을 SPI통신핀에 연결하고 CS핀을 D4에 연결했다!
+ * 지문센서에서 출력되는 지문의 ID값을 이용해서 SD카드안에 있는 파일의 내용을 출력하시오!
+ */
+#include <Adafruit_Fingerprint.h>
+#include <SPI.h>
+#include <SD.h>
+
+SoftwareSerial mySerial(2, 3);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  finger.begin(57600);
+
+  Serial.print("Initializing SD card...");
+
+  if (!SD.begin(4)) {
+    Serial.println("initialization failed!");
+    while (1);
+  }
+  Serial.println("initialization done.");
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK)  return;
+  
+  // found a match!
+  Serial.print("Found ID #");
+  Serial.print(finger.fingerID); 
+  Serial.print(" with confidence of ");
+  Serial.println(finger.confidence);
+
+  //파일을 읽어서 정보출력
+  String path = "finger" + String(finger.fingerID) + ".txt";
+  Serial.println(path);
+  File myFile = SD.open(path);
+  if (myFile) {
+    Serial.println(path);
+    while (myFile.available()) {
+      Serial.write(myFile.read());
+    }
+    Serial.println();
+    myFile.close();
+  } else {
+    Serial.println("error opening test.txt");
+  }
+}

@@ -1,0 +1,72 @@
+/*
+ * 예제155-2
+ * 바코드리드를 했을때 상품정보와 가격, 약간의 설명이 출력되도록 해보자!
+ */
+
+#include <SoftwareSerial.h>
+#include <Arduino.h>
+//There might be an issue with arduino Strings ; that's why I have included the Arduino.h here
+#include <Dictio.h>
+
+SoftwareSerial GM65(2, 3); //RX TX
+Dictio myDictio;
+unsigned long total_price = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //아두이노-PC간 시리얼통신
+  GM65.begin(9600); //아두이노-바코드리더간 시리얼통신
+  //상품정보를 등록
+  /*
+   8801045520117 라면
+  8809055546219 생수
+  8801048101023 소주
+  2851690029004 셀카봉
+  8801043015653 컵라면
+   */
+  myDictio.addVar(F("8801045520117"));
+  myDictio.addVar(F("8809055546219"));
+  myDictio.addVar(F("8801048101023"));
+  myDictio.addVar(F("2851690029004"));
+  myDictio.addVar(F("8801043015653"));
+  myDictio.addVar(F("8801008700129"));
+ 
+  myDictio.setVar(F("8801045520117"), F("라면/800/순한맛"));
+  myDictio.setVar(F("8809055546219"), F("생수/300/먹는샘물"));
+  myDictio.setVar(F("8801048101023"), F("소주/1200/회수하면100원"));
+  myDictio.setVar(F("2851690029004"), F("셀카봉/2900/중국산"));
+  myDictio.setVar(F("8801043015653"), F("컵라면/700/작은컵"));
+  myDictio.setVar(F("8801008700129"), F("구강세정제/5500/750ml"));
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(GM65.available()){
+    //종료문자가 CR(캐리지리턴이구나!)
+    String c =GM65.readStringUntil(0x0D);
+    Serial.println(c);
+    //바코드(key)에 대한 value를 가지고 오너라!
+    String result = myDictio.getValue(c);
+
+    String info[3];
+    int info_index = 0;
+    for(int i = 0;i<result.length();i++){
+      if(result[i] == '/'){
+        //구분자에 걸린거!
+        info_index++;
+        continue;
+      }
+      info[info_index] += String(result[i]);
+    }
+
+    Serial.print("상품명=");
+    Serial.println(info[0]);
+    Serial.print("가격=");
+    Serial.println(info[1]);
+    Serial.print("설명=");
+    Serial.println(info[2]);
+    total_price+=info[1].toInt();
+    Serial.print("총금액=");
+    Serial.println(total_price);
+  }
+}

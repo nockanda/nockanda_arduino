@@ -1,0 +1,197 @@
+/*
+ * 156-1
+ * 8*32 도트매트릭스(MAX7219)를 사물인터넷보드인 wemos d1r1에 연결했다
+ * 연결은 아래와같이 했다!
+ * D12 : DIN
+ * D11 : CLK
+ * D10 : CS 
+ * wemos d1r1을 post server로 작동시키고 클라이언트인 웹브라우저에서
+ * 체크박스를 통해 전송한 패턴을 그대로 dot matrix에 출력시켜라!
+ */
+
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+#include "LedControl.h"
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+const char* ssid     = STASSID;
+const char* password = STAPSK;
+
+ESP8266WebServer server(80);
+LedControl lc=LedControl(D12,D11,D10,4);//DIN,CLK,CS,디바이스갯수
+
+
+String postForms;
+
+void handleRoot() {
+  //digitalWrite(led, 1);
+  server.send(200, "text/html", postForms);
+  //digitalWrite(led, 0);
+}
+
+
+//두번째 form에서 처리하는부분
+void handleForm() {
+  if (server.method() != HTTP_POST) {
+    //digitalWrite(led, 1);
+    server.send(405, "text/plain", "Method Not Allowed");
+    //digitalWrite(led, 0);
+  } else {
+    String message = "POST form was:\n";
+    //도트매트릭스를 초기화
+    for(int i = 0;i<lc.getDeviceCount();i++){
+      //초기화 과정이다..
+      lc.clearDisplay(i);
+    }
+    for (uint8_t i = 0; i < server.args(); i++) {
+      int d = server.argName(i)[0] - '0';
+      int r = server.argName(i)[1] - '0';
+      int c = server.argName(i)[2] - '0';
+      lc.setLed(d,r,c,true);
+      message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+    }
+    server.send(200, "text/plain", message);
+    
+  }
+}
+
+void handleNotFound() {
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i = 0; i < server.args(); i++) {
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+  }
+  server.send(404, "text/plain", message);
+  
+}
+
+void setup(void) {
+  Serial.begin(115200);
+
+postForms = "\
+<!DOCTYPE html>\
+<html>\
+<head>\
+<title>NOCKANDA DOT MATRIX(MAX7219) EXAMPLE</title>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:-4px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:800px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 800px;\
+}\
+</style>\
+</head>\
+<body>\
+<h1>NOCKANDA DOT MATRIX(MAX7219) EXAMPLE!</h1>\
+<form method=\"post\" enctype=\"application/x-www-form-urlencoded\" action=\"/nockandaform/\">\
+<table border=0>\
+<tr id=\"c_head\"><th>8*32 DOT STATE</th></tr>\
+<tr id=\"c_head\"><th>\
+ <table><tr>";
+ 
+   for(int devicenum = 3;devicenum >= 0;devicenum--){
+     // 3 2 1 0
+     postForms += "<td>";
+     for(int i = 0 ;i<8;i++){
+        for(int j = 0;j<8;j++){ 
+          String checkbox_name = String(devicenum)+String(i)+String(j);
+           postForms += "<input type=\"checkbox\" name=\""+checkbox_name+"\" value=\"1\">";
+        }
+        postForms += "<BR>";
+     }
+     postForms += "</td>";
+   }
+postForms +=  "</tr></table>\
+</th>\
+<tr>\
+<td>\
+   <input type=\"submit\" value=\"Submit\">\
+</td>\
+</tr>\
+</table>\
+</form>\
+</html>\
+";
+
+  for(int i = 0;i<lc.getDeviceCount();i++){
+    //초기화 과정이다..
+    lc.shutdown(i,false);
+    lc.setIntensity(i,8);
+    lc.clearDisplay(i);
+  }
+  
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  if (MDNS.begin("esp8266")) {
+    Serial.println("MDNS responder started");
+  }
+
+  server.on("/", handleRoot);
+  server.on("/nockandaform/", handleForm);
+  server.onNotFound(handleNotFound);
+
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop(void) {
+  server.handleClient();
+}

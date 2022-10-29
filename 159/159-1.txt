@@ -1,0 +1,68 @@
+/*
+ * 예제159-1 블루투스모듈(HC06)을 D12,D13에 soft Serial로 연결했다!
+ * 모터드라이버(L298N)의 IN3,IN4,ENB핀을 각각 D5,D4,D3에 연결했다!
+ * 스마트폰에 arduino bluetooth 컨트롤러앱을 설치했다!
+ * 스마트폰을 블루투스 페어링을하고 스마트폰앱으로 모터드라이버를 제어하라!
+ */
+#include <SoftwareSerial.h>
+#define IN3 5
+#define IN4 4
+#define ENB 3
+SoftwareSerial bluetooth(12, 13); // RX, TX
+int motor_power = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신
+  bluetooth.begin(9600); //아두이노-블루투스모듈간 통신
+  pinMode(IN3,OUTPUT);
+  pinMode(IN4,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(bluetooth.available()){
+    //블루투스로 뭔가 날라온게 있는데..
+    char recv = bluetooth.read();
+    //방향키(wasd) 컨트롤키(1,2,3,4)
+    if(recv == 'w'){
+      //위(정방향)
+      Serial.println("위");
+      digitalWrite(IN3,HIGH);
+      digitalWrite(IN4,LOW);
+    }else if(recv == 'a'){
+      //왼쪽(파워감소)
+      Serial.println("왼쪽");
+      motor_power-=32;
+      if(motor_power < 0) motor_power = 0;
+      analogWrite(ENB,motor_power);
+    }else if(recv == 's'){
+      //아래(역방향)
+      Serial.println("아래");
+      digitalWrite(IN3,LOW);
+      digitalWrite(IN4,HIGH);  
+    }else if(recv == 'd'){
+      //오른(파워증가)
+      Serial.println("오른쪽");
+      motor_power+=32;
+      if(motor_power > 255) motor_power = 255;
+      analogWrite(ENB,motor_power);
+    }else if(recv == '1'){
+      //네모(사용안함)
+      Serial.println("네모");
+    }else if(recv == '2'){
+      //세모(파워MAX)
+      Serial.println("세모");
+      analogWrite(ENB,255);
+    }else if(recv == '3'){
+      //엑스(사용안함)
+      Serial.println("엑스");
+    }else if(recv == '4'){
+      //동그라미(파워MIN)
+      Serial.println("동그라미");
+      analogWrite(ENB,0);
+    }
+    //Serial.println(recv);
+    //Serial.write(bluetooth.read()); //블루투스-아두이노-PC
+  }
+  
+}

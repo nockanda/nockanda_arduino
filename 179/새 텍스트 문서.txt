@@ -1,0 +1,44 @@
+[아두이노#179] esp8266wifi MQTT로 FND모듈/OLED/LCD제어하기(2편)(wemos d1r1/사물인터넷(iot)시리즈#22/녹칸다/포로리야공대가자)
+
+esp8266wifi MQTT로 FND모듈/OLED/LCD제어하기(2편)(wemos d1r1/사물인터넷(iot)시리즈#22/녹칸다/포로리야공대가자)
+-MQTT를 이용해서 FND모듈(TM1637)을 제어해보자~!
+-특정한 숫자를 보내면 FND 모듈에 디스플레이 되면 될듯!
+-MQTT를 이용해서 0.91인치 OLED(SSD1306)를 제어해보자~!
+-TEXT를 보내면 OLED에 출력되면 될듯 하다!
+-MQTT를 이용해서 2.4인치 SPI LCD(ILI9341)을 제어해보자~!
+-TEXT를 보내면 그대로 출력하고 RGB 색상정보를 보내면 폰트 컬러를 바꿀 수 있도록 해보자!
+
+예제179-1 사물인터넷보드(wemos d1r1)에 FND모듈인 TM1637을 2개 연결했다!
+ 첫번째 TM1637은 CLK를 D3에 DIO를 D4에 연결했다!
+ 두번째 TM1637은 CLK를 D5에 DIO를 D6에 연결했다!
+ 스마트폰에 설치된 MQTT앱에서 발행한 숫자를 이용해서 TM1637에 개별적으로 값을 띄워라!
+
+
+179-1.txt
+0.00MB
+
+예제179-2 이번에는 0.91인치 OLED(SSD1306)을 I2C핀에 연결한다음
+ 스마트폰앱에서 날린 text를 띄워보자!
+
+
+179-2.txt
+0.00MB
+관련라이브러리(pubsubclient)
+
+https://pubsubclient.knolleary.net/
+
+관련라이브러리(Adafruit-GFX-Library)
+
+https://github.com/adafruit/Adafruit-GFX-Library
+
+관련라이브러리(Adafruit_ILI9341)
+
+https://github.com/adafruit/Adafruit_ILI9341
+
+관련라이브러리(TM1637)
+
+https://github.com/avishorp/TM1637
+
+관련라이브러리(ssd1306)
+
+https://github.com/adafruit/Adafruit_SSD1306

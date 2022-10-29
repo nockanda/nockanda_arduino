@@ -1,0 +1,68 @@
+/*
+ * 예제167-2-2 블루투스모듈(AT09)를 슬레이브모드로 해서 TX를 D2에 연결하고 Rx를 D3에 연결했다!
+ * 소프트웨어 시리얼로 블루투스 모듈을 연결했다!
+ * 슬레이브 아두이노에 LED4개가 있는데 D4, D5, D6, D7에 연결했다!
+ * 마스터쪽에서 날라오는 값으로 LED를 점멸시켜보자!
+ * 0000 => 모두 OFF
+ * 0001 => LED1 ON
+ * 0011 => LED1 LED2 ON
+ * 1100 => LED3, LED4 ON
+ * (실제 날라오는 데이터) '0','0','0','0','\r','\n'
+ */
+
+#include <SoftwareSerial.h>
+#define LED1 4
+#define LED2 5
+#define LED3 6
+#define LED4 7
+              
+SoftwareSerial AT09(2, 3); // RX, TX
+
+//0x50338BF41EAF (녹칸다의 슬레이브 MAC ADDRESS)
+void setup() {
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600); //PC-아두이노간 통신
+  AT09.begin(9600); //아두이노-블루투스간 통신
+  pinMode(LED1,OUTPUT);
+  pinMode(LED2,OUTPUT);
+  pinMode(LED3,OUTPUT);
+  pinMode(LED4,OUTPUT);
+}
+
+void loop() { // run over and over
+ 
+  if (AT09.available()) {
+    //마스터쪽에서 슬레이브 아두이노로 뭔가 날린값이 존재한다면~
+    byte data[6];
+    AT09.readBytes(data,6);
+    //0000 
+    if(data[3] == '0'){
+      //LED1 OFF
+      digitalWrite(LED1,LOW);
+    }else if(data[3] == '1'){
+      //LED1 ON
+      digitalWrite(LED1,HIGH);
+    }
+    if(data[2] == '0'){
+      //LED2 OFF
+      digitalWrite(LED2,LOW);
+    }else if(data[2] == '1'){
+      //LED2 ON
+      digitalWrite(LED2,HIGH);
+    }
+    if(data[1] == '0'){
+      //LED3 OFF
+      digitalWrite(LED3,LOW);
+    }else if(data[1] == '1'){
+      //LED3 ON
+      digitalWrite(LED3,HIGH);
+    }
+    if(data[0] == '0'){
+      //LED4 OFF
+      digitalWrite(LED4,LOW);
+    }else if(data[0] == '1'){
+      //LED4 ON
+      digitalWrite(LED4,HIGH);
+    }
+  }
+}

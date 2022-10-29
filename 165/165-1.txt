@@ -1,0 +1,73 @@
+/*
+  예제 165-1 알콜센서(MQ-3)을 A0에 연결했다!
+  SD카드 모듈을 H/W SPI 통신핀에 적절히 연결하고 CS핀은 D4에 연결했다!
+  알콜센서에서 측정되는 알콜농도(PPM)값을 SD카드에 저장하라!
+*/
+
+#include <SPI.h>
+#include <SD.h>
+#include <MQUnifiedsensor.h>
+/************************Hardware Related Macros************************************/
+#define         Board                   ("Arduino UNO")
+#define         Pin                     (A0)  //Analog input 3 of your arduino
+/***********************Software Related Macros************************************/
+#define         Type                    ("MQ-3") //MQ3
+#define         Voltage_Resolution      (5)
+#define         ADC_Bit_Resolution      (10) // For arduino UNO/MEGA/NANO
+#define         RatioMQ3CleanAir        (60) //RS / R0 = 60 ppm 
+/*****************************Globals***********************************************/
+//Declare Sensor
+MQUnifiedsensor MQ3(Board, Voltage_Resolution, ADC_Bit_Resolution, Pin, Type);
+const int chipSelect = 4;
+
+void setup() {
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+  Serial.print("Initializing SD card...");
+  // see if the card is present and can be initialized:
+  if (!SD.begin(chipSelect)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    while (1);
+  }
+  Serial.println("card initialized.");
+  
+  MQ3.setRegressionMethod(1); 
+  MQ3.setA(0.3934); MQ3.setB(-1.504); 
+  MQ3.init();
+  Serial.print("Calibrating please wait.");
+  float calcR0 = 0;
+  for(int i = 1; i<=10; i ++)
+  {
+    MQ3.update(); // Update data, the arduino will be read the voltage on the analog pin
+    calcR0 += MQ3.calibrate(RatioMQ3CleanAir);
+    Serial.print(".");
+  }
+  MQ3.setR0(calcR0/10);
+  Serial.println("  done!.");
+  
+  if(isinf(calcR0)) {Serial.println("Warning: Conection issue founded, R0 is infite (Open circuit detected) please check your wiring and supply"); while(1);}
+  if(calcR0 == 0){Serial.println("Warning: Conection issue founded, R0 is zero (Analog pin with short circuit to ground) please check your wiring and supply"); while(1);}
+}
+
+void loop() {
+
+  File dataFile = SD.open("165-1.txt", FILE_WRITE);
+
+  if (dataFile) {
+    MQ3.update();
+    float data = MQ3.readSensor(); 
+    dataFile.println(String(data)); //SD카드에 기록
+    dataFile.close();
+    // print to the serial port too:
+    Serial.println(String(data)); //시리얼모니터 확인용!
+  }
+  else {
+    Serial.println("error opening datalog.txt");
+  }
+
+  delay(1000);
+}

@@ -1,0 +1,177 @@
+/*
+ * 예제173-2(수신기코드)(예제51-1를 참조하는 코드)
+ * CDS에 1k옴 저항을 사용해서 디지털 적으로 사용했다.
+ * 아래와 같이 연결해야 풀업방식의 디지털 신호가 나온다!
+ * 5V----1K옴저항-----%%%%-----CDS-----GND
+ * (예시) 레이저빔이 검출되면 0(LOW) 아니면 1(HIGH)
+ * 왜냐면 기본 코드가... 풀업버튼으로 구현이 되었기 때문..(버튼을 CDS로 치환)
+ * 열전사프린터(THERMAL PRINTER)는 TX를 D5에 RX를 D6에 연결했다!
+ * uart통신의 보레이트가 9600인지 19200인지 확인해보고 연결할것!
+ * 모두 구성이 정확하다면 하나의 word가 전송된 시점에서 영수증 프린터의 1line에 text가 출력된다!
+ */
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include "Adafruit_Thermal.h"
+#include "SoftwareSerial.h"
+
+#define SCREEN_WIDTH 128 
+#define SCREEN_HEIGHT 32 
+#define OLED_RESET     4 
+#define TX_PIN 6
+#define RX_PIN 5 
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+SoftwareSerial mySerial(RX_PIN, TX_PIN); // Declare SoftwareSerial obj first
+Adafruit_Thermal printer(&mySerial);     // Pass addr to printer constructor
+
+#define UTIME 100
+#define codelength 43
+//점* 선-
+String morsecode[]=
+{
+  "-----",//0
+  "*----",//1
+  "**---",//2
+  "***--",//3
+  "****-",//4
+  "*****",//5
+  "-****",//6
+  "--***",//7
+  "---**",//8
+  "----*",//9
+  "", //:
+  "", //;
+  "", //<
+  "", //=
+  "", //>
+  "", //?
+  "", //@
+  "*-", //a
+  "-***", //b
+  "-*-*",//c
+  "-**",//d
+  "*",//e
+  "**-*",//f
+  "--*",//g
+  "****",//h
+  "**",//i
+  "*---",//j
+  "-*-",//k
+  "*-**",//l
+  "--",//m
+  "-*",//n
+  "---",//o
+  "*--*",//p
+  "--*-",
+  "*-*",
+  "***",
+  "-",
+  "**-",
+  "***-",
+  "*--",
+  "-**-",
+  "-*--",
+  "--**"
+};
+String output = "";
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(7, OUTPUT); digitalWrite(7, LOW);
+  // NOTE: SOME PRINTERS NEED 9600 BAUD instead of 19200, check test page.
+  mySerial.begin(9600);  // Initialize SoftwareSerial
+  //Serial1.begin(19200); // Use this instead if using hardware serial
+  printer.begin(); 
+  printer.setSize('L');
+  printer.boldOn();
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+  pinMode(2,INPUT); //CDS
+  display.clearDisplay();
+}
+String code = "";
+byte button = 0;
+byte pre_button = 0;
+unsigned long button_time = 0;
+unsigned long unbutton_time = 0;
+bool rest_state3 = false;
+bool rest_state7 = false;
+void loop() {
+  // put your main code here, to run repeatedly:
+  button = digitalRead(2);
+  if(pre_button == HIGH && button == LOW){
+    //폴링엣지 버튼이 눌려진 그 순간
+    button_time = millis();
+  }
+  if(pre_button == LOW && button == HIGH){
+    //라이징엣지 버튼이 떨어지는 그 순간
+    unbutton_time = millis();
+    rest_state3 = true;
+    rest_state7 = true;
+    //Serial.print("스톱워치 시작 ");
+    //Serial.println(unbutton_time);
+    button_time = millis() - button_time;
+    //sos ...---...
+    //여기가 버튼을 땐부분이다 여기서 뭔가 하자
+    if(button_time > UTIME*8){
+      //UTIME의 7배가 단어간 간격인데 여유있게 8배로
+      
+    }else if(button_time > UTIME*2){
+      //이걸 선이라고 가정하자
+      code += "-";
+      //Serial.println("-");
+    }else{
+      //이걸 점이라고 가정하자
+      code += "*";
+      //Serial.println("*");
+    }
+  }
+  
+  if(pre_button == HIGH && button == HIGH){
+    if(rest_state7){
+      unsigned long time2 = millis()-unbutton_time;
+      if(time2 > UTIME*7){
+        //한단어가 끝나는 시점
+        //Serial.print(" ");
+        //Serial.println(output);
+        display.clearDisplay();
+        display.setCursor(0,0); 
+        display.setTextSize(2);             // Draw 2X-scale text
+        display.setTextColor(SSD1306_WHITE);
+        display.print(output);
+        display.display();
+
+        printer.println(output);
+        printer.feed(2);
+        
+        output="";
+        rest_state7 = false;
+      }
+    }
+    if(rest_state3){
+      unsigned long time2 = millis()-unbutton_time;
+      
+      if(time2 > UTIME*3){
+        //Serial.print("결과 ");
+        //Serial.println(code);
+        //검색작업
+        for(int i = 0;i<codelength;i++){
+          if(morsecode[i] == code){
+            output += (char)(i+'0');
+            //Serial.print((char)(i+'0'));
+          }
+        }
+        rest_state3 = false;
+        code = "";
+      }
+      //if(unbutton_time > UTIME*3){
+      //  Serial.print("unbutton_time ");
+      //  Serial.println(unbutton_time);
+      //  rest_state = false;
+      //}
+    }
+  }
+  pre_button = button;
+}

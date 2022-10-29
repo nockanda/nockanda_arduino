@@ -1,0 +1,334 @@
+/*
+ * 예제160-1 사물인터넷보드(WEMOS D1R1)에 모터드라이버(L298N)를 연결했다!
+ * 모터드라이버의 제어핀 ENA, IN1, IN2, IN3, IN4 ,ENB는 아래와 같이 연결했다
+ * ENA : D8 //아날로그제어(PWM)
+ * IN1 : D7 //디지털제어
+ * IN2 : D6 //디지털제어
+ * IN3 : D5 //디지털제어
+ * IN4 : D4 //디지털제어
+ * ENB : D3 //아날로그제어(PWM)
+ * 사물인터넷보드를 wifi로 online상태로 만들고 클라이언트의 웹브라우저에서
+ * 제어를하면 모터드라이버가 제어되도록하라!
+ */
+
+#include <ESP8266WiFi.h>
+
+#ifndef STASSID
+#define STASSID "your-ssid" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "your-password" //패스워드
+#endif
+
+#define ENA D8 //아날로그제어(PWM)
+#define IN1 D7 //디지털제어
+#define IN2 D6 //디지털제어
+#define IN3 D5 //디지털제어
+#define IN4 D4 //디지털제어
+#define ENB D3 //아날로그제어(PWM)
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+
+int motor1_power = 0;
+int motor2_power = 0;
+String m1direction = "+";
+String m2direction = "+";
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(IN1,OUTPUT); //모터1
+  pinMode(IN2,OUTPUT); //모터1
+  pinMode(IN3,OUTPUT); //모터2
+  pinMode(IN4,OUTPUT); //모터2
+
+  //모터드라이버의 방향을 기본 정방향으로 세팅!
+  digitalWrite(IN1,HIGH);
+  digitalWrite(IN2,LOW);
+  digitalWrite(IN3,HIGH);
+  digitalWrite(IN4,LOW);
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\n');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  //서버가 클라이언트로 받은 메시지 전문을 출력
+  while (client.available()) {
+    // byte by byte is not very efficient
+    String text = client.readStringUntil('\n');
+    Serial.println(text);
+  }
+
+  //모터1번 (IN1, IN2)
+  //모터2번 (IN3, IN4)
+  //방향map
+  //(HIGH, LOW) = FORWARD
+  //(LOW, HIGH) = BACKWARD
+  
+  // Match the request
+  if (req.indexOf(F("/M1D+")) != -1) {
+    Serial.println("모터1번의 방향을 정방향으로");
+    digitalWrite(IN1,HIGH);
+    digitalWrite(IN2,LOW);
+    m1direction = "+";
+  }  else if (req.indexOf(F("/M1D-")) != -1) {
+    Serial.println("모터1번의 방향을 역방향으로");
+    digitalWrite(IN1,LOW);
+    digitalWrite(IN2,HIGH);
+    m1direction = "-";
+  } else if (req.indexOf(F("/M1UP")) != -1) {
+    Serial.println("모터1번의 파워업!");
+    motor1_power+=128;
+    if(motor1_power > 1023) motor1_power = 1023;
+    analogWrite(ENA,motor1_power);
+  }else if (req.indexOf(F("/M1DOWN")) != -1) {
+    Serial.println("모터1번의 파워다운!");
+    motor1_power-=128;
+    if(motor1_power < 0) motor1_power = 0;
+    analogWrite(ENA,motor1_power);
+  }else if (req.indexOf(F("/M1MIN")) != -1) {
+    Serial.println("모터1번의 오프!");
+    analogWrite(ENA,0);
+    motor1_power = 0;
+  }else if (req.indexOf(F("/M1MAX")) != -1) {
+    Serial.println("모터1번의 맥스파워!");
+    analogWrite(ENA,1023);
+    motor1_power = 1023;
+  }else if (req.indexOf(F("/M2D+")) != -1) {
+    Serial.println("모터2번의 방향을 정방향으로");
+    digitalWrite(IN3,HIGH);
+    digitalWrite(IN4,LOW);
+    m2direction = "+";
+  }  else if (req.indexOf(F("/M2D-")) != -1) {
+    Serial.println("모터2번의 방향을 역방향으로");
+    digitalWrite(IN3,LOW);
+    digitalWrite(IN4,HIGH);
+    m2direction = "-";
+  } else if (req.indexOf(F("/M2UP")) != -1) {
+    Serial.println("모터2번의 파워업!");
+    motor2_power+=128;
+    if(motor2_power > 1023) motor2_power = 1023;
+    analogWrite(ENB,motor2_power);
+  }else if (req.indexOf(F("/M2DOWN")) != -1) {
+    Serial.println("모터2번의 파워다운!");
+    motor2_power-=128;
+    if(motor2_power < 0) motor2_power = 0;
+    analogWrite(ENB,motor2_power);
+  }else if (req.indexOf(F("/M2MIN")) != -1) {
+    Serial.println("모터2번의 오프!");
+     analogWrite(ENB,0);
+     motor2_power = 0;
+  }else if (req.indexOf(F("/M2MAX")) != -1) {
+    Serial.println("모터2번의 맥스파워!");
+    analogWrite(ENB,1023);
+    motor2_power = 1023;
+  }
+  
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"));
+
+  String response = "\
+  <!DOCTYPE html>\
+<html>\
+<head>\
+<title>NOCKANDA L298N EXAMPLE</title>\
+<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js\"></script>\
+<script type=\"text/javascript\" charset=\"utf-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js\"></script>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:-4px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:500px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 500px;\
+}\
+</style>\
+</head>\
+<body>\
+<h1>NOCKANDA L298N MOTOR DRIVER EXAMPLE!</h1>\
+<table>\
+<tr id=\"c_head\"><th>MOTOR1</th><th>MOTOR2</th></tr>\
+<tr><th>DIRECTION ("+
+  m1direction
+  +")</th><th>DIRECTION ("+
+  m2direction
+  +")</th></tr>\
+<tr id=\"c_head\">\
+   <th>\
+     <div style=\"width:250px; height:200px;\">\
+       <canvas id=\"donut1\"></canvas>\
+     </div>\
+    </th>\
+   <th>\
+     <div style=\"width:250px; height:200px;\">\
+       <canvas id=\"donut2\"></canvas>\
+     </div>\
+    </th>\
+</tr>\
+<tr>\
+   <td><button id=\"btn\" onclick=\"location.href='/M1D+'\">M1 DIRECTION +</button></td>\
+   <td><button id=\"btn\" onclick=\"location.href='/M2D+'\">M2 DIRECTION +</button></td>\
+</tr>\
+<tr>\
+   <td><button id=\"btn\" onclick=\"location.href='/M1D-'\">M1 DIRECTION -</button></td>\
+   <td><button id=\"btn\" onclick=\"location.href='/M2D-'\">M2 DIRECTION -</button></td>\
+</tr>\
+<tr>\
+   <td><button id=\"btn\" onclick=\"location.href='/M1UP'\">M1 POWER UP</button></td>\
+   <td><button id=\"btn\" onclick=\"location.href='/M2UP'\">M2 POWER UP</button></td>\
+</tr>\
+<tr>\
+   <td><button id=\"btn\" onclick=\"location.href='/M1DOWN'\">M1 POWER DOWN</button></td>\
+   <td><button id=\"btn\" onclick=\"location.href='/M2DOWN'\">M2 POWER DOWN</button></td>\
+</tr>\
+<tr>\
+   <td><button id=\"btn\" onclick=\"location.href='/M1MAX'\">M1 POWER MAX</button></td>\
+   <td><button id=\"btn\" onclick=\"location.href='/M2MAX'\">M2 POWER MAX</button></td>\
+</tr>\
+<tr>\
+   <td><button id=\"btn\" onclick=\"location.href='/M1MIN'\">M1 POWER MIN</button></td>\
+   <td><button id=\"btn\" onclick=\"location.href='/M2MIN'\">M2 POWER MIN</button></td>\
+</tr>\
+</table>\
+<script>\
+var t_value = "+
+String(motor1_power)
++";\
+var t_color = \"red\";\
+var num = t_value /1023; \
+var data = { labels: [ \"Co2\" ], datasets: [ { data: [num, 1-num], backgroundColor: [t_color ], hoverBackgroundColor: [t_color] }] }; \
+var ctx2 = document.getElementById('donut1').getContext('2d');\
+var chart2 = new Chart(ctx2, {\
+type: 'doughnut',\
+data: data,\
+options: { \
+   responsive: true, \
+   legend: { display: false }, \
+   elements: { center: { text: Math.round(num*100), fontStyle: 'Helvetica', sidePadding: 15 } }, \
+   maintainAspectRatio : false, \
+   cutoutPercentage:70, \
+   animation: {\
+      onComplete: function () {\
+           ctx2.textAlign = 'center';\
+           ctx2.textBaseline = 'middle';\
+           ctx2.font = '50px Arial';\
+           ctx2.fillStyle = t_color;\
+           ctx2.fillText(Math.round(num*100), chart2.width/2, chart2.height-70);\
+           ctx2.font = '20px Arial';\
+           ctx2.fillText(\"(%)\", chart2.width/2, chart2.height-40);\
+      }\
+   }, \
+   rotation: 1 * Math.PI, \
+   circumference: 1 * Math.PI } \
+});\
+var h_value = "+
+String(motor2_power)
++";\
+var h_color = \"blue\";\
+var num2 = h_value /1023; \
+var data2 = { labels: [ \"Temperature\" ], datasets: [ { data: [num2, 1-num2], backgroundColor: [ h_color ], hoverBackgroundColor: [ h_color] }] }; \
+var ctx3 = document.getElementById('donut2').getContext('2d');\
+var chart3 = new Chart(ctx3, {\
+type: 'doughnut',\
+data: data2,\
+options: { \
+   responsive: true, \
+   legend: { display: false }, \
+   elements: { center: { text: Math.round(num2*100), fontStyle: 'Helvetica', sidePadding: 15 } }, \
+   maintainAspectRatio : false, \
+   cutoutPercentage:70, \
+   animation: {\
+      onComplete: function () {\
+           ctx3.textAlign = 'center';\
+           ctx3.textBaseline = 'middle';\
+           ctx3.font = '50px Arial';\
+           ctx3.fillStyle = h_color;\
+           ctx3.fillText(Math.round(num2*100), chart3.width/2, chart3.height-70);\
+           ctx3.font = '20px Arial';\
+           ctx3.fillText(\"(%)\", chart3.width/2, chart3.height-40);\
+      }\
+   }, \
+   rotation: 1 * Math.PI, \
+   circumference: 1 * Math.PI } \
+});\
+</script>\
+</body>\
+</html>\
+  ";
+  client.print(response);
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}

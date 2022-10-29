@@ -1,0 +1,135 @@
+/*
+ * 예제163-1 2.4인치 LCD쉴드(SPFD5408)을 필요한핀만 아두이노와 1:1로 연결한다!
+ * 이산화탄소센서(MH-Z19B)의 TX핀을 D10에 연결하고 RX핀을 D11에 연결했다!
+ * 이산화탄소센서와 아두이노가 soft serial통신을해서 데이터를 받은다음에
+ * 2.4인치 LCD쉴드에 도넛그래프로 결과를 디스플레이하라!
+ */
+
+#include <SPFD5408_Adafruit_GFX.h>
+#include <SPFD5408_Adafruit_TFTLCD.h>
+#include <SPFD5408_TouchScreen.h>
+#include <SoftwareSerial.h>
+#include <MHZ19.h>
+#define LCD_CS A3
+#define LCD_CD A2
+#define LCD_WR A1
+#define LCD_RD A0
+#define LCD_RESET A4
+#define BLACK   0x0000
+#define BLUE    0x001F //민감군영향
+#define RED     0xF800 //나쁨
+#define GREEN   0x07E0 //(좋음)
+#define CYAN    0x07FF //매우나쁨
+#define MAGENTA 0xF81F ///위험
+#define YELLOW  0xFFE0 //(보통)
+#define WHITE   0xFFFF
+
+#define co2tx 10
+#define co2rx 11
+SoftwareSerial mhz19b(co2tx, co2rx); //rx tx
+MHZ19 mhz(&mhz19b);
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  mhz19b.begin(9600);
+  tft.reset();
+  tft.begin(0x9341); // SDFP5408
+  tft.setRotation(3);
+  tft.fillScreen(BLACK);
+
+}
+
+void loop() {
+  //이산화탄소센서값 범위 0~5000
+  //더미데이터
+  MHZ19_RESULT response = mhz.retrieveData();
+  if (response == MHZ19_RESULT_OK)
+  {
+    //
+    //
+    //int num = random(361);
+    co2sensor(mhz.getCO2(),mhz.getTemperature()); //0~360
+  }
+  else
+  {
+    Serial.print(F("Error, code: "));
+    Serial.println(response);
+  }
+  
+  delay(1000);
+  
+}
+
+void fillArc(int arc_center_x,int arc_center_y,int arc_r,float arc_start_angle,float arc_angle,int arc_tick, uint16_t color){ 
+
+  int degree = 15;
+  for(float i = arc_start_angle; i<=arc_angle; i+=degree){
+     if(i == arc_angle){
+        //마지막것
+        float arc_x1_1 = arc_center_x+arc_r * cos(i*(PI/180.0));
+        float arc_y1_1 = arc_center_y-arc_r * sin(i*(PI/180.0));
+        float arc_x1_2 = arc_center_x+(arc_r-arc_tick) * cos(i*(PI/180.0));
+        float arc_y1_2 = arc_center_y-(arc_r-arc_tick) * sin(i*(PI/180.0));   
+        //tft.fillCircle(arc_x, arc_y, 1, YELLOW);
+        //tft.fillCircle(arc_x2, arc_y2, 1, GREEN);
+        tft.drawLine(arc_x1_1, arc_y1_1, arc_x1_2, arc_y1_2, color);
+     }else{
+      //첫번째 line
+       float arc_x1_1 = arc_center_x+arc_r * cos(i*(PI/180.0));
+      float arc_y1_1 = arc_center_y-arc_r * sin(i*(PI/180.0));
+      float arc_x1_2 = arc_center_x+(arc_r-arc_tick) * cos(i*(PI/180.0));
+      float arc_y1_2 = arc_center_y-(arc_r-arc_tick) * sin(i*(PI/180.0));   
+      //tft.fillCircle(arc_x, arc_y, 1, YELLOW);
+      //tft.fillCircle(arc_x2, arc_y2, 1, GREEN);
+      tft.drawLine(arc_x1_1, arc_y1_1, arc_x1_2, arc_y1_2, color);
+      //두번째 line
+       float arc_x2_1 = arc_center_x+arc_r * cos((i+degree)*(PI/180.0));
+      float arc_y2_1 = arc_center_y-arc_r * sin((i+degree)*(PI/180.0));
+      float arc_x2_2 = arc_center_x+(arc_r-arc_tick) * cos((i+degree)*(PI/180.0));
+      float arc_y2_2 = arc_center_y-(arc_r-arc_tick) * sin((i+degree)*(PI/180.0));   
+      tft.drawLine(arc_x1_1, arc_y1_1, arc_x2_1, arc_y2_1, color);
+      tft.drawLine(arc_x1_2, arc_y1_2, arc_x2_2, arc_y2_2, color);
+
+      //대각선을 연결해보자
+      tft.drawLine(arc_x1_1, arc_y1_1, arc_x2_2, arc_y2_2, color);
+
+      //2개의 삼각형을 색칠해보자
+      tft.fillTriangle(arc_x1_1, arc_y1_1,arc_x2_2, arc_y2_2,arc_x1_2, arc_y1_2,color);
+      tft.fillTriangle(arc_x1_1, arc_y1_1,arc_x2_2, arc_y2_2,arc_x2_1, arc_y2_1,color);
+    }
+  }
+}
+
+void co2sensor(float value, float temp){
+  uint16_t color;
+  float label = value;
+  value = value*360/5000;
+  
+  if(value > 301) color = MAGENTA;
+  else if(value > 201) color = CYAN;
+  else if(value > 151) color = RED;
+  else if(value > 101) color = BLUE;
+  else if(value > 51) color = YELLOW;
+  else color = GREEN;
+  tft.fillScreen(BLACK);
+  tft.setCursor((tft.width()/2)-80,(tft.height()/2)-50);
+  tft.setTextSize(3);
+  tft.print(temp);
+  tft.println("'C");
+  tft.setCursor((tft.width()/2)-80,(tft.height()/2)-20);
+  tft.setTextSize(4);
+  tft.setTextColor(color);
+  tft.println(label);
+  tft.setCursor((tft.width()/2)-30,(tft.height()/2)+30);
+  tft.setTextSize(3);
+  tft.setTextColor(color);
+  tft.println("PPM");
+  tft.drawCircle(tft.width()/2, tft.height()/2, tft.height()/2, color);
+  tft.drawCircle(tft.width()/2, tft.height()/2, (tft.height()/2)-10, color); 
+  fillArc(tft.width()/2,tft.height()/2,tft.height()/2,0,value,10,color);
+  
+}
