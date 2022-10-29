@@ -1,0 +1,68 @@
+/* 
+  예제 207-2 직전예제에 1602LCD에 i2c모듈이 장착된 LCD모듈을 연결한다!
+  i2c통신을 사용하므로 sda핀을 D4에 연결하고 scl핀을 D3에 연결하라!
+  직전예제의 결과를 LCD화면에 띄워보자!
+*/
+#include <Keypad.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+const byte ROWS = 4; //four rows
+const byte COLS = 3; //four columns
+//define the cymbols on the buttons of the keypads
+char hexaKeys[ROWS][COLS] = {
+  {'1','2','3'},
+  {'4','5','6'},
+  {'7','8','9'},
+  {'*','0','#'}
+};
+                    //R1 R2 R3 R4
+byte rowPins[ROWS] = {D9, D8, D7, D6}; //connect to the row pinouts of the keypad
+                    //C1 C2 C3 C4
+byte colPins[COLS] = {D5, D2, D0}; //connect to the column pinouts of the keypad
+String text;
+//initialize an instance of class NewKeypad
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+LiquidCrystal_I2C lcd(0x27,16,2);
+
+void setup(){
+  Serial.begin(115200);
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("YOUR MESSAGE?");
+}
+  
+void loop(){
+  char customKey = customKeypad.getKey(); 
+  if (customKey){
+    if(customKey == '#'){
+      text = "";
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("YOUR MESSAGE?");
+      return;
+    }
+    //별모양(*)이 입력되면 1개씩 지워지게 해보자!
+    if(customKey == '*'){
+      //1234 -> 123
+      //0123 -> substring(0,3)
+      text = text.substring(0,text.length()-1);
+    }else{
+      text = text + customKey;
+    }
+    
+    if(text.length() > 16){
+      //1234 -> 234
+      //0123 -> substirng(1,4)
+      text = text.substring(1,text.length());
+    }
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("YOUR MESSAGE?");
+    lcd.setCursor(0,1);
+    lcd.print(text);
+    Serial.println(text);
+  }
+}

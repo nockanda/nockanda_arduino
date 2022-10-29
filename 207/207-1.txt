@@ -1,0 +1,55 @@
+/* 
+  예제 207-1 사물인터넷보드(wemos d1r1)에 4x4키패드를 어떻게든?연결해보자!
+  일단 녹칸다의 솔루션으로는 4x4전체를 활용하기는 어렵고 숫자부분인 4x3부분만 활용가능하다!
+  핀번호는 {R1R2R3R4}={D9D8D7D6}, {C1C2C3} = {D5D2D0} 이렇게 연결하라!
+  예제의 기능적 동작으로는 유저가 입력한 숫자가 하나씩 늘어나고 길이가 16을 초과하게되면 제일 과거의값을 1개씩 지운다!
+  그리고 *모양 버튼을 누르면 제일 최근입력한 문자가 하나 지워진다(백스페이스)
+  마지막으로 #버튼을 누르면 지운다(clear)
+*/
+#include <Keypad.h>
+
+const byte ROWS = 4; //four rows
+const byte COLS = 3; //four columns
+//define the cymbols on the buttons of the keypads
+char hexaKeys[ROWS][COLS] = {
+  {'1','2','3'},
+  {'4','5','6'},
+  {'7','8','9'},
+  {'*','0','#'}
+};
+                    //R1 R2 R3 R4
+byte rowPins[ROWS] = {D9, D8, D7, D6}; //connect to the row pinouts of the keypad
+                    //C1 C2 C3 C4
+byte colPins[COLS] = {D5, D2, D0}; //connect to the column pinouts of the keypad
+String text;
+//initialize an instance of class NewKeypad
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+
+void setup(){
+  Serial.begin(115200);
+}
+  
+void loop(){
+  char customKey = customKeypad.getKey(); 
+  if (customKey){
+    if(customKey == '#'){
+      text = "";
+      return;
+    }
+    //별모양(*)이 입력되면 1개씩 지워지게 해보자!
+    if(customKey == '*'){
+      //1234 -> 123
+      //0123 -> substring(0,3)
+      text = text.substring(0,text.length()-1);
+    }else{
+      text = text + customKey;
+    }
+    
+    if(text.length() > 16){
+      //1234 -> 234
+      //0123 -> substirng(1,4)
+      text = text.substring(1,text.length());
+    }
+    Serial.println(text);
+  }
+}

@@ -1,0 +1,33 @@
+/*
+  예제 218-1 사물인터넷보드(wemos d1r1)에 홀센서를 D3에 연결했다!
+  DC모터에 자석을 부착하고 홀센서를 DC모터가 회전할때 자석을 만나게? 부착했다!
+  인터럽트기능을 사용해서 초당 회전수를 계산한다음 RPM을 계산해보자!
+ */
+
+#define hallsensor D3
+//자석이 없으면 1(HIGH) 자석이 있으면 0(LOW)
+
+volatile int count = 0;
+unsigned long t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(hallsensor,INPUT);
+  attachInterrupt(digitalPinToInterrupt(hallsensor), rpm, FALLING);
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  unsigned long t2 = millis();
+  if(t2-t > 1000){
+    t = t2;
+    Serial.print(count*60); Serial.println(" RPM");
+    count = 0;
+  }
+}
+
+ICACHE_RAM_ATTR void rpm() {
+  count++;
+}

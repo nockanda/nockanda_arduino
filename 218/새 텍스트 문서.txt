@@ -1,0 +1,57 @@
+[아두이노#218] esp8266wifi 보드끼리MQTT 8편 릴레이 DC모터 RPM측정(wemos d1r1/사물인터넷(iot)시리즈#57/녹칸다/포로리야공대가자)
+
+esp8266wifi 보드끼리MQTT 8편 릴레이 DC모터 RPM측정(wemos d1r1/사물인터넷(iot)시리즈#57/녹칸다/포로리야공대가자)
+-이번편의 핵심아이디어는 클라이언트가 스마트폰이 아니라 사물인터넷보드(wemos d1r1)끼리 MQTT메시지를 주고받는 것이다!
+-하나의 보드가 publish한 메시지를 단일 혹은 복수개의 보드가 subscribe한다음 정보를 표시하거나 어떤 동작을 하게끔 구현하는 예제이다!
+-스마트폰을 MQTT Client로 활용하면 GUI가 모두 훌륭하게 구현되어 있기 때문에 활용하기엔 좋으나, 때때로 보드끼리 데이터를 주고 받을 필요가 있다!
+-사물인터넷보드 3개를 준비해서 각각 A, B, C라고 해보자!
+-A는 1602LCD, 버튼(택트스위치) 2개를 달아서 릴레이를 제어할 수 있는 메시지를 MQTT로 publish할 수 있도록 구현하자!
+-B는 릴리에가 달려있고 A에서 날라오는 MQTT 메시지에 따라서 작동되도록 하고 작동유무 상태를 A의 LCD화면에 결과를 출력해보자!
+-C는 홀센서를 달아서 B의 릴레이에 달린 DC모터가 회전할때 RPM을 측정해서 MQTT로 publish한다음 A의 LCD화면에 결과를 출력해보자!
+
+참고 키워드(인터럽트)
+ICACHE_RAM_ATTR
+
+예제 218-1 사물인터넷보드(wemos d1r1)에 홀센서를 D3에 연결했다!
+  DC모터에 자석을 부착하고 홀센서를 DC모터가 회전할때 자석을 만나게? 부착했다!
+  인터럽트기능을 사용해서 초당 회전수를 계산한다음 RPM을 계산해보자!
+
+
+218-1.txt
+0.00MB
+ 
+
+
+
+예제 218-2-1 (LCD가 달려있는 제어용 사물인터넷(wemos d1r1) 전용 코드)
+ 릴레이를 ON시키는 버튼을 D5에 연결하고, OFF시키는 버튼을 D6에 연결하라!
+ LCD는 I2C통신이 가능한 녀석으로 SDA를 D4에 SCL을 D3에 연결하라!
+ 버튼을 눌렀을때 릴레이를 작동시킬 수 있는 MQTT 메시지를 publish하고!
+ RPM측정값을 subscribe해서 그 결과를 LCD화면에 출력시켜라!
+
+218-2-1.txt
+0.00MB
+
+예제 218-2-2 (릴레이가 연결된 사물인터넷보드(wemos d1r1)용)
+ 제어하는 사물인터넷보드가 MQTT로 publish하는 메시지에 따라서 릴레이를 작동시키시오!
+ 0이 수신되면 릴레이를 멈추고, 1이 수신되면 릴레이를 작동시키시오!
+ 릴레이제어topic : nockanda/relay
+ 릴레이현황topic : nockanda/relay2
+
+218-2-2.txt
+0.00MB
+
+예제 218-2-3 (홀센서가 연결된 사물인터넷보드(wemos d1r1)전용코드)
+ 홀센서가 사물인터넷보드에 D3에 연결되어있다!
+ DC모터의 RPM을 측정해서 1초에 한번씩 MQTT로 publish하라!
+ topic : nockanda/rpm
+
+218-2-3.txt
+0.00MB
+관련라이브러리(pubsubclient)
+
+https://pubsubclient.knolleary.net/
+
+관련라이브러리(LiquidCrystal_I2C)
+
+https://github.com/johnrickman/LiquidCrystal_I2C

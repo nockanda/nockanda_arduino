@@ -1,0 +1,24 @@
+/*
+ 예제 217-1-2 사물인터넷보드(wemos d1r1)에 워터플로우센서를 D3에 달았다!
+ 인터럽트를 이용해서 토출량을 측정해보자!
+ */
+
+#define flowsensor D3 //water flow sensor
+volatile double water = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(flowsensor,INPUT);
+  attachInterrupt(digitalPinToInterrupt(flowsensor), flow, FALLING);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  Serial.print(water); Serial.println("mL");
+  delay(100);
+}
+
+ICACHE_RAM_ATTR void flow(){
+  water += (1/5888.0)*1000; //단위mL
+}

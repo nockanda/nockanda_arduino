@@ -1,0 +1,71 @@
+[아두이노#211] esp8266wifi 보드끼리MQTT 3편(온습도DHT11/미세먼지GP2Y10/이산화탄소MH-Z19B/비접촉온도센서MLX90614)(wemos d1r1/사물인터넷(iot)시리즈#50/녹칸다/포로리야공대가자)
+
+esp8266wifi 보드끼리MQTT 3편(온습도/미세먼지/이산화탄소/비접촉온도센서)(wemos d1r1/사물인터넷(iot)시리즈#50/녹칸다/포로리야공대가자)
+-이번편의 핵심아이디어는 클라이언트가 스마트폰이 아니라 사물인터넷보드(wemos d1r1)끼리 MQTT메시지를 주고받는 것이다!
+-하나의 보드가 publish한 메시지를 단일 혹은 복수개의 보드가 subscribe한다음 정보를 표시하거나 어떤 동작을 하게끔 구현하는 예제이다!
+-스마트폰을 MQTT Client로 활용하면 GUI가 모두 훌륭하게 구현되어 있기 때문에 활용하기엔 좋으나, 때때로 보드끼리 데이터를 주고 받을 필요가 있다!
+-1번보드에서 온습도센서(DHT11)의 온도와 습도값을 publish하면 2번보드에 1602LCD화면에 결과를 출력하시오!
+-1번보드에서 미세먼지센서(GP2Y10)의 측정값을 publish하면 2번보드에 1602LCD화면에 결과를 출력하시오!
+-1번보드에서 이산화탄소센서(MH-Z19B)의 측정값을 publish하면 2번보드에 1602LCD화면에 결과를 출력하시오!
+-1번보드에서 적외선비접촉온도센서(MLX90614)의 측정값을 publish하면 2번보드에 1602LCD화면에 결과를 출력하시오!
+
+예제 211-1-1 사물인터넷보드(wemos d1r1)에 온습도센서(DHT11)을 D3에 연결했다!
+ MQTT로 온습도값을 publish해서 다른쪽 사물인터넷보드 LCD에 결과를 띄워보자!
+
+
+211-1-1.txt
+0.00MB
+211-1-2.txt
+0.00MB
+
+예제 211-2-1 사물인터넷보드(wemos d1r1)에 미세먼지센서(GP2Y10)을 디지털핀을 D3에 연결하고 아날로그핀을 A0에 연결했다!
+ MQTT로 미세먼지값을 publish해서 다른쪽 사물인터넷보드 LCD에 결과를 띄워보자!
+
+
+211-2-1.txt
+0.00MB
+211-2-2.txt
+0.00MB
+
+예제 211-3-1 사물인터넷보드(wemos d1r1)에 이산화탄소센서(MH-Z19B)를 TX를 D3에 RX를 D4에 연결했다!
+ MQTT로 미세먼지값을 publish해서 다른쪽 사물인터넷보드 LCD에 결과를 띄워보자!
+
+
+211-3-1.txt
+0.00MB
+211-3-2.txt
+0.00MB
+
+예제 211-4-1 사물인터넷보드(wemos d1r1)에 비접촉적외선온도센서(MLX90614)를 SDA를 D4에 SCL을 D3에 연결했다!
+ MQTT로 적외선온도센서의값을 publish해서 다른쪽 사물인터넷보드 LCD에 결과를 띄워보자!
+
+
+211-4-1.txt
+0.00MB
+211-4-2.txt
+0.00MB
+ 
+
+관련라이브러리(pubsubclient)
+
+https://pubsubclient.knolleary.net/
+
+관련라이브러리(DHT11)
+
+https://github.com/adafruit/DHT-sensor-library
+
+관련라이브러리(MHZ19B)
+
+https://github.com/strange-v/MHZ19
+
+관련라이브러리(MLX90614)
+
+https://github.com/adafruit/Adafruit-MLX90614-Library
+
+관련라이브러리(LiquidCrystal_I2C)
+
+https://github.com/johnrickman/LiquidCrystal_I2C
+
+레퍼런스강의(미세먼지센서GP2Y10#36-1)
+
+https://bota.tistory.com/1169

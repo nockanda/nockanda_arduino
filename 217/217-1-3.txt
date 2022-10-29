@@ -1,0 +1,25 @@
+/*
+ 예제 217-1-3 사물인터넷보드(wemos d1r1)에 비접촉수위센서(XKC-Y25-V)를 D3에 연결했다!
+ 물이 충분한지 부족한지 감지해보자!
+ */
+
+#define waterlevel D3
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(waterlevel,INPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(waterlevel) == HIGH){
+    //물이 있는 상태 = 물이충분한상태
+    //아무일도 일어날필요가 없음!
+    Serial.println("충분");
+  }else{
+    //물이 없는상태 = 펌프가 멈춰야하는 상태
+    Serial.println("부족");
+  }
+  delay(100);
+}

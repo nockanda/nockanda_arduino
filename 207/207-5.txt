@@ -1,0 +1,57 @@
+/*
+  예제207-5 직전예제에 1602LCD에 i2c모듈이 추가된 LCD모듈을 이용해서
+  리모컨을 눌렀을때 ID값을 LCD화면에 띄워보시오!
+  이때 LCD의 SDA핀을 D4에 SCL핀을 D3에 연결하시오!(i2c 고정핀)
+ */
+
+#include <Arduino.h>
+#include <IRremoteESP8266.h>
+#include <IRrecv.h>
+#include <IRutils.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2);
+// An IR detector/demodulator is connected to GPIO pin 14(D5 on a NodeMCU
+// board).
+// Note: GPIO 16 won't work on the ESP8266 as it does not have interrupts.
+const uint16_t kRecvPin = D5;
+
+IRrecv irrecv(kRecvPin);
+
+decode_results results;
+
+void setup() {
+  Serial.begin(115200);
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("REMOTE ID:");
+  irrecv.enableIRIn();  // Start the receiver
+  while (!Serial)  // Wait for the serial connection to be establised.
+    delay(50);
+  Serial.println();
+  Serial.print("IRrecvDemo is now running and waiting for IR message on Pin ");
+  Serial.println(kRecvPin);
+}
+
+void loop() {
+  if (irrecv.decode(&results)) {
+    // print() & println() can't handle printing long longs. (uint64_t)
+    //FF0000~FFFFFF
+    if(results.value >= 0xFF0000 && results.value <= 0xFFFFFF){
+      serialPrintUint64(results.value, HEX);
+      Serial.println("");
+      //LCD화면 출력부분!
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("REMOTE ID:");
+      lcd.setCursor(0,1);
+      unsigned long result = results.value;
+      String id = String(result,HEX);
+      lcd.print(id);
+    }
+    irrecv.resume();  // Receive the next value
+  }
+  delay(100);
+}

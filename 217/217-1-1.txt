@@ -1,0 +1,43 @@
+/*
+ * 예제 217-1-1 사물인터넷보드(wemos d1r1)에 워터펌프가 D7에 릴레이로 연결되었다!
+ * 그리고 D5에 연결된 버튼을 누르면 펌프가 작동하고 D6에 연결된 버튼을 누르면 펌프가 멈춘다!
+ * 1602LCD를 SDA를 D4에 SCL을 D3에 연결한다음 전반적인 작동상태를 점검해보자!
+ */
+
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+#define button1 D5 //ON
+#define button2 D6 //OFF
+#define pump D7 //pump
+
+LiquidCrystal_I2C lcd(0x27,16,2);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+  pinMode(pump,OUTPUT);
+  lcd.init();
+  lcd.backlight();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(button1) == LOW){
+    Serial.println("ON 버튼!");
+    digitalWrite(pump,HIGH); //펌프작동
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("WATER PUMP ON!");
+    delay(100);
+  }
+  if(digitalRead(button2) == LOW){
+    Serial.println("OFF 버튼!");
+    digitalWrite(pump,LOW); //펌프멈춤
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("WATER PUMP OFF!");
+    delay(100);
+  }
+}

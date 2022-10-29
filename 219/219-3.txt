@@ -1,0 +1,102 @@
+/*
+ 예제 219-3 직전예제에 순간전력값을 이용해서 ssd1306에 그래프를 한번 그려봐라!
+ */
+
+#include "EmonLib.h"                   // Include Emon Library
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 32
+
+#define OLED_RESET     4 // Reset pin # (or -1 if sharing Arduino reset pin)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+EnergyMonitor emon1;                   // Create an instance
+double IrmsNock = 0;
+double total_power = 0;
+unsigned long t1= 0;
+
+int graph[128];
+
+void setup()
+{  
+  Serial.begin(9600);
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+  display.display();
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+         //아날로그핀번호, 상수값
+         //SCT013-030 = 30
+  emon1.current(0, 30);             // Current: input pin, calibration.
+
+  //비접촉전류센서가 초기화될때 5~6개 샘플 정도는 노이즈가 심한값
+  for(int i = 0;i<5;i++){
+    emon1.calcIrms(1480);
+  }
+  Serial.println("INIT CT SENSOR!");
+  /*
+  //5개 샘플정도를 얻은다음에 그값을 아래쪽에서 빼버리자!
+  for(int i = 0;i<5;i++){
+    IrmsNock += emon1.calcIrms(1480);
+  }
+  IrmsNock = IrmsNock / 5; //IrmsNock /= 5
+
+  Serial.println(IrmsNock);
+  */
+  t1 = millis();
+}
+
+void loop()
+{
+  double Irms = emon1.calcIrms(1480);  // Calculate Irms only
+  if(Irms < 0.09) Irms = 0;
+
+  unsigned int t2 = millis();
+  int nocktime = t2 - t1;
+  t1 = t2;
+  double power = Irms*220.0;
+  //noctime = 1/1000 s
+  //total_power는 시간(h)가 곱해져야하는데
+  //현재 측정된 nocktime의 경우에는 ms단위이다.
+  //그러므로 ms를 s로 바꾸기위해서 1000을 나눠줘야하고,
+  //s를 m으로 바꾸기위해서 60을 나눠줘야하고, m을 h로 바꾸기위해서 60을 나눠줘야한다.
+  //그렇지만 전체 360만이라는 값을 한번에 나누면 double자료형의 소수점 유효숫자에 범위가 줄어들기 때문에
+  //우선적으로 3600을 나누고 최종결과에서 1000을 나누도록 한다!
+  total_power += power * nocktime/3600; 
+  Serial.print(nocktime); //샘플간격의 시간
+  Serial.print('\t');
+  float wh = total_power/1000;
+  float price = wh*0.91;
+  Serial.print(wh,4); //누적전력량
+  Serial.print('\t');
+  Serial.print(power,4); //순간전력
+  Serial.print('\t');
+  Serial.print(Irms,4); //순간전류
+  Serial.print('\t');
+  Serial.println(price,4); //전기요금
+  //0.057wh 
+  //1000wh : 910 = 0.057wh : ?
+  //0.057 * 0.91
+  //N-127      ......   N-2  N-1 N
+  //값을 1개씩 좌측으로 쉬프트 시켜보자!
+  for(int i=0;i<127;i++){
+    //127회전!
+    graph[i] = graph[i+1];
+  }
+  graph[127] = (int)power;
+
+  //그래프를 그려보자!
+  display.clearDisplay();
+  //128*32
+  for(int i = 0;i<127;i++){
+    display.drawLine(i, 31-graph[i], i+1, 31-graph[i+1], SSD1306_WHITE);
+  }
+  display.display();
+}

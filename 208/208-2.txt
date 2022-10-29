@@ -1,0 +1,63 @@
+/*
+  예제 208-2 직전예제에 1602LCD에 i2c모듈이 장착된 LCD모듈을 이용해서 RFID 태그의 ID를 LCD에 출력해보자!
+  LCD는 SDA를 D4에 연결했고 SCL을 D3에 연결했다!
+ */
+
+#include <SPI.h>
+#include <MFRC522.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27,16,2);
+
+#define SS_PIN D10
+#define RST_PIN D9
+ 
+MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
+
+void setup() { 
+  Serial.begin(115200);
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("RFID TAG ID:");
+  SPI.begin(); // Init SPI bus
+  rfid.PCD_Init(); // Init MFRC522 
+
+}
+ 
+void loop() {
+
+  // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
+  if ( ! rfid.PICC_IsNewCardPresent())
+    return;
+
+  // Verify if the NUID has been readed
+  if ( ! rfid.PICC_ReadCardSerial())
+    return;
+  
+  Serial.println(F("A card has been detected."));
+
+  //rfid.uid.uidByte
+  String nock = printHex(rfid.uid.uidByte, rfid.uid.size);
+  Serial.println(nock);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("RFID TAG ID:");
+  lcd.setCursor(0,1);
+  lcd.print(nock);
+
+  // Halt PICC
+  rfid.PICC_HaltA();
+
+  // Stop encryption on PCD
+  rfid.PCD_StopCrypto1();
+}
+
+String printHex(byte *buffer, byte bufferSize) {
+  String output;
+  for (byte i = 0; i < bufferSize; i++) {
+    if(buffer[i] < 0x10) output += "0" + String(buffer[i],HEX);
+    else output += String(buffer[i],HEX);
+  }
+  return output;
+}

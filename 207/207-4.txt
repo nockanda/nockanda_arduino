@@ -1,0 +1,45 @@
+/*
+  예제207-4 사물인터넷보드(wemos d1r1)에 IR리모컨 수신부를 D5에 연결했다!
+  리모컨의 특정한 버튼을 눌렀을때 3바이트로 구성된 ID값을 시리얼모니터에 출력해보라!
+  라이브러리가 esp8266전용으로 별도로 존재한다!
+  사용안되는 핀이 있을 수도 있다(예를들면 D2)
+  녹칸다가 사용하는 리모컨은 FF0000~FFFFFF 까지가 유효한 ID인것 같아서 그부분만 필터링했다!
+  ID가 다른분들은 지우고 활용하시길!
+ */
+
+#include <Arduino.h>
+#include <IRremoteESP8266.h>
+#include <IRrecv.h>
+#include <IRutils.h>
+
+// An IR detector/demodulator is connected to GPIO pin 14(D5 on a NodeMCU
+// board).
+// Note: GPIO 16 won't work on the ESP8266 as it does not have interrupts.
+const uint16_t kRecvPin = D5;
+
+IRrecv irrecv(kRecvPin);
+
+decode_results results;
+
+void setup() {
+  Serial.begin(115200);
+  irrecv.enableIRIn();  // Start the receiver
+  while (!Serial)  // Wait for the serial connection to be establised.
+    delay(50);
+  Serial.println();
+  Serial.print("IRrecvDemo is now running and waiting for IR message on Pin ");
+  Serial.println(kRecvPin);
+}
+
+void loop() {
+  if (irrecv.decode(&results)) {
+    // print() & println() can't handle printing long longs. (uint64_t)
+    //FF0000~FFFFFF
+    if(results.value >= 0xFF0000 && results.value <= 0xFFFFFF){
+      serialPrintUint64(results.value, HEX);
+      Serial.println("");
+    }
+    irrecv.resume();  // Receive the next value
+  }
+  delay(100);
+}

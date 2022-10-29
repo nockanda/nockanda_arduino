@@ -1,0 +1,296 @@
+/*
+   예제206-1 사물인터넷보드(wemos d1r1)에 영화진흥위원회 영화박스오피스 openapi 서비스를 이용해서
+   시리얼모니터에 결과를 출력해보라!
+ */
+#include <ESP8266WiFi.h>
+#include <ArduinoJson.h>
+
+#ifndef STASSID
+#define STASSID "~~~~~" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "~~~~~~~" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+
+const char* host = "kobis.or.kr";
+const int httpsPort = 80;
+String yourkey = "~~~~~~~~~~";
+
+typedef struct{
+  int year;
+  int month;
+  int day;
+  int hour;
+  int minute;
+  int second;
+}Nocktime;
+
+WiFiClient client;
+void setup() {
+  Serial.begin(115200);
+  Serial.println();
+  Serial.print("connecting to ");
+  Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  
+  Serial.print("connecting to ");
+  Serial.println(host);
+
+  Nocktime nt;
+  String date;
+  if(get_nocktime(nt)){
+    //정상적으로 값을 받은경우
+    date += String(nt.year);
+    if(nt.month < 10) date += "0"+ String(nt.month);
+    else date += String(nt.month);
+    if(nt.day < 10) date += "0"+ String(nt.day);
+    else date += String(nt.day);
+  }else{
+    //에러가난경우
+  }
+
+  //클라이언트와 서버와 커넥트
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("connection failed");
+    return;
+  }
+
+  String url = "/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json?key="+yourkey+"&targetDt="+date;
+
+  //사물인터넷보드에서 RSS서버로 보내는 요청!
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long t = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - t > 10000) break;
+  }
+
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+
+  while(client.available()){
+    String data = client.readStringUntil('\n'); //readline();
+    if(data.indexOf("{\"boxO") == -1) continue;
+
+    DynamicJsonDocument doc(6144);
+    deserializeJson(doc, data);
+
+    JsonObject boxOfficeResult = doc["boxOfficeResult"];
+    const char* boxOfficeResult_boxofficeType = boxOfficeResult["boxofficeType"]; // "일별 박스오피스"
+    const char* boxOfficeResult_showRange = boxOfficeResult["showRange"]; // "20201230~20201230"
+
+    for (int i = 0;i<10;i++) {
+      JsonObject elem = boxOfficeResult["dailyBoxOfficeList"][i];
+      const char* rnum = elem["rnum"]; // "1"
+      const char* rank = elem["rank"]; // "1"
+      const char* rankInten = elem["rankInten"]; // "0"
+      const char* rankOldAndNew = elem["rankOldAndNew"]; // "OLD"
+      const char* movieCd = elem["movieCd"]; // "20192567"
+      const char* movieNm = elem["movieNm"]; // "원더 우먼 1984"
+      const char* openDt = elem["openDt"]; // "2020-12-23"
+      const char* salesAmt = elem["salesAmt"]; // "174400620"
+      const char* salesShare = elem["salesShare"]; // "45.9"
+      const char* salesInten = elem["salesInten"]; // "19608580"
+      const char* salesChange = elem["salesChange"]; // "12.7"
+      const char* salesAcc = elem["salesAcc"]; // "3257945210"
+      const char* audiCnt = elem["audiCnt"]; // "22713"
+      const char* audiInten = elem["audiInten"]; // "4811"
+      const char* audiChange = elem["audiChange"]; // "26.9"
+      const char* audiAcc = elem["audiAcc"]; // "363564"
+      const char* scrnCnt = elem["scrnCnt"]; // "1903"
+      const char* showCnt = elem["showCnt"]; // "4077"
+
+      Serial.print(rank);//순위
+      Serial.print('\t');
+      Serial.print(rankOldAndNew);//신규랭킹진입여부
+      Serial.print('\t');
+      String audiacc_s = audiAcc;
+      float audiacc2 = audiacc_s.toInt();
+      if(audiacc2 > 1000000){
+        audiacc2 = audiacc2/1000000;
+        audiacc_s = String(audiacc2,1) + "M";
+      }else if(audiacc2>1000){
+        audiacc2 = audiacc2/1000;
+        audiacc_s = String(audiacc2,1) + "K";
+      }
+      Serial.print(audiacc_s); //누적관객수
+      Serial.print('\t');
+      Serial.print(audiInten); //전일대비관객수증감분
+      Serial.print('\t');
+      Serial.println(title_length(movieNm,146)); //영화제목
+    }
+  }
+  Serial.println("DONE");
+}
+
+void loop() {
+}
+
+String title_length(String input,int maxlength){
+  int char_length=0;
+  String output;
+  String dot;
+  for(int i = 0;i<input.length();){
+    if(input[i] > 128){
+      //한글..폰트사이즈를..16
+      char_length+=16;
+      output += input[i];
+      output += input[i+1];
+      output += input[i+2];
+      i+=3;
+    }else{
+      //아스키코드...10
+      output += input[i];
+      char_length+=10;
+      i++;
+    }
+
+    if(char_length+16 > maxlength){
+      dot = "..";
+      break;
+    }
+  }
+  return output+dot;
+}
+bool get_nocktime(Nocktime &t){
+  //--------------------------------------------
+  //클라이언트와 서버와 커넥트
+  if (!client.connect("google.com", 80)) {
+    Serial.println("connection failed");
+    return false;
+  }
+  client.print("HEAD / HTTP/1.1\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long timeout = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - timeout > 10000) break;
+  }
+
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+
+  bool iscollected = false;
+  while(client.available()){
+    String data = client.readStringUntil('\n'); //readline();
+    //Date: Thu, 17 Dec 2020 10:26:44 GMT
+    //01234567890123456789012345678901234
+    
+    if(data.indexOf("Date: ") != -1){
+      //검색결과 date:라는 패턴이 존재하더라~
+      //조건문안에 들어온 시점에 data안에는 우리가 원하는 값이 들어있다!
+      iscollected = true;
+      //Serial.println(data);
+      int day = data.substring(11,13).toInt(); //day
+      int month = 0;
+      //Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+      String mo = data.substring(14,17);
+      if(mo == "Jan"){
+        month = 1;
+      }else if(mo == "Feb"){
+        month = 2;
+      }else if(mo == "Mar"){
+        month = 3;
+      }else if(mo == "Apr"){
+        month = 4;
+      }else if(mo == "May"){
+        month = 5;
+      }else if(mo == "Jun"){
+        month = 6;
+      }else if(mo == "Jul"){
+        month = 7;
+      }else if(mo == "Aug"){
+        month = 8;
+      }else if(mo == "Sep"){
+        month = 9;
+      }else if(mo == "Oct"){
+        month = 10;
+      }else if(mo == "Nov"){
+        month = 11;
+      }else if(mo == "Dec"){
+        month = 12;
+      }
+      int year = data.substring(18,22).toInt(); //year
+      int hour = data.substring(23,25).toInt(); //hour
+      int minute = data.substring(26,28).toInt(); //minute
+      int second = data.substring(29,31).toInt(); //second
+
+      int dayofmonth[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+      //년도가 4의 배수일때마다 2월이 29일까지다!
+      //year % 4 == 0
+      hour += 9;
+      if(hour > 24){
+        //20 + 9 = 29 = 29-24 = 5
+        hour -= 24;
+        day++;
+        int yoondal = 0;
+        if(year % 4 == 0 && month == 2) yoondal = 1;
+        
+        if(day > dayofmonth[month-1]+yoondal){
+          day -= dayofmonth[month-1]+yoondal;
+          month++;
+          if(month > 12){
+            month -= 12;
+            year++;
+          }
+        }
+      }
+      //하루를 빼보자!
+      day--;
+      if(day <= 0){
+        //전월 말일로 day가 이동하고 month가 하루 깍혀야한다!
+        //만약 1월이면 어떻게..?
+        if(month == 1){
+          month = 12;
+          year--;
+        }else{
+          month--;
+        }
+
+        int yoondal = 0;
+        if(year % 4 == 0 && month == 2) yoondal = 1;
+        day = dayofmonth[month-1]+yoondal;
+      }
+      
+      /*
+      Serial.println(year);
+      Serial.println(month);
+      Serial.println(day);
+      Serial.println(hour);
+      Serial.println(minute);
+      Serial.println(second);
+      */
+      t.year = year;
+      t.month = month;
+      t.day = day;
+      t.hour = hour;
+      t.minute = minute;
+      t.second = second;
+    }
+  }  
+
+  return iscollected;
+}

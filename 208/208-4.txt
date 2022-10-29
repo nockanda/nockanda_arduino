@@ -1,0 +1,35 @@
+/*
+  예제 208-4 사물인터넷보드(wemos d1r1)에 지문인식센서(FPM10A)를 연결했다!
+  TX를 D5에 연결하고 RX를 D6에 연결했다!
+  지문인식모듈에서 출력되는 지문의 ID값을 시리얼모니터에 출력해보자!
+ */
+
+
+#include <Adafruit_Fingerprint.h>
+SoftwareSerial mySerial(D5, D6);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+
+void setup()  
+{
+  Serial.begin(115200);
+  finger.begin(57600);
+}
+
+void loop()                     // run over and over again
+{
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK)  return;
+  
+  // found a match!
+  Serial.print("Found ID #"); Serial.print(finger.fingerID); 
+  Serial.print(" with confidence of "); Serial.println(finger.confidence);
+}
+
+
+

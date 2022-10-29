@@ -1,0 +1,67 @@
+[아두이노#208] esp8266wifi MQTT로 (RFID:RC522/지문:FPM10A)제어해보기! (wemos d1r1/사물인터넷(iot)시리즈#47/녹칸다/포로리야공대가자)
+
+esp8266wifi MQTT로 (RFID:RC522/지문:FPM10A)제어해보기! (wemos d1r1/사물인터넷(iot)시리즈#47/녹칸다/포로리야공대가자)
+-RFID모듈인 RC522와 지문인식모듈인 FPM10A를 이용해서 사물인터넷보드에 호환가능한지 확인해보자!
+-RFID모듈로 RFID태그를 리딩해서 인식된값을 MQTT로 publish해보자!
+-지문인식모듈로 지문의 ID를 읽어서 MQTT로 publish해보자!
+-이번편은 사물인터넷보드에서 MQTT를 사용할때 RFID리더와 지문인식이 정상적으로 작동되는지 확인하는것이 포인트이다!
+-다른클라이언트에서 태그ID와 지문ID를 받아서 뭘할건지에 대해서는 그다음 서비스단에서 결정하면 되는 것이다!
+-일단 권한문제에 대한 이슈는 고려하지 않는다~~!
+
+예제 208-1 사물인터넷보드(wemos d1r1)에 RFID리더(RC522)를 연결했다!
+  SPI통신을 위한핀은 그대로 연결하고 CS핀을 D10에, RESET핀을 D9에 연결했다!
+  RFID 태그의 ID를 STRING으로 변환해서 시리얼모니터에 출력하시오!
+
+
+208-1.txt
+0.00MB
+
+예제 208-2 직전예제에 1602LCD에 i2c모듈이 장착된 LCD모듈을 이용해서 RFID 태그의 ID를 LCD에 출력해보자!
+  LCD는 SDA를 D4에 연결했고 SCL을 D3에 연결했다!
+
+
+208-2.txt
+0.00MB
+
+예제 208-3 직전예제에 사물인터넷보드가 MQTT 메시지를 publish할 수 있도록 코드를 구현하자!
+  유저가 RFID태그를 태깅하면 ID값을 nockanda/rfid라는 topic으로 publish해보자!
+
+208-3.txt
+0.00MB
+
+예제 208-4 사물인터넷보드(wemos d1r1)에 지문인식센서(FPM10A)를 연결했다!
+  TX를 D5에 연결하고 RX를 D6에 연결했다!
+  지문인식모듈에서 출력되는 지문의 ID값을 시리얼모니터에 출력해보자!
+
+
+208-4.txt
+0.00MB
+
+예제 208-5 직전예제에 LCD모듈을 활용해서 결과를 LCD화면에 띄워라!
+  1602LCD는 I2C모듈이 장착된걸로 사용하고 SDA를 D4에 SCL을 D3에 연결하라!
+
+
+208-5.txt
+0.00MB
+
+예제 208-6 직전예제에 사물인터넷보드가 MQTT 메시지를 publish하도록 구현하라!
+ 유저의 지문이 인식되면 지문의 ID값을 nockanda/finger라는 topic으로 publish하시오!
+ 그리고 지문의 인식정확도를 nockanda/conf라는 topic으로 publish하시오!
+
+208-6.txt
+0.00MB
+필요라이브러리(RC522)
+
+https://github.com/miguelbalboa/rfid
+
+관련라이브러리(finger print)
+
+https://github.com/adafruit/Adafruit-Fingerprint-Sensor-Library
+
+관련라이브러리(LiquidCrystal_I2C)
+
+https://github.com/johnrickman/LiquidCrystal_I2C
+
+관련라이브러리(pubsubclient)
+
+https://pubsubclient.knolleary.net/

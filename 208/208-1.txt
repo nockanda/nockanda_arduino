@@ -1,0 +1,53 @@
+/*
+  예제 208-1 사물인터넷보드(wemos d1r1)에 RFID리더(RC522)를 연결했다!
+  SPI통신을 위한핀은 그대로 연결하고 CS핀을 D10에, RESET핀을 D9에 연결했다!
+  RFID 태그의 ID를 STRING으로 변환해서 시리얼모니터에 출력하시오!
+ */
+
+#include <SPI.h>
+#include <MFRC522.h>
+
+#define SS_PIN D10
+#define RST_PIN D9
+ 
+MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
+
+void setup() { 
+  Serial.begin(115200);
+  SPI.begin(); // Init SPI bus
+  rfid.PCD_Init(); // Init MFRC522 
+
+}
+ 
+void loop() {
+
+  // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
+  if ( ! rfid.PICC_IsNewCardPresent())
+    return;
+
+  // Verify if the NUID has been readed
+  if ( ! rfid.PICC_ReadCardSerial())
+    return;
+  
+    Serial.println(F("A card has been detected."));
+
+    //rfid.uid.uidByte
+    String nock = printHex(rfid.uid.uidByte, rfid.uid.size);
+    Serial.println(nock);
+  
+
+  // Halt PICC
+  rfid.PICC_HaltA();
+
+  // Stop encryption on PCD
+  rfid.PCD_StopCrypto1();
+}
+
+String printHex(byte *buffer, byte bufferSize) {
+  String output;
+  for (byte i = 0; i < bufferSize; i++) {
+    if(buffer[i] < 0x10) output += "0" + String(buffer[i],HEX);
+    else output += String(buffer[i],HEX);
+  }
+  return output;
+}

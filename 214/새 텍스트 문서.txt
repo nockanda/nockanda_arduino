@@ -1,0 +1,50 @@
+[아두이노#214] esp8266wifi 보드끼리MQTT 6편(RFID:RC522/지문센서:FPM10A)(wemos d1r1/사물인터넷(iot)시리즈#53/녹칸다/포로리야공대가자)
+
+esp8266wifi 보드끼리MQTT 6편(RFID:RC522/지문센서:FPM10A)(wemos d1r1/사물인터넷(iot)시리즈#53/녹칸다/포로리야공대가자)
+-이번편의 핵심아이디어는 클라이언트가 스마트폰이 아니라 사물인터넷보드(wemos d1r1)끼리 MQTT메시지를 주고받는 것이다!
+-하나의 보드가 publish한 메시지를 단일 혹은 복수개의 보드가 subscribe한다음 정보를 표시하거나 어떤 동작을 하게끔 구현하는 예제이다!
+-스마트폰을 MQTT Client로 활용하면 GUI가 모두 훌륭하게 구현되어 있기 때문에 활용하기엔 좋으나, 때때로 보드끼리 데이터를 주고 받을 필요가 있다!
+-1번보드에서 RFID(RC522)의 인식결과를 publish하면 2번보드에 LCD화면에 결과가 출력되도록 하시오!
+-1번보드에서 지문센서(FPM10A)의 인식결과를 publish하면 2번보드에 LCD화면에 결과가 출력되도록 하시오!
+
+예제 214-1-1 사물인터넷보드(wemos d1r1)에 RFID리더기(RC522)를 연결했다!
+ SPI통신에 맞게 적절히 아래와 같이 연결한다!
+ RESET : D9
+ SDA(CS) : D10
+ MOSI : D11
+ MISO : D12
+ SCK : D13
+ RFID태그가 태깅되었을때 ID를 MQTT로 publish해서 다른쪽 사물인터넷보드에 달린
+ LCD화면에 ID가 출력되도록 구현하시오!
+
+
+214-1-1.txt
+0.00MB
+214-1-2.txt
+0.00MB
+
+예제 214-2-1 사물인터넷보드(wemos d1r1)에 지문인식모듈(FPM10A)를 연결했다!
+ TX핀을 D3에 연결하고 RX핀을 D4에 연결했다!
+ 지문인식모듈에서 출력되는 지문의 ID값을 MQTT로 publish해서
+ LCD화면이 달린 사물인터넷보드에 결과를 띄워보자! 
+
+
+214-2-1.txt
+0.00MB
+214-2-2.txt
+0.00MB
+관련라이브러리(pubsubclient)
+
+https://pubsubclient.knolleary.net/
+
+필요라이브러리(RC522)
+
+https://github.com/miguelbalboa/rfid
+
+관련라이브러리(finger print)
+
+https://github.com/adafruit/Adafruit-Fingerprint-Sensor-Library
+
+관련라이브러리(LiquidCrystal_I2C)
+
+https://github.com/johnrickman/LiquidCrystal_I2C
