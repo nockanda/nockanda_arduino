@@ -1,0 +1,66 @@
+#include <SPFD5408_Adafruit_GFX.h>    // Core graphics library
+#include <SPFD5408_Adafruit_TFTLCD.h> // Hardware-specific library
+#include <SPFD5408_TouchScreen.h>
+#include <MHZ19.h>
+
+MHZ19 mhz(&Serial1); //센서를 18, 19번핀에 연결을 했음을 의미
+
+#define LCD_CS A3 // Chip Select goes to Analog 3
+#define LCD_CD A2 // Command/Data goes to Analog 2
+#define LCD_WR A1 // LCD Write goes to Analog 1
+#define LCD_RD A0 // LCD Read goes to Analog 0
+
+#define LCD_RESET A4 // Can alternately just connect to Arduino's reset pin
+
+#define BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+
+void setup(void) {
+  Serial.begin(9600);
+  Serial1.begin(9600); //아두이노 메가와 이산화탄소센서의 통신
+  tft.reset();
+  tft.begin(0x9341);
+  tft.setRotation(3); //USB커넥터가 왼쪽방향에 있을때 정면인 방향
+
+  //LCD화면에 NOCKANDA FOREVER!
+  tft.fillScreen(BLACK);//검정색으로 화면에 기본색을 칠해라!
+  tft.setTextColor(YELLOW);
+  tft.setTextSize(3); //문자1개당 5px*7px 
+}
+
+void loop(void) {
+  MHZ19_RESULT response = mhz.retrieveData();
+  if (response == MHZ19_RESULT_OK)
+  {
+    int co2 = mhz.getCO2();
+    
+    tft.fillScreen(BLACK);//검정색으로 화면에 기본색을 칠해라!
+    tft.setCursor(0, 0); //글자가 출력될 좌표!
+    tft.print("CO2=");
+    tft.print(co2);
+    tft.print("PPM");
+    
+    Serial.print("측정한 이산화탄소농도=");
+    Serial.print(co2);
+    Serial.println("PPM");
+  }
+  else
+  {
+    Serial.print(F("Error, code: "));
+    Serial.println(response);
+
+    tft.fillScreen(BLACK);//검정색으로 화면에 기본색을 칠해라!
+    tft.setCursor(0, 0); //글자가 출력될 좌표!
+    tft.print("CO2=NO DATA!!");
+  }
+  
+  delay(2000);
+}

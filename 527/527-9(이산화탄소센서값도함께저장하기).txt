@@ -1,0 +1,81 @@
+#include <ESP8266WiFi.h>
+#include "ThingSpeak.h"
+#include "DHT.h"
+#include <SoftwareSerial.h>
+#include <MHZ19.h>
+
+SoftwareSerial ss(D4,D5);
+MHZ19 mhz(&ss);
+
+#define DHTPIN D3
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+char ssid[] = "nockanda";
+char pass[] = "11213144";
+int keyIndex = 0;
+WiFiClient  client;
+
+unsigned long myChannelNumber = 1841548;
+const char * myWriteAPIKey = "P4E9RR2KCOTZLC8Z";
+
+String myStatus = "";
+
+void setup() {
+  Serial.begin(115200);
+  dht.begin();  
+  ss.begin(9600);
+  WiFi.mode(WIFI_STA); 
+  ThingSpeak.begin(client);
+}
+
+void loop() {
+
+  // Connect or reconnect to WiFi
+  if(WiFi.status() != WL_CONNECTED){
+    Serial.print("Attempting to connect to SSID: ");
+    while(WiFi.status() != WL_CONNECTED){
+      WiFi.begin(ssid, pass);  // Connect to WPA/WPA2 network. Change this line if using open or WEP network
+      Serial.print(".");
+      delay(5000);     
+    } 
+    Serial.println("\nConnected.");
+  }
+
+  //온도와 습도값을 여기서 측정을 해야한다!
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  int co2 = 0; //0~5000
+  
+  MHZ19_RESULT response = mhz.retrieveData();
+  if (response == MHZ19_RESULT_OK)
+  {
+    co2 = mhz.getCO2(); //측정한 Co2 농도!
+  }
+
+  //내가 만든 필드 번호에 값을 1개씩 대입한다!(데이터 꾸러미)
+  ThingSpeak.setField(1, t); //1번필드에 온도값 탑승
+  ThingSpeak.setField(2, h); //2번필드에 습도값 탑승
+  ThingSpeak.setField(3, co2); //3번필드에 습도값 탑승
+
+  Serial.print("온도=");
+  Serial.print(t);
+  Serial.print(", 습도=");
+  Serial.print(h);
+  Serial.print(", co2농도=");
+  Serial.println(co2);
+  
+  //일단 뭔지 모르겠다!
+  //ThingSpeak.setStatus(myStatus);
+  
+  //여러개의 데이터를 전송할때 사용하는 함수의 모양
+  int x = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+  if(x == 200){
+    Serial.println("Channel update successful.");
+  }
+  else{
+    Serial.println("Problem updating channel. HTTP error code " + String(x));
+  }
+  
+  delay(16000);
+}

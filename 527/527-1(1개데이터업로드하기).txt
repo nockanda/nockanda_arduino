@@ -1,0 +1,50 @@
+#include <ESP8266WiFi.h>
+
+#include "ThingSpeak.h" // always include thingspeak header file after other header files and custom macros
+
+char ssid[] = "nockanda"; //wifi공유기 id
+char pass[] = "11213144"; //wifi공유기 pw
+int keyIndex = 0;
+WiFiClient  client;
+
+unsigned long myChannelNumber = 1841517; //채널 ID
+const char * myWriteAPIKey = "U5VU3BUCQPRJCSZT"; //쓰기 API KEY
+
+void setup() {
+  Serial.begin(115200);  // 컴퓨터하고 통신하는 속도
+
+  WiFi.mode(WIFI_STA); 
+  ThingSpeak.begin(client);  // Initialize ThingSpeak
+}
+
+void loop() {
+
+  //혹시 wifi연결이 끊어지면 계속 반복해서 접속을 시도하겠다!
+  // Connect or reconnect to WiFi
+  if(WiFi.status() != WL_CONNECTED){
+    Serial.print("Attempting to connect to SSID: ");
+    while(WiFi.status() != WL_CONNECTED){
+      WiFi.begin(ssid, pass);  // Connect to WPA/WPA2 network. Change this line if using open or WEP network
+      Serial.print(".");
+      delay(5000);     
+    } 
+    Serial.println("\n공유기하고 접속이 완료되었습니다!.");
+  }
+
+  //랜덤한 센서값 하나 만들기!
+  float mytemp = random(1000,5000)/100.0; //10.00~49.99
+  
+  //해당되는 채널에 1번필드에 number라는 값을 대입하시오!
+                                 //나의 채널ID  //필드번호 //데이터   //API키
+  int x = ThingSpeak.writeField(myChannelNumber, 1, mytemp, myWriteAPIKey);
+
+  //응답코드(200이면 서버가 성공적으로 응답했음)
+  if(x == 200){
+    Serial.println("성공적으로 업로드 했습니다!");
+  }
+  else{
+    Serial.println("에러가 발생했습니다! error code " + String(x));
+  }
+  
+  delay(16000); //최소 15초
+}

@@ -1,0 +1,24 @@
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+//i2c통신에서는 핀번호에 대한 언급이 전혀없다!
+
+                   //주소,//가로폭//라인갯수
+LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+
+void setup()
+{
+  lcd.init();                      // initialize the lcd 
+  // Print a message to the LCD.
+  lcd.backlight();
+  lcd.setCursor(0,0); //첫번째줄
+  lcd.print("Hello, world!");
+  lcd.setCursor(0,1);
+  lcd.print("NOCKANDA!!");
+}
+
+
+void loop()
+{
+  //아무것도 안함
+}

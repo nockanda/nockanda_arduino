@@ -1,0 +1,84 @@
+
+#include <ESP8266WiFi.h>
+#include "ThingSpeak.h"
+
+#define SECRET_SSID "nockanda"
+#define SECRET_PASS "11213144"
+
+char ssid[] = SECRET_SSID;
+char pass[] = SECRET_PASS;
+int keyIndex = 0;       
+WiFiClient  client;
+
+//public 채널의 id
+unsigned long weatherStationChannelNumber = 12397;
+
+//
+int statusCode = 0;
+
+void setup() {
+  Serial.begin(115200);      // Initialize serial 
+  
+  WiFi.mode(WIFI_STA);
+  
+  ThingSpeak.begin(client);  // Initialize ThingSpeak
+
+  //와이파이 공유기와 접속
+  if(WiFi.status() != WL_CONNECTED){
+    Serial.print("Attempting to connect to SSID: ");
+    Serial.println(SECRET_SSID);
+    while(WiFi.status() != WL_CONNECTED){
+      WiFi.begin(ssid, pass); // Connect to WPA/WPA2 network. Change this line if using open or WEP network
+      Serial.print(".");
+      delay(5000);     
+    } 
+    Serial.println("\nConnected");
+  }
+}
+
+void loop() {
+    
+    // Read and store all the latest field values, location coordinates, status message, and created-at timestamp
+    // use ThingSpeak.readMultipleFields(channelNumber, readAPIKey) for private channels
+    statusCode = ThingSpeak.readMultipleFields(weatherStationChannelNumber);
+    
+    if(statusCode == 200)
+    {
+      // Fetch the stored data
+
+      int windDir = ThingSpeak.getFieldAsInt(1);
+      float windSpeed = ThingSpeak.getFieldAsFloat(2);
+      int percentHumid = ThingSpeak.getFieldAsInt(3);
+      float tempInF = ThingSpeak.getFieldAsFloat(4);
+      float rainInchPerMin = ThingSpeak.getFieldAsFloat(5);
+      float pressureInHg = ThingSpeak.getFieldAsFloat(6);
+      float powerLevel = ThingSpeak.getFieldAsFloat(7);
+      int lightIntensity = ThingSpeak.getFieldAsInt(8);
+      String statusMessage = ThingSpeak.getStatus(); // Status message
+      String latitude = ThingSpeak.getLatitude(); // Latitude
+      String longitude = ThingSpeak.getLongitude(); // Longitude
+      String elevation = ThingSpeak.getElevation(); // Elevation
+      String createdAt = ThingSpeak.getCreatedAt(); // Created-at timestamp
+      
+      Serial.println("Wind Direction (North = 0 degrees): " + String(windDir));
+      Serial.println("Wind Speed (mph): " + String(windSpeed));
+      Serial.println("% Humidity: " + String(percentHumid));
+      Serial.println("Temperature (F): " + String(tempInF));
+      Serial.println("Rain (Inches/minute): " + String(rainInchPerMin));
+      Serial.println("Pressure (\"Hg): " + String(pressureInHg));
+      Serial.println("Power Level (V): " + String(powerLevel));
+      Serial.println("Light Intensity: " + String(lightIntensity));
+      Serial.println("Status Message, if any: " + statusMessage);
+      Serial.println("Latitude, if any (+ve is North, -ve is South): " + latitude);
+      Serial.println("Longitude, if any (+ve is East, -ve is West): " + longitude);
+      Serial.println("Elevation, if any (meters above sea level): " + elevation);
+      Serial.println("Created at, if any (YYYY-MM-DD hh:mm:ss): " + createdAt);
+    }
+    else{
+      Serial.println("Problem reading channel. HTTP error code " + String(statusCode)); 
+    }
+
+    Serial.println();
+    delay(16000); // no need to fetch too often
+       
+}

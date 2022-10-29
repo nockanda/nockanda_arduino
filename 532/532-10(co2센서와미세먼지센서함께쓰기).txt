@@ -1,0 +1,49 @@
+#include "PMS.h"
+#include <MHZ19.h>
+
+PMS pms(Serial2); //미세먼지센서를 Serial2에 연결함!
+PMS::DATA data;
+MHZ19 mhz(&Serial1); //센서를 18, 19번핀에 연결을 했음을 의미
+
+void setup()
+{
+  Serial.begin(9600);   //PC와 메가간의 통신
+  Serial1.begin(9600);  //메가와 센서간의 통신(CO2)
+  Serial2.begin(9600);  //메가와 센서간의 통신(미세먼지)
+  pms.passiveMode();
+}
+
+void loop()
+{
+  pms.requestRead();
+  if (pms.readUntil(data))
+  {
+    Serial.print("PM 1.0 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_1_0);
+
+    Serial.print("PM 2.5 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_2_5);
+
+    Serial.print("PM 10.0 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_10_0);
+  }
+  else
+  {
+    Serial1.println("No data.");
+  }
+  
+  MHZ19_RESULT response = mhz.retrieveData();
+  if (response == MHZ19_RESULT_OK)
+  {
+    int co2 = mhz.getCO2();
+    Serial.print("측정한 이산화탄소농도=");
+    Serial.print(co2);
+    Serial.println("PPM");
+  }
+  else
+  {
+    Serial.print(F("Error, code: "));
+    Serial.println(response);
+  }
+  delay(2000);
+}

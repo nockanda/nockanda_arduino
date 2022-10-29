@@ -1,0 +1,66 @@
+
+#include <ESP8266WiFi.h>
+#include "ThingSpeak.h" 
+
+#define SECRET_SSID "nockanda"
+#define SECRET_PASS "11213144"
+
+#define greenled D4
+#define redled D3
+
+char ssid[] = SECRET_SSID;   // your network SSID (name) 
+char pass[] = SECRET_PASS;   // your network password
+int keyIndex = 0;            // your network key Index number (needed only for WEP)
+WiFiClient  client;
+
+void setup() {
+  Serial.begin(115200);  // Initialize serial
+  pinMode(greenled,OUTPUT);
+  pinMode(redled,OUTPUT);
+  
+  WiFi.mode(WIFI_STA); 
+  ThingSpeak.begin(client);  // Initialize ThingSpeak
+}
+
+void loop() {
+
+  int statusCode = 0;
+  
+  // Connect or reconnect to WiFi
+  if(WiFi.status() != WL_CONNECTED){
+    Serial.print("Attempting to connect to SSID: ");
+    Serial.println(SECRET_SSID);
+    while(WiFi.status() != WL_CONNECTED){
+      WiFi.begin(ssid, pass); // Connect to WPA/WPA2 network. Change this line if using open or WEP network
+      Serial.print(".");
+      delay(5000);     
+    } 
+    Serial.println("\nConnected");
+  }
+
+  //음~ 일단 기본 정보는 아래와 같다
+  //Channel ID: 1841517
+  //Read API Keys : T6L5DP6HFJRC29LT
+  //현재 채널에 저장된 값이 소수점이 있는 값이더라~
+  //private채널이니까 비밀번호가 필요하더라~
+  int cds = ThingSpeak.readIntField(1842400, 1, "VE28EBOMNC9ILH2A");  
+  statusCode = ThingSpeak.getLastReadStatus();
+  if(statusCode == 200){
+    Serial.println("채널의 가장 최근값" + String(cds));
+    //cds라는 변수안에 든 값이 200이상이면 낮이고 200미만이면 밤이다!
+    if(cds >= 200){
+      //낮
+      digitalWrite(greenled,HIGH);
+      digitalWrite(redled,LOW);
+    }else{
+      //밤
+      digitalWrite(greenled,LOW);
+      digitalWrite(redled,HIGH);
+    }
+  }
+  else{
+    Serial.println("요청에 실패했습니다! HTTP error code " + String(statusCode)); 
+  }
+  delay(16000);
+  
+}

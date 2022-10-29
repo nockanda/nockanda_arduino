@@ -1,0 +1,71 @@
+
+#include <Adafruit_MAX31865.h>
+#include <SPFD5408_Adafruit_GFX.h>    // Core graphics library
+#include <SPFD5408_Adafruit_TFTLCD.h> // Hardware-specific library
+#include <SPFD5408_TouchScreen.h>
+
+#define LCD_CS A3 // Chip Select goes to Analog 3
+#define LCD_CD A2 // Command/Data goes to Analog 2
+#define LCD_WR A1 // LCD Write goes to Analog 1
+#define LCD_RD A0 // LCD Read goes to Analog 0
+
+#define LCD_RESET A4
+
+#define BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+
+//SCK=CLK(13), MISO=SDO(12), MOSI=SDI(11)
+Adafruit_MAX31865 thermo = Adafruit_MAX31865(10); //하드웨어 SPI를 사용하고 CS핀은 10번이다!
+
+#define RREF      430.0 //PT100이면 430, PT1000이면 4300
+#define RNOMINAL  100.0 //PT100이면 100, PT1000이면 1000
+
+float old_temp = 0;
+
+void setup() {
+  Serial.begin(115200);
+  thermo.begin(MAX31865_3WIRE); //온도 측정 활성~
+
+  //LCD화면 시작
+  tft.reset();
+  tft.begin(0x9341); // SDFP5408
+  tft.setRotation(3);
+  tft.fillScreen(BLACK); //화면을 검정으로 꽉 채워라!
+
+  tft.setTextColor(YELLOW);
+  tft.setTextSize(4);
+  tft.setCursor(0, 0);
+  tft.println("Nockanda526-4");
+}
+
+
+void loop() {
+  float temp = thermo.temperature(RNOMINAL, RREF); //온도측정~
+  Serial.print("Temperature = ");
+  Serial.println(temp);
+  //원래 있었던것을 clear하는 작업
+  //tft.fillScreen(BLACK);
+  tft.setCursor(0, 100);
+  //old_temp
+  tft.setTextColor(BLACK);
+  tft.println(old_temp);
+
+  //온도값에 따라서 컬러를 변경한다
+  if(temp > 60) tft.setTextColor(RED);
+  else if(temp > 30) tft.setTextColor(YELLOW);
+  else tft.setTextColor(GREEN);
+  tft.setTextSize(10);
+  tft.setCursor(0, 100);
+  tft.println(temp);
+
+  old_temp = temp;
+  delay(1000);
+}

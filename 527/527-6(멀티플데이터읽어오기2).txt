@@ -1,0 +1,67 @@
+
+#include <ESP8266WiFi.h>
+#include "ThingSpeak.h"
+
+#define SECRET_SSID "nockanda"
+#define SECRET_PASS "11213144"
+
+char ssid[] = SECRET_SSID;
+char pass[] = SECRET_PASS;
+int keyIndex = 0;       
+WiFiClient  client;
+
+
+//
+int statusCode = 0;
+
+void setup() {
+  Serial.begin(115200);      // Initialize serial 
+  
+  WiFi.mode(WIFI_STA);
+  
+  ThingSpeak.begin(client);  // Initialize ThingSpeak
+
+  //와이파이 공유기와 접속
+  if(WiFi.status() != WL_CONNECTED){
+    Serial.print("Attempting to connect to SSID: ");
+    Serial.println(SECRET_SSID);
+    while(WiFi.status() != WL_CONNECTED){
+      WiFi.begin(ssid, pass); // Connect to WPA/WPA2 network. Change this line if using open or WEP network
+      Serial.print(".");
+      delay(5000);     
+    } 
+    Serial.println("\nConnected");
+  }
+}
+
+void loop() {
+    //음~~ 일단 정보는 아래와 같다
+    //Channel ID: 1841524
+    //Read API Keys : OGH9XARKY4NHFTKG
+    //녹칸다의 채널은 private하니까 매개변수 2개 짜리 함수를 써야겠구나!
+                                               //채널ID     //read api key
+    statusCode = ThingSpeak.readMultipleFields(1841524,"OGH9XARKY4NHFTKG");
+    
+    if(statusCode == 200)
+    {
+      
+      int value1 = ThingSpeak.getFieldAsInt(1);
+      int value2 = ThingSpeak.getFieldAsInt(2);
+      int value3 = ThingSpeak.getFieldAsInt(3);
+      String createdAt = ThingSpeak.getCreatedAt(); //가장 최근 데이터 업로드한 시간
+
+      Serial.print(value1);
+      Serial.print("\t");
+      Serial.print(value2);
+      Serial.print("\t");
+      Serial.print(value3);
+      Serial.print("\t");
+      Serial.println(createdAt);
+    }
+    else{
+      Serial.println("Problem reading channel. HTTP error code " + String(statusCode)); 
+    }
+
+    delay(16000); // no need to fetch too often
+       
+}

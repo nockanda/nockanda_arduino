@@ -1,0 +1,39 @@
+#include <MHZ19.h>
+
+MHZ19 mhz(&Serial2);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC와 메가간 통신속도가 9600
+  Serial1.begin(9600); //메가와 블루투스모듈간 통신속도9600
+  Serial2.begin(9600); //아두이노 메가와 이산화탄소센서의 통신
+}
+
+void loop() {
+  MHZ19_RESULT response = mhz.retrieveData();
+  if (response == MHZ19_RESULT_OK)
+  {
+    int co2 = mhz.getCO2();
+    //PC로전송
+    Serial.print("측정한 이산화탄소농도=");
+    Serial.print(co2);
+    Serial.println("PPM");
+
+    //블루투스로 전송
+    Serial1.print("측정한 이산화탄소농도=");
+    Serial1.print(co2);
+    Serial1.println("PPM");
+  }
+  else
+  {
+    //PC로전송
+    Serial.print(F("Error, code: "));
+    Serial.println(response);
+
+    //블루투스로 전송
+    Serial1.print(F("Error, code: "));
+    Serial1.println(response);
+  }
+  
+  delay(2000);
+}

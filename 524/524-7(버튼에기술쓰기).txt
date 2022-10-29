@@ -1,0 +1,177 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+
+#ifndef STASSID
+#define STASSID "nockanda"
+#define STAPSK  "11213144"
+#endif
+
+const char* ssid     = STASSID;
+const char* password = STAPSK;
+
+ESP8266WebServer server(80);
+
+const int led = LED_BUILTIN;
+
+int mycount = 0;
+
+void handleRoot(){
+  //가상의 센서값을 여기서 측정하겠다!
+  int sensor1 = random(1000,2000);
+  int sensor2 = random(1000,2000);
+  
+
+String myresponse = "\
+<html>\
+  <head>\
+    <script src=\"https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js\"></script>\
+    <script>\
+      $(document).ready(function() {\
+         setInterval(function() {\
+            $.ajax({\
+            url: \"/sensor\",\
+            method: \"GET\",\
+            dataType: \"text\",\
+            success: function(data) {\
+              var mydata = JSON.parse(data);\
+              $(\"#result1\").html(mydata.data1);\
+              $(\"#result2\").html(mydata.data2);\
+            }\
+           })\
+         },1000);\
+         $(\"button\").click(function(){\
+            $.ajax({\
+            url: \"/button\",\
+            method: \"GET\",\
+            data:{\
+              id:$(this).val()\
+            },\
+            success: function(data) {\
+              $(\"#cnt\").html(data);\
+            }\
+           })\
+         });\
+      });\
+    </script>\
+  </head>\
+  <body>\
+    <table border=1 width=500>\
+      <tr>\
+        <th colspan=2>nockanda 524</th>\
+      </tr>\
+      <tr>\
+        <td width=50%>Sensor1 Value</td>\
+        <td id=result1>%sensor1%</td>\
+      </tr>\
+      <tr>\
+        <td>Sensor2 Value</td>\
+        <td id=result2>%sensor2%</td>\
+      </tr>\
+      <tr>\
+        <td>Now count</td>\
+        <td id=cnt>%count%</td>\
+      </tr>\
+      <tr>\
+        <td align=center><button value=plus>plus(+)</button></td>\
+        <td align=center><button value=minus>minus(-)</button></td>\
+      </tr>\
+      <tr>\
+        <td align=center><button value=plus10>plus(+10)</button></td>\
+        <td align=center><button value=minus10>minus(-10)</button></td>\
+      </tr>\
+    </table>\
+      </body>\
+</html>";
+
+  myresponse.replace("%sensor1%",String(sensor1));
+  myresponse.replace("%sensor2%",String(sensor2));
+  myresponse.replace("%count%",String(mycount));
+  
+  //서버가 클라이언트에게 보내준다!(response)
+  server.send(200, "text/html", myresponse);
+}
+
+void handleSensor(){
+  //가상의 센서값을 여기서 측정하겠다!
+  int sensor1 = random(1000,2000);
+  int sensor2 = random(1000,2000);
+  //{"data1":???,"data2":???}
+  String myresponse = "{\"data1\":"+String(sensor1)+",\"data2\":"+String(sensor2)+"}";
+  server.send(200, "text/plain", myresponse);
+}
+
+void handleButton(){
+  //server.args()
+  //server.arg()
+  //server.argName()
+  Serial.print(server.argName(0));
+  Serial.print(",");
+  Serial.println(server.arg(0));
+
+  if(server.arg(0) == "plus"){
+    mycount++;
+  }else if(server.arg(0) == "minus"){
+    mycount--;
+  }else if(server.arg(0) == "plus10"){
+    mycount+=10;
+  }else if(server.arg(0) == "minus10"){
+    mycount-=10;
+  }
+  server.send(200, "text/plain", String(mycount));
+}
+
+void handleNotFound() {
+  digitalWrite(led, 1);
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i = 0; i < server.args(); i++) {
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+  }
+  server.send(404, "text/plain", message);
+  digitalWrite(led, 0);
+}
+
+void setup(void) {
+  pinMode(led, OUTPUT);
+  digitalWrite(led, 0);
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  if (MDNS.begin("esp8266")) {
+    Serial.println("MDNS responder started");
+  }
+
+  //클라이언트가 루트경로로 request했을때 handleRoot함수가 호출된다
+  server.on("/", handleRoot);
+  server.on("/sensor", handleSensor);
+  server.on("/button", handleButton);
+
+  server.onNotFound(handleNotFound);
+
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop(void) {
+  server.handleClient();
+}

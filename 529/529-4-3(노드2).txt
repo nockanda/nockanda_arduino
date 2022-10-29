@@ -1,0 +1,196 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial lora(D5,D6);
+
+#define mode D7
+
+#define device_num 1
+
+#define SET_ADDH 0x00
+#define SET_ADDL 0x03
+#define SET_CH 0x47
+#define SET_MODE 0b01000011//(fixed transmission) //0b00000011(tranparent transmission)
+#define SET_Txpower 0b00000011 //21dBm 0b00000000(30dbm)
+
+byte now_addh = 0;
+byte now_addl = 0;
+byte now_ch = 0;
+byte now_mode = 0;
+byte now_txpower = 0;
+
+byte send_buff[4];
+
+struct{
+  byte id=SET_ADDL;
+  float temp;
+  float humi;
+}mysensor;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC하고 아두이노하고의 통신라인!
+  lora.begin(9600); //아두이노하고 로라모듈하고의 통신라인!
+  pinMode(mode,OUTPUT);
+
+  digitalWrite(mode,HIGH); //설정모드!
+  delay(100);
+
+  Serial.println("E220-900T30D의 설정값입니다");
+
+  Serial.print("ADDH=");
+  send_buff[0] = 0xC1;
+  send_buff[1] = 0x00;
+  send_buff[2] = 0x01;
+  now_addh = get_config(send_buff);
+  Serial.println(now_addh,HEX);
+
+  delay(100);
+  Serial.print("ADDL=");
+  send_buff[0] = 0xC1;
+  send_buff[1] = 0x01;
+  send_buff[2] = 0x01;
+  now_addl = get_config(send_buff);
+  Serial.println(now_addl,HEX);
+
+  delay(100);
+  Serial.print("CH=");
+  send_buff[0] = 0xC1;
+  send_buff[1] = 0x04;
+  send_buff[2] = 0x01;
+  now_ch = get_config(send_buff);
+  Serial.print(850.125+ now_ch);
+  Serial.println("Mhz");
+
+  delay(100);
+  Serial.print("mode=");
+  send_buff[0] = 0xC1;
+  send_buff[1] = 0x05;
+  send_buff[2] = 0x01;
+  now_mode = get_config(send_buff);
+  Serial.println(bitRead(now_mode, 6)?"Fixed Transmission":"Transparent Transmission");
+
+  delay(100);
+  Serial.print("TXpower=");
+  send_buff[0] = 0xC1;
+  send_buff[1] = 0x03;
+  send_buff[2] = 0x01;
+  now_txpower = get_config(send_buff);
+
+ 
+  if(bitRead(now_txpower,1) == 0 && bitRead(now_txpower,0) == 0){
+    Serial.println("30dBm");
+  }else if(bitRead(now_txpower,1) == 0 && bitRead(now_txpower,0) == 1){
+    Serial.println("27dBm");
+  }else if(bitRead(now_txpower,1) == 1 && bitRead(now_txpower,0) == 0){
+    Serial.println("24dBm");
+  }else if(bitRead(now_txpower,1) == 1 && bitRead(now_txpower,0) == 1){
+    Serial.println("21dBm");
+  }
+
+  //유저가 희망하는(아두이노에 코드로 지정된) 설정값으로 update!
+  if(SET_ADDH != now_addh){
+    //주소값을 업데이트한다!
+    delay(100);
+    send_buff[0] = 0xC0;
+    send_buff[1] = 0x00;
+    send_buff[2] = 0x01;
+    send_buff[3] = SET_ADDH; //내가 설정할 값
+    Serial.print("ADDH값 수정=");
+    Serial.println(set_config(send_buff),HEX);
+  }
+
+  if(SET_ADDL != now_addl){
+    delay(100);
+    send_buff[0] = 0xC0;
+    send_buff[1] = 0x01;
+    send_buff[2] = 0x01;
+    send_buff[3] = SET_ADDL; //내가 설정할 값
+    Serial.print("ADDL값 수정=");
+    Serial.println(set_config(send_buff),HEX);
+  }
+
+  if(SET_CH != now_ch){
+    delay(100);
+    send_buff[0] = 0xC0;
+    send_buff[1] = 0x04;
+    send_buff[2] = 0x01;
+    send_buff[3] = SET_CH; //내가 설정할 값
+    Serial.print("CH값 수정=");
+    Serial.print(850.125+ set_config(send_buff));
+    Serial.println("Mhz");
+  }
+
+  if(SET_MODE != now_mode){
+    delay(100);
+    send_buff[0] = 0xC0;
+    send_buff[1] = 0x05;
+    send_buff[2] = 0x01;
+    send_buff[3] = SET_MODE; //내가 설정할 값
+    Serial.print("MODE값 수정=");
+    Serial.println(bitRead(set_config(send_buff), 6)?"Fixed Transmission":"Transparent Transmission");
+  }
+
+  if(SET_Txpower != now_txpower){
+    delay(100);
+    send_buff[0] = 0xC0;
+    send_buff[1] = 0x03;
+    send_buff[2] = 0x01;
+    send_buff[3] = SET_Txpower; //내가 설정할 값
+    Serial.print("TXPOWER값 수정=");
+    now_txpower = set_config(send_buff);
+    if(bitRead(now_txpower,1) == 0 && bitRead(now_txpower,0) == 0){
+      Serial.println("30dBm");
+    }else if(bitRead(now_txpower,1) == 0 && bitRead(now_txpower,0) == 1){
+      Serial.println("27dBm");
+    }else if(bitRead(now_txpower,1) == 1 && bitRead(now_txpower,0) == 0){
+      Serial.println("24dBm");
+    }else if(bitRead(now_txpower,1) == 1 && bitRead(now_txpower,0) == 1){
+      Serial.println("21dBm");
+    }
+  }
+  
+  delay(1000);
+  Serial.println("송수신모드로 전환합니다");
+  digitalWrite(mode,LOW); //송수신모드!
+  delay(100);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  byte header[] = {0x00,0x01,0x47};
+  lora.write(header,3);
+  
+  mysensor.temp = random(1000,5000)/100.0;//10.00~49.99
+  mysensor.humi = random(1000,5000)/100.0;//10.00~49.99
+  lora.write((byte*)&mysensor,sizeof(mysensor));
+  delay(16000);
+}
+
+byte get_config(byte input[]){
+  byte recv_buff[4];
+  lora.write(input,3);
+  lora.readBytes(recv_buff,4);
+
+  if(recv_buff[0] == input[0] && recv_buff[1] == input[1] && recv_buff[2] == input[2]){
+    //Serial.print("ADDH=");
+    //Serial.println(recv_buff[3],HEX);
+    return recv_buff[3];
+  }else{
+    return 0xFF;
+  }
+}
+
+byte set_config(byte input[]){
+  byte recv_buff[4];
+  lora.write(input,4);
+  lora.readBytes(recv_buff,4);
+
+  if(recv_buff[0] == 0xC1 && recv_buff[1] == input[1] && recv_buff[2] == input[2] && recv_buff[3] == input[3]){
+    //응답이 정상적으로온 경우
+    return recv_buff[3];
+  }else{
+    //실패!
+    return 0xFF;
+  }
+}
+

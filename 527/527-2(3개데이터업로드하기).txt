@@ -1,0 +1,67 @@
+#include <ESP8266WiFi.h>
+#include "ThingSpeak.h"
+
+char ssid[] = "nockanda";
+char pass[] = "11213144";
+int keyIndex = 0;
+WiFiClient  client;
+
+unsigned long myChannelNumber = 1841524;
+const char * myWriteAPIKey = "T2SGEYO7XR0M1YDI";
+
+String myStatus = "";
+
+void setup() {
+  Serial.begin(115200);  
+  WiFi.mode(WIFI_STA); 
+  ThingSpeak.begin(client);
+}
+
+void loop() {
+
+  // Connect or reconnect to WiFi
+  if(WiFi.status() != WL_CONNECTED){
+    Serial.print("Attempting to connect to SSID: ");
+    while(WiFi.status() != WL_CONNECTED){
+      WiFi.begin(ssid, pass);  // Connect to WPA/WPA2 network. Change this line if using open or WEP network
+      Serial.print(".");
+      delay(5000);     
+    } 
+    Serial.println("\nConnected.");
+  }
+
+  //값을 만든다
+  int number1 = random(0,100);
+  int number2 = random(0,100);
+  int number3 = random(0,100);
+
+  //내가 만든 필드 번호에 값을 1개씩 대입한다!(데이터 꾸러미)
+  ThingSpeak.setField(1, number1);
+  ThingSpeak.setField(2, number2);
+  ThingSpeak.setField(3, number3);
+
+  // figure out the status message
+  if(number1 > number2){
+    myStatus = String("field1 is greater than field2"); 
+  }
+  else if(number1 < number2){
+    myStatus = String("field1 is less than field2");
+  }
+  else{
+    myStatus = String("field1 equals field2");
+  }
+  
+  //일단 뭔지 모르겠다!
+  //ThingSpeak.setStatus(myStatus);
+  
+  //여러개의 데이터를 전송할때 사용하는 함수의 모양
+  int x = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+  if(x == 200){
+    Serial.println("Channel update successful.");
+  }
+  else{
+    Serial.println("Problem updating channel. HTTP error code " + String(x));
+  }
+  
+  delay(16000);
+}

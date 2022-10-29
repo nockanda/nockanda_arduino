@@ -1,0 +1,23 @@
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC와 메가간 통신속도가 9600
+  Serial1.begin(9600); //메가와 블루투스모듈간 통신속도9600
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //녹칸다가 PC에서 시리얼모니터에 text를 입력하면(시리얼 입력)
+  //그 text를 블루투스 통신으로 스마트폰으로 전송한다!
+  if(Serial.available()){
+    //시리얼모니터에서 뭔가 전송됨!
+    //종료문자는 \n(라인피더)
+    String data = Serial.readStringUntil('\n'); //시리얼모니터에서 설정이 되어있어야함!
+    Serial1.println(data);
+  }
+  //블루투스모듈에서 들어오는 text데이터를 컴퓨터의 시리얼모니터에 출력하겠다!
+
+  if(Serial1.available()){
+    String data = Serial1.readStringUntil('\n'); //스마트폰쪽에서 설정이 되어있어야함!
+    Serial.println(data);
+  }
+}

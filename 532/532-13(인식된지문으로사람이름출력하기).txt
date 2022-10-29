@@ -1,0 +1,48 @@
+#include <Adafruit_Fingerprint.h>
+
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&Serial1);
+
+String nockanda_company[] = {
+  "CEO NOCKANDA1",
+  "Gildong, Hong2",
+  "Minam, Kim3",
+  "MS, SEO4",
+  "TT, KIM5",
+  "QQ, Choi6",
+  "WW, Park7",
+  "HH, Jang8",
+  "YY, KIM9",
+  "WW, LEE10",
+};
+
+void setup()  
+{
+  Serial.begin(9600); //PC와 아두이노메가
+  
+  Serial.println("\n\nNockanda finger detect test");
+
+  // set the data rate for the sensor serial port
+  finger.begin(57600);
+  delay(5);
+}
+
+void loop()  
+{
+  getFingerprintIDez();
+  delay(50);
+}
+
+int getFingerprintIDez() {
+  uint8_t p = finger.getImage(); //지문인식센서와 소통
+  if (p != FINGERPRINT_OK)  return -1;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return -1;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK)  return -1;
+  
+  //finger.fingerID 1~10
+  Serial.println(nockanda_company[finger.fingerID-1]);
+  return finger.fingerID; 
+}
