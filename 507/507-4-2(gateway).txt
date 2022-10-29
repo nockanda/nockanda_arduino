@@ -1,0 +1,141 @@
+#include <ESP8266WiFi.h>
+#include <espnow.h>
+
+//와이파이 공유기의 id비밀번호가 들어가야 인터넷에 접속이 가능하겠죠?
+#ifndef STASSID
+#define STASSID "nockanda"
+#define STAPSK  "11213144"
+#endif
+
+const char* ssid     = STASSID;
+const char* password = STAPSK;
+
+//클라이언트가 서버에 연결을 해야하는데.. 서버의 주소가 필요하다!
+const char* host = "192.168.0.3";
+//서버의 ip주소는 전체적인 주소의 일부분 상세주소인 포트번호가 필요하다!
+const uint16_t port = 60000;
+
+WiFiClient client;
+
+unsigned long t = 0;
+unsigned long t2 = 0;
+
+byte broadcasting[] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+
+struct{
+  float temp;
+  float humi;
+}mydht11;
+
+//셋업함수는 아두이노가 부팅되면 딱 한번 실행되는부분!
+//와이파이 공유기와 연결하는 작업을 진행한다!
+void setup() {
+  Serial.begin(115200);
+
+  // We start by connecting to a WiFi network
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  Serial.println();
+  Serial.println();
+  Serial.print("Wait for WiFi... ");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("나의 맥어드레스 =");
+  Serial.println(WiFi.macAddress());
+
+  //ESPNOW의 기능을 활성화한다!
+  if (esp_now_init() != 0) {
+    //ESP NOW 시작 실패!
+    Serial.println("ESPNOW 실패!");
+    return;
+  }else{
+     //ESP NOW 시작 성공!
+     Serial.println("ESPNOW 성공!");
+  }
+  //지금 이보드의 역할은 주고 받는것을 다하겠다!
+  esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+
+  //나의 슬레이브를 등록해야겠다!
+  esp_now_add_peer(broadcasting, ESP_NOW_ROLE_COMBO, 1, NULL, 0);//뒤에 2개는 ID, PW
+
+  //송신완료 콜백함수 등록
+  esp_now_register_send_cb(OnDataSent);
+
+  //수신완료 콜백 함수 등록
+  esp_now_register_recv_cb(OnDataRecv);
+
+  WiFi.printDiag(Serial);
+}
+
+
+void loop() {
+  //TCP서버에 접속하라!
+  //만약 접속이 안되어 있으면 접속을 하고
+  //접속중이면 접속을 유지하라!
+  if(!client.connected()){
+    client.connect(host, port);
+    delay(5000);
+  }
+
+  //서버에서 클라이언트로 들어오는 메시지를 수신하는부분
+  if(client.available()){
+    String data = client.readStringUntil('\n');
+    Serial.print("수신=");
+    Serial.println(data);
+
+    //이 메시지는 ESPNOW 노드로 전달
+    esp_now_send(broadcasting, (byte*)data.c_str(), data.length());
+  }
+
+/*
+  //클라이언트에서 서버로 업로드하는 부분
+  if(millis() - t > 2000){
+    t = millis();
+    client.println("안녕하세요 녹칸다입니다!");
+  }
+*/
+/*
+  //ESPNOW게이트웨이가 노드에게 전송하는 부분
+  if(millis() - t2 > 2000){
+    t2 = millis();
+    //2초마다 한번씩 하겠다!
+    esp_now_send(broadcasting, (uint8_t *) &data, sizeof(data));
+  }
+*/
+}
+
+//송신콜백함수 원형:
+void OnDataSent(uint8_t *mac, uint8_t status) {
+   //status가 0일때 송신 완료!
+   if(status == 0){
+      Serial.println("성공적으로 송신했음!");
+   }else{
+      Serial.println("송신 실패!!");
+   }
+}
+
+
+//수신콜백함수 원형:
+void OnDataRecv(uint8_t * mac, uint8_t * data, uint8_t len) {
+  //수신한 구조체를 원복하는 부분
+  memcpy(&mydht11,data,sizeof(mydht11));
+
+  String myjson = "{\"temp\":"+String(mydht11.temp)+",\"humi\":"+String(mydht11.humi)+"}";
+  
+  //이 메시지는 노드레드 서버로 전달(JSON)
+  if(client.connected()){
+    client.println(myjson);
+  }
+  
+}

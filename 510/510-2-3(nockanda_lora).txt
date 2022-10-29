@@ -1,0 +1,72 @@
+#include <SPI.h> 
+#include <LoRa.h>
+
+//920.9Mhz
+const long frequency = 9209E5;
+
+typedef void (*lora_recive)(String msg);
+
+lora_recive mycallback;
+
+//수신모드
+    void LoRa_rxMode(){
+      LoRa.disableInvertIQ();               // normal mode
+      LoRa.receive();                       // set receive mode
+    }
+
+    //송신모드
+    void LoRa_txMode(){
+      LoRa.idle();                          // set standby mode
+      LoRa.enableInvertIQ();                // active invert I and Q signals
+    }
+
+    void LoRa_sendMessage(String message) {
+      LoRa_txMode();                        // set tx mode
+      LoRa.beginPacket();                   // start packet
+      LoRa.print(message);                  // add payload
+      LoRa.endPacket(true);                 // finish packet and send it
+    }
+
+    void onReceive(int packetSize) {
+      String message = "";
+    
+      while (LoRa.available()) {
+        message += (char)LoRa.read();
+      }
+    
+      //Serial.print("Gateway Receive: ");
+      //Serial.println(message);
+      #ifdef ESP_LOGD
+            ESP_LOGD("nockanda", "received: %s\n", message.c_str());
+      #endif
+      mycallback(message);
+    }
+
+    void onTxDone() {
+      Serial.println("TxDone");
+      LoRa_rxMode();
+    }
+
+class {
+public:
+    void begin() {
+        //NSS(D10), RST(D9), DIO0(D3)
+        LoRa.setPins(15, 2, 5);
+          if (!LoRa.begin(frequency)) {
+            Serial.println("LoRa init failed. Check your connections.");
+            while (true);                       // if failed, do nothing
+          }
+
+          LoRa.onReceive(onReceive);
+          LoRa.onTxDone(onTxDone);
+          LoRa_rxMode();
+    }
+    void receive(lora_recive callback) {
+        mycallback = callback;
+    }
+    void send(String msg){
+        LoRa_sendMessage(msg);
+    }
+    
+} NOCKANDA_lora;
+

@@ -1,0 +1,45 @@
+esphome:
+  name: nockanda4
+  includes:
+  - nockanda_lora.h
+  libraries:
+  - SPI
+  - "LoRa"
+
+esp8266:
+  board: esp01_1m
+  
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+sensor:
+  - platform: template
+    name: "LoRa Float"
+    id: test1
+
+custom_component:
+- lambda: |-
+       NOCKANDA_lora.begin();
+       NOCKANDA_lora.receive([](float input) {
+          id(test1).publish_state(input);
+       });
+       return {};
+
+ota:
+  password: "5540bdfe29301d5b64f04029f61c5a67"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Nockanda4 Fallback Hotspot"
+    password: "123123123"
+
+captive_portal:
+    

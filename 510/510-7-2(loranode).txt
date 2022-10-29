@@ -1,0 +1,115 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+
+#define myid 2
+#define led D4
+
+//920.9Mhz
+const long frequency = 9209E5;
+
+struct{
+  byte id = myid;
+  float sensor1;
+  float sensor2;
+  float sensor3;
+}mysensor;
+
+void setup() {
+  Serial.begin(115200);                   // initialize serial
+  pinMode(led,OUTPUT);
+  //NSS(D10), RST(D9), DIO0(D3)
+  LoRa.setPins(D10, D9, D3);
+  if (!LoRa.begin(frequency)) {
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+  Serial.println();
+  Serial.println("LoRa Simple Node");
+  Serial.println("Only receive messages from gateways");
+  Serial.println("Tx: invertIQ disable");
+  Serial.println("Rx: invertIQ enable");
+  Serial.println();
+
+  LoRa.onReceive(onReceive);
+  LoRa.onTxDone(onTxDone);
+  LoRa_rxMode();
+}
+
+void loop() {
+
+  //node쪽은 1초에 한번 뭔가 전송하려고 한다~
+  if (runEvery(2000)) { // repeat every 1000 millis
+    //가상의 센서값
+    mysensor.sensor1 = random(2000,5000)/100.0; //20.00~ 49.99
+    mysensor.sensor2 = random(2000,5000)/100.0; //20.00~ 49.99
+    mysensor.sensor3 = random(2000,5000)/100.0; //20.00~ 49.99
+
+    Serial.print(mysensor.id);
+    Serial.print("\t");
+    Serial.print(mysensor.sensor1);
+    Serial.print("\t");
+    Serial.print(mysensor.sensor2);
+    Serial.print("\t");
+    Serial.println(mysensor.sensor3);
+    
+
+    LoRa_txMode();
+    LoRa.beginPacket();
+    //(byte*)&mysensor -> mysensor가 float인데 byte배열로 바꿔라!
+    LoRa.write((byte*)&mysensor,sizeof(mysensor));
+    LoRa.endPacket(true);
+    Serial.println("Send Message!");
+  }
+}
+
+void LoRa_rxMode(){
+  LoRa.enableInvertIQ();                // active invert I and Q signals
+  LoRa.receive();                       // set receive mode
+}
+
+void LoRa_txMode(){
+  LoRa.idle();                          // set standby mode
+  LoRa.disableInvertIQ();               // normal mode
+}
+
+void LoRa_sendMessage(String message) {
+  LoRa_txMode();                        // set tx mode
+  LoRa.beginPacket();                   // start packet
+  LoRa.print(message);                  // add payload
+  LoRa.endPacket(true);                 // finish packet and send it
+}
+
+void onReceive(int packetSize) {
+  if(packetSize != 2) return;
+
+  byte recv[2];
+  recv[0] = LoRa.read();
+  recv[1] = LoRa.read();
+
+  if(recv[0] != myid) return;
+
+  if(recv[1] == '0'){
+    digitalWrite(led,LOW);
+  }else if(recv[1] == '1'){
+    digitalWrite(led,HIGH);
+  }
+}
+
+void onTxDone() {
+  Serial.println("TxDone");
+  LoRa_rxMode();
+}
+
+boolean runEvery(unsigned long interval)
+{
+  static unsigned long previousMillis = 0;
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval)
+  {
+    previousMillis = currentMillis;
+    return true;
+  }
+  return false;
+}

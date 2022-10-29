@@ -1,0 +1,69 @@
+#include <ESP8266WiFi.h>
+
+//와이파이 공유기의 id비밀번호가 들어가야 인터넷에 접속이 가능하겠죠?
+#ifndef STASSID
+#define STASSID "nockanda"
+#define STAPSK  "11213144"
+#endif
+
+const char* ssid     = STASSID;
+const char* password = STAPSK;
+
+//클라이언트가 서버에 연결을 해야하는데.. 서버의 주소가 필요하다!
+const char* host = "192.168.0.3";
+//서버의 ip주소는 전체적인 주소의 일부분 상세주소인 포트번호가 필요하다!
+const uint16_t port = 60000;
+
+WiFiClient client;
+
+unsigned long t = 0;
+
+//셋업함수는 아두이노가 부팅되면 딱 한번 실행되는부분!
+//와이파이 공유기와 연결하는 작업을 진행한다!
+void setup() {
+  Serial.begin(115200);
+
+  // We start by connecting to a WiFi network
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  Serial.println();
+  Serial.println();
+  Serial.print("Wait for WiFi... ");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+
+void loop() {
+  //TCP서버에 접속하라!
+  //만약 접속이 안되어 있으면 접속을 하고
+  //접속중이면 접속을 유지하라!
+  if(!client.connected()){
+    client.connect(host, port);
+    delay(5000);
+  }
+
+  //서버에서 클라이언트로 들어오는 메시지를 수신하는부분
+  if(client.available()){
+    String data = client.readStringUntil('\n');
+    Serial.print("수신=");
+    Serial.println(data);
+  }
+
+  //클라이언트에서 서버로 업로드하는 부분
+  if(millis() - t > 2000){
+    t = millis();
+    client.println("안녕하세요 녹칸다입니다!");
+  }
+}
