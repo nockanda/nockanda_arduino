@@ -1,0 +1,63 @@
+#define NOCK_CLK 4
+#define NOCK_DT 5
+#define NOCK_SW 6
+
+bool pre_CLK = HIGH;
+char cmd = '=';
+
+int my_menu_count = 3;
+
+String my_menu[] = {
+            "MENU1",
+            "MENU2",
+            "MENU3"
+};
+
+int index = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(NOCK_CLK,INPUT);
+  pinMode(NOCK_DT,INPUT);
+  pinMode(NOCK_SW,INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  check_rotary_encoder();
+
+  if(cmd != '='){
+    //어떤 방향이던지 유저가 레버를 돌렸다
+    if(cmd == '+'){
+      //Serial.println("시계방향으로 회전!");
+      index++;
+      if(index > my_menu_count-1) index = my_menu_count-1;
+    }else if(cmd == '-'){
+      //Serial.println("반시계방향으로 회전!");
+      index--;
+      if(index < 0) index = 0;
+    }
+
+    Serial.println(my_menu[index]);
+    cmd = '=';
+  }
+
+  delay(1);
+}
+
+void check_rotary_encoder(){
+  bool now_CLK = digitalRead(NOCK_CLK);
+  if(pre_CLK == HIGH && now_CLK == LOW){
+    //폴링엣지
+    bool now_DT = digitalRead(NOCK_DT);
+    if(now_CLK != now_DT){
+      //시계방향
+      cmd = '+';
+    }else{
+      //반시계방향
+      cmd = '-';
+    }
+  }
+  pre_CLK = now_CLK;
+}

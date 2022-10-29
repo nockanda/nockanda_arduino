@@ -1,0 +1,70 @@
+#include <MsTimer2.h>
+#include <Servo.h>
+Servo myservo;
+
+#define NOCK_CLK 4
+#define NOCK_DT 5
+
+bool pre_sensorA = LOW;
+
+volatile int num = 0;
+
+byte leds[] = {A0,A1,A2,A3,A4,A5};
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 결과를 PC로 볼꺼야~
+  myservo.attach(9);
+  myservo.write(0); //초기각도 0도임!
+  pinMode(NOCK_CLK, INPUT);
+  pinMode(NOCK_DT, INPUT);
+
+  for(int i = 0;i<6;i++){
+    pinMode(leds[i],OUTPUT);
+  }
+
+  //타이머 인터럽트를 실행하겠다!
+  MsTimer2::set(10, rotary_encoder); //시간, 함수
+  MsTimer2::start();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //메인루프는 쉬어라~
+  for(int i = 0;i<6;i++){
+    for(int j =0;j<6;j++){
+      if(j == i) digitalWrite(leds[j],HIGH);
+      else digitalWrite(leds[j],LOW);
+    }
+    delay(1000);
+  }
+}
+
+void rotary_encoder(){
+  //1.지금 센서값을 확인해야하는 타이밍인가?
+  //(=CLK핀에 상승에지가 발생했는가?)
+  bool sensorA = digitalRead(NOCK_CLK);//N
+  
+  //여기서 할거하고~~
+  if(pre_sensorA == HIGH && sensorA == LOW){
+    //센서A의 Falling edge!
+    //2.센서B의 상태를 가지고 와서 비교를 해본다!
+    bool sensorB = digitalRead(NOCK_DT);
+    if(sensorA != sensorB){
+      //시계방향으로 회전하고 있구나~
+      //Serial.println("시계방향");
+      num+=10;
+      if(num > 180) num = 180;
+    }else{
+      //반시계방향으로 회전하고 있구나~
+      //Serial.println("반시계방향");
+      num-=10;
+      if(num < 0) num = 0;
+    }
+    Serial.println(num);
+    myservo.write(num);
+  }
+
+
+  pre_sensorA = sensorA;
+}

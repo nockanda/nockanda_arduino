@@ -1,0 +1,111 @@
+#define NOCK_CLK 4
+#define NOCK_DT 5
+#define NOCK_SW 6
+
+#define LCD_LINE 4
+
+bool pre_CLK = HIGH;
+char cmd = '=';
+
+int my_menu_count = 7;
+
+String my_menu[] = {
+            "MENU1",
+            "MENU2",
+            "MENU3",
+            "MENU4",
+            "MENU5",
+            "MENU6",
+            "MENU7"
+};
+
+int index = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(NOCK_CLK,INPUT);
+  pinMode(NOCK_DT,INPUT);
+  pinMode(NOCK_SW,INPUT_PULLUP);
+
+  //초기 메뉴를 출력한다(LCD)
+  Serial.println("*" + my_menu[0]);
+  for(int i = 1;i<4;i++){
+    //1,2,3
+    Serial.println(" " + my_menu[i]);
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  check_rotary_encoder();
+
+  if(cmd != '='){
+    //어떤 방향이던지 유저가 레버를 돌렸다
+    if(cmd == '+'){
+      //Serial.println("시계방향으로 회전!");
+      index++;
+      if(index > my_menu_count-1) index = my_menu_count-1;
+    }else if(cmd == '-'){
+      //Serial.println("반시계방향으로 회전!");
+      index--;
+      if(index < 0) index = 0;
+    }else if(cmd == '>'){
+      Serial.print("현재 선택된 메뉴는 [");
+      Serial.print(my_menu[index]);
+      Serial.println("] 입니다!");
+      delay(300);
+    }
+
+    //현재까지의 결과를 시리얼 모니터에 출력하는 부분!
+
+    int pagenum = index/LCD_LINE;
+    Serial.println("LCD화면 클리어!");
+    if((pagenum+1)*LCD_LINE >= my_menu_count){
+      //마지막페이지 처리부분
+      for(int i = pagenum*LCD_LINE;i<my_menu_count;i++){
+        if(i == index){
+          Serial.print("*");
+        }else{
+          Serial.print(" ");
+        }
+        Serial.println(my_menu[i]);
+      }
+    }else{
+      //마지막페이지를 제외한 모든 부분
+      for(int i = pagenum*LCD_LINE;i<pagenum*LCD_LINE+LCD_LINE;i++){
+        //index : (가상으로)선택이 되어있는 번호
+        if(i == index){
+          Serial.print("*");
+        }else{
+          Serial.print(" ");
+        }
+        Serial.println(my_menu[i]);
+      }
+    }
+    cmd = '=';
+  }
+
+  delay(1);
+}
+
+void check_rotary_encoder(){
+  if(digitalRead(NOCK_SW) == LOW){
+    //로터리엔코더에 스위치가 풀업방식으로 연결!
+    cmd = '>';
+  }
+  
+  bool now_CLK = digitalRead(NOCK_CLK);
+  if(pre_CLK == HIGH && now_CLK == LOW){
+    //폴링엣지
+    bool now_DT = digitalRead(NOCK_DT);
+    if(now_CLK != now_DT){
+      //시계방향
+      cmd = '+';
+    }else{
+      //반시계방향
+      cmd = '-';
+    }
+  }
+  pre_CLK = now_CLK;
+}

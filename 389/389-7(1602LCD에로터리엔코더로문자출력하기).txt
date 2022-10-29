@@ -1,0 +1,79 @@
+#include <MsTimer2.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2);
+
+#define NOCK_CLK 4
+#define NOCK_DT 5
+#define NOCK_SW 3
+
+bool pre_sensorA = LOW;
+
+volatile int num = 32;
+int char_index = 0;
+int line_index = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 결과를 PC로 볼꺼야~
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  pinMode(NOCK_CLK, INPUT);
+  pinMode(NOCK_DT, INPUT);
+  pinMode(NOCK_SW, INPUT_PULLUP);
+
+  //타이머 인터럽트를 실행하겠다!
+  //MsTimer2::set(1, rotary_encoder); //시간, 함수
+  //MsTimer2::start();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(NOCK_SW) == LOW){
+    //LCD화면의 커서를 옮긴다
+    char_index++; //0~15
+    if(char_index > 15){
+      char_index=0;
+      line_index++;
+      if(line_index > 2){
+        line_index=0;
+      }
+    }
+
+    lcd.setCursor(char_index,line_index);
+    delay(500);
+  }
+  
+  //1.지금 센서값을 확인해야하는 타이밍인가?
+  //(=CLK핀에 상승에지가 발생했는가?)
+  bool sensorA = digitalRead(NOCK_CLK);//N
+  
+  //여기서 할거하고~~
+  if(pre_sensorA == HIGH && sensorA == LOW){
+    //센서A의 Falling edge!
+    //2.센서B의 상태를 가지고 와서 비교를 해본다!
+    bool sensorB = digitalRead(NOCK_DT);
+    if(sensorA != sensorB){
+      //시계방향으로 회전하고 있구나~
+      //Serial.println("시계방향");
+      num++;
+      if(num > 126) num = 126;
+    }else{
+      //반시계방향으로 회전하고 있구나~
+      //Serial.println("반시계방향");
+      num--;
+      if(num < 32) num = 32;
+    }
+    Serial.println((char)num);
+    lcd.setCursor(char_index,line_index);
+    lcd.print((char)num);
+  }
+
+  pre_sensorA = sensorA;
+}
+
+void rotary_encoder(){
+  
+}

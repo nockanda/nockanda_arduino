@@ -1,0 +1,141 @@
+#include <MsTimer2.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+#include <EEPROM.h>
+
+#include "DHT.h"
+#define DHTPIN 6
+#define DHTTYPE DHT11 
+DHT dht(DHTPIN, DHTTYPE);
+
+#define CLK1 8
+#define DIO1 9
+#define CLK2 10
+#define DIO2 11
+TM1637Display display1(CLK1, DIO1);
+TM1637Display display2(CLK2, DIO2);
+
+#define NOCK_CLK 4
+#define NOCK_DT 5
+#define NOCK_SW 3
+
+#define alram_led 7
+
+bool pre_sensorA = LOW;
+
+volatile float temp_set = 20.0;
+
+bool is_called = false;
+
+union{
+  float f;
+  byte b[4];
+}Nockanda;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 결과를 PC로 볼꺼야~
+
+  //EEPROM에서 설정된 온도를 읽어온다
+  //temp_set = ??;
+  Nockanda.b[0] = EEPROM.read(0);
+  Nockanda.b[1] = EEPROM.read(1);
+  Nockanda.b[2] = EEPROM.read(2);
+  Nockanda.b[3] = EEPROM.read(3);
+  temp_set = Nockanda.f;
+  
+  dht.begin();
+  pinMode(NOCK_CLK, INPUT);
+  pinMode(NOCK_DT, INPUT);
+  pinMode(NOCK_SW, INPUT_PULLUP);
+  pinMode(alram_led,OUTPUT);
+  //나는 어떤 핀을 외부 인터럽트로 활용하겠다!
+  attachInterrupt(digitalPinToInterrupt(NOCK_SW), button_pressed, FALLING);
+
+  //타이머 인터럽트를 실행하겠다!
+  MsTimer2::set(1, rotary_encoder); //시간, 함수
+  MsTimer2::start();
+
+  display1.setBrightness(0x0f);
+  display2.setBrightness(0x0f);
+  display1.showNumberDec(0, false);
+  display2.showNumberDec(temp_set*10, false);
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    //PC에서 아두이노쪽으로 시리얼모니터로 뭔가 전송했다~!
+    char c = Serial.read();
+    if(c == '0'){
+      //작업이 이루어지는상황!
+      Serial.println("앞으로 10초간 파업을 하겠습니다!!!");
+      delay(10000);
+      Serial.println("협상이 잘 되었습니다!!");
+    }
+  }
+  
+  //float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  //Serial.print(h);
+  //Serial.print(",");
+  //Serial.println(t);
+  display1.showNumberDec(t*10, false);
+
+  //설정값과 현재온도를 비교해서 부저음을 발생시킨다
+  if(t > temp_set){
+    //부저음을 재생한다
+    digitalWrite(alram_led,HIGH);
+  }else{
+    //부저음을 끈다
+    digitalWrite(alram_led,LOW);
+  }
+  delay(1000);
+}
+
+void button_pressed(){
+  //인터럽트가 발생하면(=버튼이눌려지면) 뭘 할래?
+  //현재 설정온도를 EEPROM에 기록한다!
+  //temp_set : float : 4bytes
+  digitalWrite(alram_led,HIGH);
+  Nockanda.f = temp_set;
+  //Nockanda.b[0] ~ Nockanda[3]
+  EEPROM.write(0, Nockanda.b[0]);
+  EEPROM.write(1, Nockanda.b[1]);
+  EEPROM.write(2, Nockanda.b[2]);
+  EEPROM.write(3, Nockanda.b[3]);
+  Serial.println("기록했습니다!");
+  //디바운스 처리가 귀찮아서 일단..
+  delay(500);
+  digitalWrite(alram_led,LOW);
+}
+
+void rotary_encoder(){
+  //1.지금 센서값을 확인해야하는 타이밍인가?
+  //(=CLK핀에 상승에지가 발생했는가?)
+  bool sensorA = digitalRead(NOCK_CLK);//N
+  
+  //여기서 할거하고~~
+  if(pre_sensorA == HIGH && sensorA == LOW){
+    //센서A의 Falling edge!
+    //2.센서B의 상태를 가지고 와서 비교를 해본다!
+    bool sensorB = digitalRead(NOCK_DT);
+    if(sensorA != sensorB){
+      //시계방향으로 회전하고 있구나~
+      //Serial.println("시계방향");
+      temp_set += 0.1;
+      if(temp_set > 100) temp_set = 100;
+    }else{
+      //반시계방향으로 회전하고 있구나~
+      //Serial.println("반시계방향");
+      temp_set -= 0.1;
+      if(temp_set < -50) temp_set = -50;
+    }
+    display2.showNumberDec(temp_set*10, false);
+  }
+
+
+  pre_sensorA = sensorA;
+}
+

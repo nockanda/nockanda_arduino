@@ -1,0 +1,89 @@
+#include <MsTimer2.h>
+#include <Stepper.h>
+
+const int stepsPerRevolution = 2048;
+                                  //IN4 IN2 IN3 IN1
+Stepper myStepper(stepsPerRevolution, 8, 10, 9, 11);
+
+#define NOCK_CLK 4
+#define NOCK_DT 5
+
+bool pre_sensorA = LOW;
+
+volatile char key = '=';
+byte leds[] = {A0,A1,A2,A3,A4,A5};
+
+int i = 0;
+unsigned long t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 결과를 PC로 볼꺼야~
+
+  myStepper.setSpeed(15);
+  
+  for(int i = 0;i<6;i++){
+    pinMode(leds[i],OUTPUT);
+  }
+  
+  pinMode(NOCK_CLK, INPUT);
+  pinMode(NOCK_DT, INPUT);
+
+  //타이머 인터럽트를 실행하겠다!
+  MsTimer2::set(1, rotary_encoder); //시간, 함수
+  MsTimer2::start();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  if(millis() - t > 1000){
+    t = millis();
+    for(int j =0;j<6;j++){
+      if(i==j) digitalWrite(leds[j],HIGH);
+      else digitalWrite(leds[j],LOW);
+    }
+    i++;
+    if(i == 6) i=0;
+  }
+  
+
+  //여기서 스탭모터를 제어를 해보겠다!
+  if(key != '='){
+    //타이밍!
+    if(key == '+'){
+      myStepper.step(32);
+    }else if(key == '-'){
+      myStepper.step(-32);
+    }
+    key = '=';
+  }
+}
+
+void rotary_encoder(){
+  //1.지금 센서값을 확인해야하는 타이밍인가?
+  //(=CLK핀에 상승에지가 발생했는가?)
+  bool sensorA = digitalRead(NOCK_CLK);//N
+  
+  //여기서 할거하고~~
+  if(pre_sensorA == HIGH && sensorA == LOW){
+    //센서A의 Falling edge!
+    //2.센서B의 상태를 가지고 와서 비교를 해본다!
+    bool sensorB = digitalRead(NOCK_DT);
+    if(sensorA != sensorB){
+      //시계방향으로 회전하고 있구나~
+      //Serial.println("시계방향");
+      //num++;
+      key = '+';
+    }else{
+      //반시계방향으로 회전하고 있구나~
+      //Serial.println("반시계방향");
+      //num--;
+      key = '-';
+    }
+    //Serial.println(num);
+  }
+
+
+  pre_sensorA = sensorA;
+}

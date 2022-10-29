@@ -1,0 +1,221 @@
+#define lcd_line 4
+
+class Nockanda{
+  public:
+  char* title; //메뉴의이름
+  Nockanda* parent; //아빠노드
+  Nockanda* next; //자식노드(=child)
+  int count; //자식노드의 갯수
+  bool is_root = false; //루트노드이냐?
+};
+
+Nockanda root[6]; //루트노드
+int root_count = 6; //루트노드의 갯수는 6개이다!
+
+Nockanda sub1[5]; //root[0]의 서브메뉴
+Nockanda sub1_1[2]; //sub1[0]의 서브메뉴
+Nockanda sub2[2]; //root[1]의 서브메뉴
+Nockanda sub3[4]; //root[2]의 서브메뉴
+
+Nockanda* cwd; //current working directory
+int menu_index = 0; //현재 선택되어있는 메뉴의 번호
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  root[0].title = "root1";
+  root[0].next = sub1;
+  root[0].count = 5;
+  root[0].is_root = true;
+  root[1].title = "root2";
+  root[1].next = sub2;
+  root[1].count = 2;
+  root[1].is_root = true;
+  root[2].title = "root3";
+  root[2].next = sub3;
+  root[2].count = 4;
+  root[2].is_root = true;
+  root[3].title = "root4";
+  root[3].is_root = true;
+  root[4].title = "root5";
+  root[4].is_root = true;
+  root[5].title = "root6";
+  root[5].is_root = true;
+  
+  sub1[0].title = "nockanda1-1";
+  sub1[1].title = "nockanda1-2";
+  sub1[2].title = "nockanda1-3";
+  sub1[3].title = "nockanda1-4";
+  sub1[4].title = "nockanda1-5";
+  sub1[0].parent = &root[0]; //나는 아빠가 root[0]이다(주소를 확인해보면 안다)
+  sub1[1].parent = &root[0];
+  sub1[2].parent = &root[0];
+  sub1[3].parent = &root[0];
+  sub1[4].parent = &root[0];
+  sub1[0].next = sub1_1;
+  sub1[0].count = 2;
+
+  sub1_1[0].title = "nockanda1-1-1";
+  sub1_1[1].title = "nockanda1-1-2";
+  sub1_1[0].parent = &sub1[0]; //나는 아빠가 첫번쨰 할아버지의 장남이다!
+  sub1_1[1].parent = &sub1[0];
+
+  //두번째 할아버지의 자손
+  sub2[0].title = "nockanda2-1";
+  sub2[1].title = "nockanda2-2";
+  sub2[0].parent = &root[1];
+  sub2[1].parent = &root[1];
+  
+
+  sub3[0].title = "nockanda3-1";
+  sub3[1].title = "nockanda3-2";
+  sub3[2].title = "nockanda3-3";
+  sub3[3].title = "nockanda3-4";
+  sub3[0].parent = &root[2];
+  sub3[1].parent = &root[2];
+  sub3[2].parent = &root[2];
+  sub3[3].parent = &root[2];
+
+  //초기 LCD에 출력될 메뉴를 선정한다
+  //루트노드가 4개 이상이면 4개 출력하고
+  //4개보다 작으면 갯수만큼 출력한다
+  if(root_count>4){
+    Serial.print("*");
+    Serial.println(root[0].title);
+    for(int i = 1;i<4;i++){
+      Serial.print(" ");
+      Serial.println(root[i].title);
+    }
+  }else{
+    Serial.print("*");
+    Serial.println(root[0].title);
+    for(int i = 1;i<root_count;i++){
+      Serial.print(" ");
+      Serial.println(root[i].title);
+    }
+  }
+
+  //초기 작업 디렉토리는 루트이다!
+  cwd = root;
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    char cmd = Serial.read(); //문자 1개를 읽는다
+    if(cmd == '+'){
+      //시계방향(메뉴의 번호가 바뀌는 지점)
+      //현재 메뉴의 번호가 막내를 지칭하고 있을때 막내보다 더 높은 번호는 없다
+      //형제가 몇명인지는 아빠만 알고있다!
+      //크게 루트노드와 일반노드로 나뉘는데 루트노드는 아빠가 없어서 전역으로 갯수가 지정되어있다!
+      
+      //메뉴의 인덱스를 증가시킨다
+      menu_index++;
+      if((*cwd).is_root){
+        //루트노드이다
+        if(menu_index>root_count-1) menu_index = root_count-1;
+      }else{
+        //루트노드가 아니다
+        if(menu_index>(*((*cwd).parent)).count) menu_index = (*((*cwd).parent)).count;
+      }
+    }else if(cmd == '-'){
+      //반시계방향(메뉴의 번호가 바뀌는 지점)
+      //하한은 무조건 0
+      //메뉴 인덱스가 감소하는 지점은 하한값이 0이면 된다
+      menu_index--;
+      if(menu_index<0)menu_index=0;
+    }else if(cmd == '>'){
+      //로터리엔코더 스위치가 눌려진경우
+      //cwd = ???;
+      if((*((*(cwd)).parent)).count == menu_index && !(*cwd).is_root){
+        //아하! 뒤로가기 버튼이 눌려진것이구나!
+        Serial.println("뒤로가기버튼이 눌러졌다!!");
+        if((*((*cwd).parent)).is_root){
+          cwd = root;
+        }else{
+          //아빠의 아빠한테 가서 자식 주소를 가져온다
+          cwd = (*((*((*cwd).parent)).parent)).next;
+        }
+        menu_index = 0;
+      }else{
+        //하위메뉴로 들어가는 전략이 여기서 나와야한다
+        //현재 선택된 메뉴가 자식이 있냐없냐?
+        if((*(cwd+menu_index)).next == NULL){
+          //리프노드!
+          Serial.println("뭔가? 상황이 벌어진다!");
+        }else{
+          cwd = (*(cwd+menu_index)).next;
+          menu_index = 0;
+        }
+      }
+    }
+    menu_update();
+  }//가상의 로터리엔코더
+
+  
+}
+
+
+void menu_update(){
+  //2004LCD에 결과를 프린트하는부분
+  if((*cwd).is_root){
+    //루트일때 메뉴출력
+    int pageNum = menu_index/lcd_line;
+    //지금 포커스가 있는 메뉴가 제일 마지막 페이지인가?
+    if(lcd_line*(pageNum+1) >= root_count){
+      //마지막페이지
+      for(int i = lcd_line*pageNum;i<root_count;i++){
+        if(menu_index == i){
+          Serial.print("*"); //현재 선택한 것이 출력할 것과 일치하는것에 별모양을 붙힌다
+        }
+        else{
+          Serial.print(" ");
+        }
+        Serial.println((*(cwd+i)).title); //현재 노드의 타이틀을 출력한다
+      }
+    }else{
+      //무조건 lcd_line개씩 출력
+      for(int i = lcd_line*pageNum;i<lcd_line*pageNum+lcd_line;i++){
+          if(menu_index == i){
+            Serial.print("*"); //현재 선택한 것이 출력할 것과 일치하는것에 별모양을 붙힌다
+          }
+          else{
+            Serial.print(" ");
+          }
+          Serial.println((*(cwd+i)).title);
+      } 
+    }
+    
+  }else{
+    //루트가 아닐때 메뉴출력
+    int pageNum = menu_index/lcd_line;
+    if(lcd_line*(pageNum+1) >= (*((*cwd).parent)).count+1){
+        for(int i = lcd_line*pageNum;i<(*((*cwd).parent)).count+1;i++){
+          if(menu_index == i){
+            Serial.print("*"); //현재 선택한 것이 출력할 것과 일치하는것에 별모양을 붙힌다
+          }
+          else{
+            Serial.print(" ");
+          }
+          //여기서 원래 형제수를 다 출력하고 제일 마지막 인덱스에 해당되는
+          // i == (*((*cwd).parent)).count 일때 BACK노드가 출력되어야한다
+          if(i != (*((*cwd).parent)).count){
+            Serial.println((*(cwd+i)).title);
+          }else{
+            Serial.println("BACK");
+          }
+        } 
+      }else{
+        //여기는 한 페이지 내 이므로 BACK노드를 고려할 필요가 없다!
+        for(int i = lcd_line*pageNum;i<lcd_line*pageNum+lcd_line;i++){
+          if(menu_index == i){
+            Serial.print("*"); //현재 선택한 것이 출력할 것과 일치하는것에 별모양을 붙힌다
+          }
+          else{
+            Serial.print(" ");
+          }
+          Serial.println((*(cwd+i)).title);
+        } 
+      }
+  }//메뉴출력부분
+}

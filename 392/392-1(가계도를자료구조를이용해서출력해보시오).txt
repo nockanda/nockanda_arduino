@@ -1,0 +1,145 @@
+//가계도를 효율적으로 표현하기 위한 노드의 자료구조
+//class(클래스) struct(구조체)
+
+//자료구조
+class Nockanda{
+  //녹칸다 클래스의 구조를 명시해야한다
+  public:
+  char* name;
+  Nockanda* parent; //녹칸다라는 클래스의 주소를 기억한다
+  Nockanda* child; //녹칸다라는 클래스의 주소를 기억한다
+  int child_count;
+};
+
+Nockanda root[5]; //0~4
+Nockanda A_child[3];
+Nockanda B_child[4];
+Nockanda C_child[2];
+Nockanda D_child[1];
+
+Nockanda AA_child[2];
+Nockanda AB_child[3];
+Nockanda AC_child[2];
+
+Nockanda BA_child[4];
+Nockanda BB_child[2];
+Nockanda BC_child[1];
+Nockanda BD_child[2];
+
+Nockanda CA_child[4];
+Nockanda CB_child[2];
+
+Nockanda DA_child[3];
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//나 시리얼 통신 할꺼야~
+  root[0].name = "A";
+  root[0].child = A_child;
+  root[0].child_count = 3;
+  
+  root[1].name = "B";
+  root[1].child = B_child;
+  root[1].child_count = 4;
+  
+  root[2].name = "C";
+  root[2].child = C_child;
+  root[2].child_count = 2;
+  
+  root[3].name = "D";
+  root[3].child = D_child;
+  root[3].child_count = 1;
+  
+  root[4].name = "E";
+  root[4].child_count = 0;
+
+  A_child[0].name = "AA";
+  A_child[0].child = AA_child;
+  A_child[0].child_count = 2;
+  A_child[1].name = "AB";
+  A_child[1].child = AB_child;
+  A_child[1].child_count = 3;
+  A_child[2].name = "AC";
+  A_child[2].child = AC_child;
+  A_child[2].child_count = 1;
+
+  B_child[0].name = "BA";
+  B_child[0].child = BA_child;
+  B_child[0].child_count = 4;
+  B_child[1].name = "BB";
+  B_child[1].child = BB_child;
+  B_child[1].child_count = 2;
+  B_child[2].name = "BC";
+  B_child[2].child = BC_child;
+  B_child[2].child_count = 1;
+  B_child[3].name = "BD";
+  B_child[3].child = BC_child;
+  B_child[3].child_count = 2;
+
+  C_child[0].name = "CA";
+  C_child[0].child = CA_child;
+  C_child[0].child_count = 4;
+  C_child[1].name = "CB";
+  C_child[1].child = CB_child;
+  C_child[1].child_count = 2;
+
+  D_child[0].name = "DA";
+  D_child[0].child = DA_child;
+  D_child[0].child_count = 3;
+
+  AA_child[0].name = "AAA";
+  AA_child[1].name = "AAB";
+
+  AB_child[0].name = "ABA";
+  AB_child[1].name = "ABB";
+  AB_child[2].name = "ABB";
+
+  AC_child[0].name = "ACA";
+  AC_child[1].name = "ACB";
+
+  BA_child[0].name = "BAA";
+  BA_child[1].name = "BAB";
+  BA_child[2].name = "BAC";
+  BA_child[3].name = "BAD";
+
+  BB_child[0].name = "BBA";
+  BB_child[1].name = "BBB";
+
+  BC_child[0].name = "BCA";
+
+  BD_child[0].name = "BDA";
+  BD_child[1].name = "BDB";
+
+  CA_child[0].name = "CAA";
+  CA_child[1].name = "CAB";
+  CA_child[2].name = "CAC";
+  CA_child[3].name = "CAD";
+
+  CB_child[0].name = "CBA";
+  CB_child[1].name = "CBB";
+
+  DA_child[0].name = "DAA";
+  DA_child[1].name = "DAB";
+  DA_child[2].name = "DAC";
+
+  Serial.println("할아버지 출력!");
+  Nockanda* cwd;
+  for(int i = 0;i<5;i++){
+    Serial.println(root[i].name);
+    //각각의 할아버지의 자손을 여기서 출력하시오
+    for(int j =0;j< root[i].child_count;j++){
+      Serial.print("└");
+      Serial.println((*(root[i].child+j)).name);
+      for(int k =0;k<(*(root[i].child+j)).child_count;k++){       
+        Serial.print("   └");
+        Serial.println((*((*(root[i].child+j)).child+k)).name);
+      }
+    }
+  }
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}

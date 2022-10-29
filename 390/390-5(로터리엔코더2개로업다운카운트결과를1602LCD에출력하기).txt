@@ -1,0 +1,123 @@
+#include <MsTimer2.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2);
+
+//엔코더1
+#define NOCK_CLK1 4
+#define NOCK_DT1 5
+//엔코더2
+#define NOCK_CLK2 6
+#define NOCK_DT2 7
+
+//엔코더1번의 CLK핀의 N-1의 상태를 저장하기 위한 변수
+bool pre_sensorA1 = HIGH;
+//엔코더2번의 CLK핀의 N-1의 상태를 저장하기 위한 변수
+bool pre_sensorA2 = HIGH;
+
+volatile char direct1 = '='; //엔코더1번꺼
+volatile char direct2 = '='; //엔코더2번꺼
+int number1=0;
+int number2=0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 결과를 PC로 볼꺼야~
+  pinMode(NOCK_CLK1, INPUT);
+  pinMode(NOCK_DT1, INPUT);
+  pinMode(NOCK_CLK2, INPUT);
+  pinMode(NOCK_DT2, INPUT);
+
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("NUM1=0");
+  lcd.setCursor(0,1);
+  lcd.print("NUM2=0");
+  
+  //타이머 인터럽트를 실행하겠다!
+  MsTimer2::set(1, rotary_encoder); //시간, 함수
+  MsTimer2::start();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(direct1 != '='){
+    //로터리 엔코더가 돌아갔다
+    if(direct1 == '+'){
+      Serial.println("엔코더1번 시계방향으로 돌아감!");
+      number1++;
+    }else if(direct1 == '-'){
+      Serial.println("엔코더1번 반시계방향으로 돌아감!");
+      number1--;
+    }
+    Serial.println(number1);
+    lcd.setCursor(0,0);
+    lcd.print("NUM1=");
+    lcd.print(number1);
+    lcd.print("    ");
+    direct1 = '=';
+  }
+  if(direct2 != '='){
+    //로터리 엔코더가 돌아갔다
+    if(direct2 == '+'){
+      Serial.println("엔코더2번 시계방향으로 돌아감!");
+      number2++;
+    }else if(direct2 == '-'){
+      Serial.println("엔코더2번 반시계방향으로 돌아감!");
+      number2--;
+    }
+    Serial.println(number2);
+    lcd.setCursor(0,1);
+    lcd.print("NUM2=");
+    lcd.print(number2);
+    lcd.print("    ");
+    direct2 = '=';
+  }
+}
+
+//로터리엔코더 2개의 입력값을 판정
+void rotary_encoder(){
+  //1.지금 센서값을 확인해야하는 타이밍인가?
+  //(=CLK핀에 상승에지가 발생했는가?)
+  bool sensorA1 = digitalRead(NOCK_CLK1);//N
+  
+  //여기서 할거하고~~
+  if(pre_sensorA1 == HIGH && sensorA1 == LOW){
+    //센서A의 Falling edge!
+    //2.센서B의 상태를 가지고 와서 비교를 해본다!
+    bool sensorB = digitalRead(NOCK_DT1);
+    if(sensorA1 != sensorB){
+      //시계방향으로 회전하고 있구나~
+      Serial.println("[엔코더1번] 시계방향");
+      direct1 = '+';
+    }else{
+      //반시계방향으로 회전하고 있구나~
+      Serial.println("[엔코더1번] 반시계방향");
+      direct1 = '-';
+    }
+  }
+  pre_sensorA1 = sensorA1;
+
+
+  bool sensorA2 = digitalRead(NOCK_CLK2);//N
+  
+  //여기서 할거하고~~
+  if(pre_sensorA2 == HIGH && sensorA2 == LOW){
+    //센서A의 Falling edge!
+    //2.센서B의 상태를 가지고 와서 비교를 해본다!
+    bool sensorB = digitalRead(NOCK_DT2);
+    if(sensorA2 != sensorB){
+      //시계방향으로 회전하고 있구나~
+      Serial.println("[엔코더2번] 시계방향");
+      direct2 = '+';
+    }else{
+      //반시계방향으로 회전하고 있구나~
+      Serial.println("[엔코더2번] 반시계방향");
+      direct2 = '-';
+    }
+  }
+  pre_sensorA2 = sensorA2;
+}
+

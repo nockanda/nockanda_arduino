@@ -1,0 +1,121 @@
+#define NOCK_CLK 4
+#define NOCK_DT 5
+#define NOCK_SW 6
+
+#define led1 7
+#define led2 8
+#define led3 9
+#define led4 10
+#define led5 11
+#define led6 12
+#define led7 13
+
+bool pre_sensorA = LOW;
+
+int num = 0; //0~6
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 결과를 PC로 볼꺼야~
+  pinMode(NOCK_CLK, INPUT);
+  pinMode(NOCK_DT, INPUT);
+  pinMode(NOCK_SW, INPUT_PULLUP);
+
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  pinMode(led3,OUTPUT);
+  pinMode(led4,OUTPUT);
+  pinMode(led5,OUTPUT);
+  pinMode(led6,OUTPUT);
+  pinMode(led7,OUTPUT);
+
+  digitalWrite(led1,HIGH);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  
+  //1.지금 센서값을 확인해야하는 타이밍인가?
+  //(=CLK핀에 상승에지가 발생했는가?)
+  bool sensorA = digitalRead(NOCK_CLK);
+  //여기서 할거하고~~
+  if(pre_sensorA == HIGH && sensorA == LOW){
+    //센서A의 Falling edge!
+    //2.센서B의 상태를 가지고 와서 비교를 해본다!
+    bool sensorB = digitalRead(NOCK_DT);
+    if(sensorA != sensorB){
+      //시계방향으로 회전하고 있구나~
+      //Serial.println("시계방향");
+      num++;
+      if(num > 6) num = 6;
+    }else{
+      //반시계방향으로 회전하고 있구나~
+      //Serial.println("반시계방향");
+      num--;
+      if(num < 0) num = 0;
+    }
+
+    //LED가 상황에 맞게 제어되면 되겠다!
+    if(num == 0){
+      digitalWrite(led1,HIGH);
+      digitalWrite(led2,LOW);
+      digitalWrite(led3,LOW);
+      digitalWrite(led4,LOW);
+      digitalWrite(led5,LOW);
+      digitalWrite(led6,LOW);
+      digitalWrite(led7,LOW);
+    }else if(num == 1){
+      digitalWrite(led1,LOW);
+      digitalWrite(led2,HIGH);
+      digitalWrite(led3,LOW);
+      digitalWrite(led4,LOW);
+      digitalWrite(led5,LOW);
+      digitalWrite(led6,LOW);
+      digitalWrite(led7,LOW);
+    }else if(num == 2){
+      digitalWrite(led1,LOW);
+      digitalWrite(led2,LOW);
+      digitalWrite(led3,HIGH);
+      digitalWrite(led4,LOW);
+      digitalWrite(led5,LOW);
+      digitalWrite(led6,LOW);
+      digitalWrite(led7,LOW);
+    }else if(num == 3){
+      digitalWrite(led1,LOW);
+      digitalWrite(led2,LOW);
+      digitalWrite(led3,LOW);
+      digitalWrite(led4,HIGH);
+      digitalWrite(led5,LOW);
+      digitalWrite(led6,LOW);
+      digitalWrite(led7,LOW);
+    }else if(num == 4){
+      digitalWrite(led1,LOW);
+      digitalWrite(led2,LOW);
+      digitalWrite(led3,LOW);
+      digitalWrite(led4,LOW);
+      digitalWrite(led5,HIGH);
+      digitalWrite(led6,LOW);
+      digitalWrite(led7,LOW);
+    }else if(num == 5){
+      digitalWrite(led1,LOW);
+      digitalWrite(led2,LOW);
+      digitalWrite(led3,LOW);
+      digitalWrite(led4,LOW);
+      digitalWrite(led5,LOW);
+      digitalWrite(led6,HIGH);
+      digitalWrite(led7,LOW);
+    }else if(num == 6){
+      digitalWrite(led1,LOW);
+      digitalWrite(led2,LOW);
+      digitalWrite(led3,LOW);
+      digitalWrite(led4,LOW);
+      digitalWrite(led5,LOW);
+      digitalWrite(led6,LOW);
+      digitalWrite(led7,HIGH);
+    }
+  }
+
+
+  pre_sensorA = sensorA;
+  delay(1);
+}
