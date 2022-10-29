@@ -1,0 +1,372 @@
+#include <SoftwareSerial.h>
+#include "CRC16.h"
+#include "CRC.h"
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
+#include <ArduinoJson.h>
+
+#define RTU_OK 0
+#define RTU_TIMEOUT 1
+#define RTU_DATA_ERROR 2
+#define RTU_CRC_ERROR 3
+#define direct D13 //데이터 입출력핀! //LOW(0):수신모드 HIGH(1):송신모드
+
+//와이파이 공유기의 id비밀번호가 들어가야 인터넷에 접속이 가능하겠죠?
+#ifndef STASSID
+#define STASSID "popcorn"
+#define STAPSK  "11213144"
+#endif
+
+const char* ssid     = STASSID;
+const char* password = STAPSK;
+
+//클라이언트가 서버에 연결을 해야하는데.. 서버의 주소가 필요하다!
+const char* host = "192.168.0.8";
+//서버의 ip주소는 전체적인 주소의 일부분 상세주소인 포트번호가 필요하다!
+const uint16_t port = 60000;
+
+ESP8266WiFiMulti WiFiMulti;
+
+//모드버스부분
+String device_id = "#device2";
+
+
+CRC16 crc;
+
+
+
+byte buff[50];
+
+                   //rx, tx
+SoftwareSerial modbus(D3, D4); //모듈tx, rx @아두이노 입장 rx, tx
+
+void setup() {
+  // put your setup code here, to run once:  
+  Serial.begin(9600); //아두이노-PC 통신라인(결과출력용)
+  modbus.begin(9600); //사용하는 제품마다 숫자가 다름!
+  
+  //데이터 입출력핀을 출력모드로 설정한다!
+  pinMode(direct,OUTPUT);
+  //시작은 수신모드이다!
+  recv_mode();
+
+  //만약에 버퍼에 뭔가 있으면 클리어한다!
+  while(modbus.available()){
+    modbus.read();
+  }
+
+  //와이파이연결하는 부분!
+  WiFi.mode(WIFI_STA);
+  WiFiMulti.addAP(ssid, password);
+
+  Serial.println();
+  Serial.println();
+  Serial.print("Wait for WiFi... ");
+
+  while (WiFiMulti.run() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  delay(500);
+
+  
+  Serial.println("녹칸다의 modbus 시작!");
+
+}
+
+void loop() {
+  //서버주소가 ~~인데 ~~에 연결할거다!
+  Serial.print("connecting to ");
+  Serial.print(host);
+  Serial.print(':');
+  Serial.println(port);
+
+  // Use WiFiClient class to create TCP connections
+  WiFiClient client;
+
+  //클라이언트가 서버에 접속을 시도한다!(5초마다 한다!)
+  if (!client.connect(host, port)) {
+    Serial.println("connection failed");
+    Serial.println("wait 5 sec...");
+    delay(5000);
+    return;
+  }
+  //서버와 접속이 성공적으로 진행이된 경우!
+
+  bool is_accepted = false;
+
+  unsigned long dt = millis();//서버하고 소통하는 스레드
+  unsigned long dt2 = millis(); //monitor1
+  //서버와 클라이언트가 연결이 보장이된 경우에 while루프가 작동하고
+  //연결이 끊어지면 while루프가 멈춘다!
+  while(client.connected()){
+    //여기안은 클라이언트와 서버가 접속중을때 활성화된다!
+    //1초마다 서버에게 메시지를 전송한다!
+    if(millis() - dt > 1000){
+      dt = millis();
+      if(!is_accepted){
+        //서버하고 인사를 안한상태
+        client.println(device_id);
+      }else{
+        //서버에게 나 접속하고 있어요~ 라는 데이터를 보낸다
+        String output;
+        StaticJsonDocument<200> doc;
+
+        doc["from"] = device_id;
+        doc["to"] = "#server";
+        doc["msg"] = "OK";
+        
+        serializeJson(doc, output);
+        client.println(output);
+        
+      }
+    }
+
+    //실제로 원하는 메시지를 전송하는 부분
+    /*
+    if(millis() - dt2 > 2000){
+      dt2 = millis();
+      String output;
+        StaticJsonDocument<200> doc;
+
+        doc["from"] = device_id;
+        doc["to"] = "#app1";
+        doc["msg"] = "나는 보드 1번입니다!";
+        
+        serializeJson(doc, output);
+        client.println(output);
+    }
+    */
+    //서버에서 전송한 메시지를 클라이언트도 받아야 한다!
+    if(client.available()){
+      //서버에서 전송한 메시지가 있다!
+      Serial.println("메시지가 수신되었다");
+      String msg = client.readStringUntil('\n');
+      //서버에서 OK라는 응답을 하게 된다면~
+      if(msg == "#OK"){
+        Serial.println("서버하고 명함 주고 받는 절차를 마무리했다!");
+        is_accepted = true;
+      }else{
+        //msg : JSON에서 object로 바꾸어줘야한다!
+      
+        StaticJsonDocument<150> doc;
+
+        deserializeJson(doc, msg);
+      
+        String from = doc["from"]; // "#device1"
+        String msg_response = doc["msg"]["response"]; // "01050000FF00"
+        String msg_len = doc["msg"]["len"];
+
+        //msg_response : 의뢰자가 modbus에 요청하고자 하는 프레임이 이것이다!
+        byte request[msg_response.length()/2];
+        for(int i = 0, j =0;i<msg_response.length();i+=2,j++){
+
+          int num1 = 0;
+          if(msg_response[i] >= '0' && msg_response[i]<= '9'){
+            num1 = msg_response[i] - '0';
+          }else if(msg_response[i] >= 'A' && msg_response[i]<= 'F'){
+            num1 = msg_response[i] - 'A'+10;
+          }else if(msg_response[i] >= 'a' && msg_response[i]<= 'f'){
+            num1 = msg_response[i] - 'a'+10;
+          }
+
+          int num2 = 0;
+          if(msg_response[i+1] >= '0' && msg_response[i+1]<= '9'){
+            num2 = msg_response[i+1] - '0';
+          }else if(msg_response[i+1] >= 'A' && msg_response[i+1]<= 'F'){
+            num2 = msg_response[i+1] - 'A'+10;
+          }else if(msg_response[i+1] >= 'a' && msg_response[i+1]<= 'f'){
+            num2 = msg_response[i+1] - 'a'+10;
+          }
+
+          request[j] = num1*16+num2;
+        }
+
+        //여기까지하면 request가 만들어진다..!
+
+        //request : byte array
+
+        int response_len = msg_len.toInt();
+
+        if(nockanda_modbus_rtu(request,msg_response.length()/2,buff,response_len) ==RTU_OK){
+          //성공메시지 응답
+          /*
+          Serial.print("성공!");
+          for(int i = 0;i<8;i++){
+            Serial.print(buff[i]);
+            Serial.print(",");
+          }
+          Serial.println();
+          */
+          //슬레이브가 응답한 데이터를 다시 문자열로 조립힌다!
+          String response;
+          for(int i = 0;i<response_len;i++){
+            String num = String(buff[i],HEX);
+            if(num.length() == 1) num = "0" + num;
+            response += num;
+          }
+          //Serial.println(response);
+          //다른 TCP클라이언트에게 응답하면
+          //받는놈:from
+          //보내는놈:device_id
+          String output;
+          StaticJsonDocument<128> doc;
+
+          doc["from"] = device_id;
+          doc["to"] = from;
+          
+          JsonObject msg = doc.createNestedObject("msg");
+          msg["result"] = "OK";
+          msg["response"] = response;
+          
+          serializeJson(doc, output);
+
+          //output
+          client.println(output);
+        }else{
+          //실패 메시지 응답
+          Serial.println("실패!!");
+          String output;
+          StaticJsonDocument<128> doc;
+
+          doc["from"] = device_id;
+          doc["to"] = from;
+          
+          JsonObject msg = doc.createNestedObject("msg");
+          msg["result"] = "NO";
+          msg["response"] = "";
+          
+          serializeJson(doc, output);
+
+          //output
+          client.println(output);
+        }
+        
+      }
+    }
+  }
+  client.stop();
+}
+
+
+int nockanda_modbus_rtu(byte req[],int req_len,byte res[],int res_len){
+  //sht20에게 보내줘야할 데이터이다!
+  //byte request[] = {slaveid, 0x04, 0x00, 0x01, 0x00, 0x01};
+  int response_length = res_len;
+
+  uint16_t request_crc = crc16(req, req_len, 0x8005, 0xFFFF, 0, true, true);
+
+  //2바이트로 표현된 result값을 1byte씩 쪼개서 2byte로 나눠담는 과정~!
+  byte request_crc_high = request_crc >> 8;
+  byte request_crc_low = request_crc & 0xFF;
+
+
+  //테스트 프린트
+  Serial.print("request = ");
+  for(int i = 0;i<req_len;i++){
+    Serial.print(req[i],HEX);
+    Serial.print(",");
+  }
+  Serial.print(request_crc_low,HEX);
+  Serial.print(",");
+  Serial.print(request_crc_high,HEX);
+  Serial.println();
+ 
+  //송신모드로 전환!
+  send_mode();
+  //request 송신!
+  modbus.write(req, req_len);
+  modbus.write(request_crc_low);
+  modbus.write(request_crc_high);
+  //request가 완료됨을 확인할 필요가 있다!
+  modbus.flush();
+  recv_mode();
+
+  //Serial.println("전송완료!");
+
+  //두목이 쫄병한데 물어봤으면 대답할 여유를 줘야한다!
+  //(기존코드)
+  //while(!modbus.available());
+  //(스트리밍후 개선 코드) 수신할 데이터 길이만큼 기다린다
+  unsigned long t = millis();
+  bool is_timeout = false;
+  while(!(modbus.available()==response_length)){
+    if(millis() - t > 1000){
+      //while루프 시작후 1초가 경과된 상황!
+      is_timeout = true;
+      break;
+    }
+  }
+
+  if(is_timeout){
+    //타임아웃 상황이다!
+    Serial.println("타임아웃입니다!");
+    return RTU_TIMEOUT;
+  }
+  
+  //받아야 한다!
+  //byte response[50];
+  int len = 0;
+  while(modbus.available()){
+    res[len] = modbus.read();
+    len++;
+  }
+
+  //수신완료지점
+  if(len != response_length){
+    Serial.println("데이터가 잘못 왔다!");
+    return RTU_DATA_ERROR;
+  }
+
+  //response안에 들어있는 값을 길이 맞는 byte array에 담는 과정!
+  byte data[len-2];
+  for(int i = 0;i<len-2;i++){
+    data[i] = res[i];
+  }
+
+  //CRC체크
+  uint16_t result = crc16(data, len-2, 0x8005, 0xFFFF, 0, true, true);
+
+  //2바이트로 표현된 result값을 1byte씩 쪼개서 2byte로 나눠담는 과정~!
+  byte crc_high = result >> 8;
+  byte crc_low = result & 0xFF;
+
+  if(crc_low != res[len-2] || crc_high != res[len-1]){
+    //에러의조건
+    Serial.println("CRC가 안맞다..!");
+    return RTU_CRC_ERROR;
+  }
+
+  return RTU_OK;
+  
+/*
+  Serial.print("수신된 CRC=");
+  Serial.print(response[len-2],HEX);
+  Serial.println(response[len-1],HEX);
+
+  Serial.print("계산된 CRC=");
+  Serial.print(crc_low, HEX);
+  Serial.println(crc_high, HEX);
+*/
+/*
+  //출력을 해보자!
+  for(int i = 0;i<len;i++){
+    Serial.print(response[i],HEX);
+    Serial.print(",");
+  }
+  Serial.println();
+  */
+}
+
+void send_mode(){
+  digitalWrite(direct,HIGH);
+}
+void recv_mode(){
+  digitalWrite(direct,LOW);
+}

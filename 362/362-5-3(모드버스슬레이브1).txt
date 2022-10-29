@@ -1,0 +1,96 @@
+#include <SoftwareSerial.h>
+#include "CRC16.h"
+#include "CRC.h"
+
+byte myid = 0x01;
+
+CRC16 crc;
+
+#define mode 13
+SoftwareSerial modbus(2, 3); //모듈tx, rx @아두이노 입장 rx, tx
+
+byte buff[50];
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //아두이노-PC 통신라인(결과출력용)
+  modbus.begin(9600); //사용하는 제품마다 숫자가 다름!
+  pinMode(mode,OUTPUT);
+  //시작은 수신모드이다!
+  recv_mode();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //두목이 뭔가 보내줄때까지 기다려야한다!
+  if(modbus.available()){
+    delay(100);
+    Serial.println(modbus.available());
+    //두목이 뭔가 전송했다!
+    //받는 데이터 길이가 정해져있지않다!
+    int len = 0;
+    while(true){
+      if(!modbus.available()) break;
+      buff[len] = modbus.read();
+      len++;
+    }
+    //나한테 온게 맞냐?
+    if(buff[0] != myid){
+      return;
+    }
+    
+    //받아온 데이터에서 CRC를 제외한 부분만 추려낸다!
+    if(len < 2) return;
+    byte req[len-2];
+
+    for(int i = 0;i<len-2;i++){
+      req[i] = buff[i];
+    }
+    
+    //받은 데이터가 적합한지 CRC계산을 해야한다!
+    uint16_t request_crc = crc16(req, len-2, 0x8005, 0xFFFF, 0, true, true);
+    byte request_crc_high = request_crc >> 8;
+    byte request_crc_low = request_crc & 0xFF;
+    //마스터에서 받은 CRC buff[len-1] buff[len-2]
+    if(buff[len-2] != request_crc_low || buff[len-1] != request_crc_high){
+      return;
+    }
+
+    //(1)일단 마스터가 무엇을 요청하던지간에 무조건 온도와 습도값을 반환한다!
+
+    //가상의 센서값을 만들어보자!
+    float humi = 56.22;
+    float temp = 26.31;
+    //2,3에 습도, 4.5에 온도
+
+    buff[2] = ((int)(humi*100))/256;
+    buff[3] = ((int)(humi*100))%256;
+    buff[4] = ((int)(temp*100))/256;
+    buff[5] = ((int)(temp*100))%256;
+
+    //(2)일단 슬레이브가 CRC계산하는것은 잠깐 생략해두고 다음에 시간 널널할때 하기로함!
+    //작업한다! (6,7)에 CRC붙히기
+    byte res[6];
+    for(int i = 0;i<6;i++){
+      res[i] = buff[i];
+    }
+    uint16_t response_crc = crc16(res, 6, 0x8005, 0xFFFF, 0, true, true);
+    byte response_crc_high = response_crc >> 8;
+    byte response_crc_low = response_crc & 0xFF;
+    
+    //받은데이터를 그대로 마스터쪽으로 echo한다!
+    send_mode();
+    for(int i = 0;i<6;i++){
+      modbus.write(buff[i]);
+    }
+    modbus.write(response_crc_low);
+    modbus.write(response_crc_high);
+    recv_mode();
+  }
+}
+void send_mode(){
+  digitalWrite(mode,HIGH);
+}
+void recv_mode(){
+  digitalWrite(mode,LOW);
+}
