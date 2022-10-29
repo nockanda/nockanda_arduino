@@ -1,0 +1,81 @@
+#include <SoftwareSerial.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+#define buzzer 4
+
+SoftwareSerial HC06(2, 3); 
+LiquidCrystal_I2C lcd(0x27,16,2); //2004
+
+bool is_start = false;
+unsigned long t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  HC06.begin(9600);//아두이노-블루투스모듈간 통신
+  lcd.init();
+  lcd.backlight();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(HC06.available()){
+    String text = HC06.readStringUntil(0x0A); //0x0A == \n
+    Serial.println(text);
+    is_start = true;
+    t = text.toInt();
+
+    t = (t*1000) + millis();
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("STOP WATCH RUN!!");
+  }
+
+  if(is_start){
+    //타이머가 작동이 되었다면~~
+    //앱인벤터로 전송한 시간이 경과하면~
+    //현재 시간 + 10초
+    unsigned long t2 = millis();
+    if(t2 > t){
+      Serial.println("스탑워치가 종료되었습니다!");
+      String line = "0.00 Sec";
+      while(line.length() < 16){
+        line += " ";
+      }
+      lcd.setCursor(0,1);
+      lcd.print(line);
+      
+      //삑-삑-삑-삑-
+      tone(buzzer,1047);
+      delay(200);
+      noTone(buzzer);
+      delay(200);
+      tone(buzzer,1047);
+      delay(200);
+      noTone(buzzer);
+      delay(200);
+      tone(buzzer,1047);
+      delay(200);
+      noTone(buzzer);
+      delay(200);
+      tone(buzzer,1047);
+      delay(200);
+      noTone(buzzer);
+      delay(200);
+      is_start=false;
+    }else{
+      float gap = (t - t2)/1000.0;
+      String line = String(gap);
+      line += " Sec";
+      while(line.length() < 16){
+        line += " ";
+      }
+      lcd.setCursor(0,1);
+      lcd.print(line);
+      delay(100);
+    }
+  }
+
+  
+}

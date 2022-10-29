@@ -1,0 +1,39 @@
+#include <SPI.h>
+#include <MFRC522.h>
+#include <SoftwareSerial.h>
+
+#define SS_PIN 10
+#define RST_PIN 9
+ 
+MFRC522 rfid(SS_PIN, RST_PIN);
+SoftwareSerial HC06(2, 3);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //아두이노와-PC간 통신라인
+  HC06.begin(9600);//아두이노-블루투스모듈간 통신라인
+  SPI.begin(); // Init SPI bus
+  rfid.PCD_Init(); // Init MFRC522
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if ( ! rfid.PICC_IsNewCardPresent())
+    return;
+
+  // Verify if the NUID has been readed
+  if ( ! rfid.PICC_ReadCardSerial())
+    return;
+
+  String rfid_id = "";
+  for(int i = 0;i<4;i++){
+    rfid_id += String(rfid.uid.uidByte[i],16);
+  }
+  HC06.println(rfid_id);
+
+  // Halt PICC
+  rfid.PICC_HaltA();
+
+  // Stop encryption on PCD
+  rfid.PCD_StopCrypto1();
+}

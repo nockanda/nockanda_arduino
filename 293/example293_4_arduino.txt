@@ -1,0 +1,95 @@
+#include <SoftwareSerial.h>
+#include "DHT.h"
+#include <Arduino.h>
+#include <TM1637Display.h>
+#include <ArduinoJson.h>
+
+#define CLK1 8
+#define DIO1 9
+#define CLK2 10
+#define DIO2 11
+#define DHTPIN 4
+#define DHTTYPE DHT11
+#define buzzer 5
+
+DHT dht(DHTPIN, DHTTYPE);
+SoftwareSerial HC06(2, 3); // RX, TX
+TM1637Display display1(CLK1, DIO1);
+TM1637Display display2(CLK2, DIO2);
+
+bool sw = false; //false일때 도씨단위
+float temp = 50;
+float humi = 99;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //아두이노-PC간 통신!
+  HC06.begin(9600); //아두이노-블로투스모듈간 통신!
+  dht.begin();
+  display1.setBrightness(0x0f);
+  display2.setBrightness(0x0f);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(HC06.available()){
+    String data = HC06.readStringUntil(0x0A); // \n
+    Serial.println(data);
+    StaticJsonDocument<64> doc;
+
+    deserializeJson(doc, data);
+
+    
+    String cmd = doc["cmd"]; // "temp"
+    String data1 = doc["data1"]; // "0"
+    String data2 = doc["data2"]; // "-"
+    if(cmd == "temp"){
+      //도씨-화씨 바꾸기
+      if(data1 == "0"){
+        sw = false;
+      }else if(data1 == "1"){
+        sw = true;
+      }
+    }else if(cmd == "set"){
+      //알람설정
+      temp = data1.toFloat();
+      humi = data2.toFloat();
+      //Serial.println("온도값을 " + data1 + "으로 설정했습니다!");
+      //Serial.println("습도값을 " + data2 + "으로 설정했습니다!");
+    }
+  }
+  
+  float h = dht.readHumidity(); //습도
+  
+  float t;
+  if(sw){
+    //화씨
+    t = dht.readTemperature(true); //온도
+  }else{
+    //도씨
+    t = dht.readTemperature(); //온도
+  }
+
+  if(sw == false){
+    //도씨일때만 하겠다~
+    if(t > temp || h > humi){
+      //알람이 발생한다!
+      Serial.println("알람이 발생했다");
+      tone(buzzer,3136);
+    }else{
+      noTone(buzzer);
+    }
+  }
+
+  //값을 FND모듈에 출력한다!
+  display1.showNumberDec(h, false);
+  display2.showNumberDec(t, false);
+
+  String data = String(h) + "," + String(t);
+
+  HC06.println(data);  // 습도 , 온도
+  //Serial.print(h);
+  //Serial.print(",");
+  //Serial.println(t);
+  delay(1000);
+}

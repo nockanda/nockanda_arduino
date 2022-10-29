@@ -1,0 +1,27 @@
+#include <SoftwareSerial.h>
+#include "DHT.h"
+#define DHTPIN 4
+#define DHTTYPE DHT11
+
+DHT dht(DHTPIN, DHTTYPE);
+SoftwareSerial HC06(2, 3); // RX, TX
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //아두이노-PC간 통신!
+  HC06.begin(9600); //아두이노-블로투스모듈간 통신!
+  dht.begin();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  float h = dht.readHumidity(); //습도
+  float t = dht.readTemperature(); //온도
+
+  String data = String(h) + "," + String(t);
+
+  HC06.println(data);  // 습도 , 온도
+  //Serial.print(h);
+  //Serial.print(",");
+  //Serial.println(t);
+  delay(1000);
+}

@@ -1,0 +1,17 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial HC06(2, 3);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC와 아두이노간 통신
+  HC06.begin(9600); //아두이노와 블루투스모듈간 통신
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int num1 = random(0,101);
+  int num2 = random(0,101);
+  HC06.println(String(num1) + "," + String(num2));
+  delay(1000);
+}

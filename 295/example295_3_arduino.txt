@@ -1,0 +1,37 @@
+//초음파 : 29us에 1cm를 이동
+//delayMicroseconds(us)
+//duration = pulseIn(pin, HIGH);
+#include <SoftwareSerial.h>
+#include <Wire.h>
+#include <Adafruit_MLX90614.h>
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+SoftwareSerial HC06(2, 3);
+#define trig 4
+#define echo 5
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  HC06.begin(9600);
+  mlx.begin(); 
+  pinMode(trig,OUTPUT); //trig 발사
+  pinMode(echo,INPUT); //echo 받기
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  
+  digitalWrite(trig,LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig,LOW);
+  float dist = (pulseIn(echo, HIGH)/29.0)/2; //cm
+  float temp = mlx.readObjectTempC();
+  //Serial.print(dist);
+  //Serial.print("\t");
+  //Serial.println(temp);
+  // 거리값, 온도값
+  HC06.println(String(dist)+","+String(temp));
+  
+  delay(1000);
+}

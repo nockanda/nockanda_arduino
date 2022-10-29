@@ -1,0 +1,30 @@
+#include <SoftwareSerial.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK 4
+#define DIO 5
+SoftwareSerial HC06(2, 3); 
+TM1637Display display(CLK, DIO);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  HC06.begin(9600);//아두이노-블루투스모듈간 통신
+  display.setBrightness(0x0f);
+  display.showNumberDec(0, false);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(HC06.available()){
+    String text = HC06.readStringUntil(0x0A); //0x0A == \n
+    //숫자냐 아니냐? int범위에 들어오냐?
+    int num = text.toInt();
+    //-999 ~ 9999
+    if(num >= -999 && num <= 9999){
+       display.showNumberDec(num, false);
+    }
+    Serial.println(text);
+  }
+}

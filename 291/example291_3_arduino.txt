@@ -1,0 +1,20 @@
+#include <SoftwareSerial.h>
+SoftwareSerial HC06(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신 //앱인벤터와 전혀 상관없는!
+  HC06.begin(9600); //아두이노-블루투스모듈간 통신
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int x_pos = analogRead(A0);
+  int y_pos = analogRead(A1);
+  // 500,500
+  HC06.println(String(x_pos)+","+String(y_pos));
+  //Serial.print(x_pos);
+  //Serial.print(",");
+  //Serial.println(y_pos);
+  delay(200);
+}

@@ -1,0 +1,40 @@
+#include <SoftwareSerial.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+#include <ArduinoJson.h>
+
+#define CLK1 4
+#define DIO1 5
+#define CLK2 6
+#define DIO2 7
+SoftwareSerial HC06(2, 3); 
+TM1637Display display1(CLK1, DIO1);
+TM1637Display display2(CLK2, DIO2);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  HC06.begin(9600);//아두이노-블루투스모듈간 통신
+  display1.setBrightness(0x0f);
+  display2.setBrightness(0x0f);
+  display1.showNumberDec(0, false);
+  display2.showNumberDec(0, false);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(HC06.available()){
+    String text = HC06.readStringUntil(0x0A); //0x0A == \n
+    StaticJsonDocument<48> doc;
+    deserializeJson(doc, text);
+
+    int num1 = doc["num1"]; // 123
+    int num2 = doc["num2"]; // 456
+    Serial.print("num1=");
+    Serial.println(num1);
+    Serial.print("num2=");
+    Serial.println(num2);
+    display1.showNumberDec(num1, false);
+    display2.showNumberDec(num2, false);
+  }
+}

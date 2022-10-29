@@ -1,0 +1,35 @@
+#include <MHZ19.h>
+#include <SoftwareSerial.h>
+SoftwareSerial HC06(2, 3);
+MHZ19 mhz(&Serial);
+
+int num = 1000;
+
+void setup()
+{
+  Serial.begin(9600); //CO2센서-아두이노간 통신!
+  HC06.begin(9600); //아두이노-블루투스모듈간 통신!
+}
+
+void loop()
+{
+  if(HC06.available()){
+    //앱인벤터쪽에서 블루투스로 뭔가? 값을 전송했다!
+    String data = HC06.readStringUntil(0x0a);
+    num = data.toInt();
+  }
+  MHZ19_RESULT response = mhz.retrieveData();
+  if (response == MHZ19_RESULT_OK)
+  {
+    int co2 = mhz.getCO2(); //0~5000
+    int temp = mhz.getTemperature();
+    HC06.println(String(co2)+","+String(temp)+","+String(num));
+  }
+  else
+  {
+    //Serial.print(F("Error, code: "));
+    //Serial.println(response);
+  }
+  
+  delay(num);
+}

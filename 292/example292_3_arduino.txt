@@ -1,0 +1,35 @@
+#include <SoftwareSerial.h>
+#include <ArduinoJson.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+SoftwareSerial HC06(2, 3); 
+LiquidCrystal_I2C lcd(0x27,16,2); //2004
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  HC06.begin(9600);//아두이노-블루투스모듈간 통신
+  lcd.init();
+  lcd.backlight();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(HC06.available()){
+    String text = HC06.readStringUntil(0x0A); //0x0A == \n
+    StaticJsonDocument<64> doc;
+
+    deserializeJson(doc, text);
+
+    String line1 = doc["line1"]; // "hello"
+    String line2 = doc["line2"]; // "world"
+    Serial.println(line1);
+    Serial.println(line2);
+    lcd.clear();
+    lcd.setCursor(0,0); //0~15, 0~1
+    lcd.print(line1);
+    lcd.setCursor(0,1); //0~15, 0~1
+    lcd.print(line2);
+  }
+}

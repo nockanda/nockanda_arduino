@@ -1,0 +1,16 @@
+#include <SoftwareSerial.h>
+SoftwareSerial HC06(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신 //앱인벤터와 전혀 상관없는!
+  HC06.begin(9600); //아두이노-블루투스모듈간 통신
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //일정한 간격으로 광센서값을 읽어서 컴퓨터로 전송한다!
+  int sensor = analogRead(A0); //0~1023
+  HC06.println(sensor);
+  delay(200);
+}
