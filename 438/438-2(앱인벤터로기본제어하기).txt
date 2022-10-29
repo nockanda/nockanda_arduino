@@ -1,0 +1,77 @@
+#include "DHT.h"
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+#include <SoftwareSerial.h>
+SoftwareSerial bluetooth(6,7);
+LiquidCrystal_I2C lcd(0x27,16,2); //2004 -> 1602
+
+#define DHTPIN 5
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+#define mosfet 2
+#define btn_on 3
+#define btn_off 4
+
+unsigned long t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //아두이노의 결과를 PC에 출력하겠다!
+  bluetooth.begin(9600); //아두이노와 블루투스모듈간의 통신!
+  dht.begin();
+  lcd.init();
+  lcd.backlight();
+  pinMode(mosfet,OUTPUT); //모스펫핀을 출력으로 설정!
+  pinMode(btn_on,INPUT_PULLUP); //아두이노에 내장된 저항을 이용해서 버튼을 활용하겠다!
+  pinMode(btn_off,INPUT_PULLUP); //아두이노에 내장된 저항을 이용해서 버튼을 활용하겠다!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(bluetooth.available()){
+    //스마트폰에서 on이라고 전송하면 켜지고 off라고 전송하면 꺼진다
+    String data = bluetooth.readStringUntil('\n');
+
+    if(data == "on"){
+      digitalWrite(mosfet,HIGH);
+    }else if(data == "off"){
+      digitalWrite(mosfet,LOW);
+    }
+  }
+  
+  if(digitalRead(btn_on) == LOW){
+    //버튼이 눌려진것!
+    digitalWrite(mosfet,HIGH);
+  }
+  if(digitalRead(btn_off) == LOW){
+    //버튼이 눌려진것!
+    digitalWrite(mosfet,LOW);
+  }
+
+  if(millis() - t > 1000){
+    t = millis();
+    //1초에 한번 온도와 습도를 측정하세요!
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+
+    //온도와 습도값을 블루투스로 전송한다
+    bluetooth.print(digitalRead(mosfet));
+    bluetooth.print(",");
+    bluetooth.print(h);
+    bluetooth.print(",");
+    bluetooth.println(t);
+
+    //온도와 습도값을 LCD모듈에 출력한다!
+    lcd.setCursor(0,0); //첫번째줄~
+    lcd.print("HUMI=");
+    lcd.print(h);
+    lcd.print("%  ");
+    lcd.setCursor(0,1); //두번째줄~
+    lcd.print("TEMP=");
+    lcd.print(t);
+    lcd.print("'C  ");
+  }
+
+  
+}

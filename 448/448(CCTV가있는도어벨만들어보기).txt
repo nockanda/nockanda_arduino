@@ -1,0 +1,142 @@
+#include "nockanda_blynk.h"
+
+/* Comment this out to disable prints and save space */
+#define BLYNK_PRINT Serial
+
+/* Fill-in your Template ID (only if using Blynk.Cloud) */
+//#define BLYNK_TEMPLATE_ID   "YourTemplateID"
+
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+
+#define doorbell D3
+#define doorsensor D4
+#define manual_lock D5
+#define lock D6
+#define buzzer D7
+
+bool old_bell_state = HIGH;
+bool old_manual_btn = HIGH;
+bool old_doorsensor = LOW;
+unsigned long manual_time = 0;
+
+bool push_noti = true;
+bool auto_lock = true;
+
+bool doorsensor_sw = false;
+unsigned long doorsensor_time = 0;
+// You should get Auth Token in the Blynk App.
+// Go to the Project Settings (nut icon).
+//char auth[] = "YourAuthToken";
+
+// Your WiFi credentials.
+// Set password to "" for open networks.
+char ssid[] = "nockanda";
+char pass[] = "11213144";
+
+BlynkTimer timer;
+void myTimerEvent()
+{
+  //도어센서의 상태를 읽어와서 전송한다!
+  if(digitalRead(doorsensor) == LOW){
+    //문이 닫혀있는 경우!
+    //Serial.println("닫힘");
+    Blynk.virtualWrite(V0, "닫힘");
+  }else{
+    //문이 열려있는 경우!
+    //Serial.println("열림");
+    doorsensor_sw = false;
+    Blynk.virtualWrite(V0, "열림");
+    //만약에 잠금이 걸려있는 상태라면 침입니다!
+    if(digitalRead(lock) == LOW){
+      //락이 걸려있는경우
+      //락이 걸렸는데 문이 열린 경우 이때 푸시알람을 발생시킨다!
+      if(push_noti) Blynk.notify("침입이 감지되었습니다!"); //최대 5초에 1회
+    }
+  }
+}
+BLYNK_WRITE(V1)
+{
+  int pinValue = param.asInt();//0 or 1
+  digitalWrite(lock,pinValue);
+  //Serial.println(pinValue);
+}
+BLYNK_WRITE(V2)
+{
+  //알람 설정할거냐 말거냐
+  push_noti = param.asInt();//0 or 1
+}
+BLYNK_WRITE(V3)
+{
+  //자동잠금기능 할거냐 말거냐
+  auto_lock = param.asInt();//0 or 1
+}
+void setup()
+{
+  // Debug console
+  Serial.begin(9600);
+  pinMode(doorbell,INPUT_PULLUP);
+  pinMode(doorsensor,INPUT_PULLUP);
+  pinMode(manual_lock,INPUT_PULLUP);
+  pinMode(lock,OUTPUT);
+  Blynk.begin(auth, ssid, pass);
+  timer.setInterval(500, myTimerEvent);
+}
+
+void loop()
+{
+  Blynk.run();
+  timer.run();
+  bool now_bell_state = digitalRead(doorbell);
+  //버튼을 눌렀을때 소리를 발생시키겠다~~
+  if(now_bell_state == LOW){
+    //버튼이 눌려짐
+    tone(buzzer, 2093);
+  }else{
+    //버튼이 안눌려짐
+    noTone(buzzer);
+  }
+  //버튼을 누르는 딱 그순간에 유저에게 푸시알람을 전송한다!
+  if(now_bell_state == LOW && old_bell_state == HIGH){
+    //Serial.println("푸시알람 전송한다"); 
+    if(push_noti) Blynk.notify("호출벨이 울렸습니다!"); //최대 5초에 1회
+  }
+  //수동버튼을 눌렀을때 잠겨있으면 풀고, 풀려있으면 잠궈라!
+  bool now_manual_btn = digitalRead(manual_lock);
+  if(old_manual_btn==HIGH && now_manual_btn == LOW){
+    //버튼이 눌려짐!
+    manual_time = millis();
+  }else if(old_manual_btn==LOW && now_manual_btn == HIGH){
+    if(millis() - manual_time > 100){
+      //버튼이 눌려짐을 감지하기 위해서는 100ms이상 버튼을 눌러야된다!
+      bool now_lock = digitalRead(lock);
+      digitalWrite(lock,!now_lock);
+      Blynk.virtualWrite(V1, !now_lock);
+    }
+  }
+
+  //자동문닫기
+  bool now_doorsensor = digitalRead(doorsensor);
+
+  if(auto_lock){
+    if(old_doorsensor == HIGH && now_doorsensor == LOW){
+      //열려있다가 닫힌상태!
+      doorsensor_sw = true;
+      doorsensor_time = millis();
+    }
+  
+    if(doorsensor_sw){
+      if(millis() - doorsensor_time > 5000){
+        //다시잠그겠다
+        digitalWrite(lock,LOW);
+        Blynk.virtualWrite(V1, 0);
+        doorsensor_sw = false;
+      }
+    }
+  }
+  
+  old_doorsensor = now_doorsensor;
+  old_manual_btn = now_manual_btn;
+  old_bell_state = now_bell_state; //LOW
+}

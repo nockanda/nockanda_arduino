@@ -1,0 +1,43 @@
+
+// Fill-in information from your Blynk Template here
+#define BLYNK_TEMPLATE_ID "TMPLi1GwSh8w"
+#define BLYNK_DEVICE_NAME "nockanda"
+
+#define BLYNK_FIRMWARE_VERSION        "0.1.2"
+
+#define BLYNK_PRINT Serial
+
+//#define BLYNK_DEBUG
+
+#define APP_DEBUG
+
+// Uncomment your board, or configure a custom board in Settings.h
+//#define USE_SPARKFUN_BLYNK_BOARD
+//#define USE_NODE_MCU_BOARD
+//#define USE_WITTY_CLOUD_BOARD
+//#define USE_WEMOS_D1_MINI
+
+#include "BlynkEdgent.h"
+
+BlynkTimer timer;
+
+void myTimerEvent()
+{
+  float sensor = random(0,10000)/100.0; //0.00~99.99
+  Blynk.virtualWrite(V4, sensor);
+}
+
+void setup()
+{
+  Serial.begin(115200);
+  delay(100);
+
+  BlynkEdgent.begin();
+
+  timer.setInterval(1000L, myTimerEvent);
+}
+
+void loop() {
+  BlynkEdgent.run();
+  timer.run();
+}

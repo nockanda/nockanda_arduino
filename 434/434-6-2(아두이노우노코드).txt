@@ -1,0 +1,65 @@
+/*
+AccelStepper stepper = AccelStepper(연결방식, STEP핀, DIR핀);
+stepper.setMaxSpeed(1000); //최대속도
+stepper.setCurrentPosition(0); //현재 스탭을 설정
+stepper.currentPosition(); //현재 스탭을 반환
+stepper.setSpeed(200); //스탭모터의 방향과 속도를 설정
+stepper.runSpeed(); //스탭모터 작동(고정속도)
+stepper.setAcceleration(2000); //가속량을 설정함
+stepper.moveTo(1000); //목표스탭량을 설정함
+stepper.runToPosition(); //가속도를 붙혀서 스탭모터제어
+*/
+
+#include <AccelStepper.h>
+#include <MultiStepper.h>
+
+#define DIR1 2
+#define STEP1 3
+#define DIR2 4
+#define STEP2 5 
+
+AccelStepper stepper1 = AccelStepper(1, STEP1, DIR1);
+AccelStepper stepper2 = AccelStepper(1, STEP2, DIR2);
+MultiStepper steppers;
+int speed = 1000;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//결과를 시리얼모니터에서 볼거야~
+  stepper1.setMaxSpeed(200); //초당 몇스탭이냐? 1000/s(초당5회전)
+  stepper1.setCurrentPosition(0); //현재 스탭을 설정
+  stepper2.setMaxSpeed(200); //초당 몇스탭이냐? 1000/s(초당5회전)
+  stepper2.setCurrentPosition(0); //현재 스탭을 설정
+
+  //멀티스테퍼로 등록한다
+  steppers.addStepper(stepper1);
+  steppers.addStepper(stepper2);
+}
+
+//메인스레드
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    //유저가 시리얼 모니터에서 뭔가 전송했다!
+    String data = Serial.readStringUntil('\r');    
+    int comma_pos = data.indexOf(",");
+    String num1 = data.substring(0,comma_pos); //123
+    String num2 = data.substring(comma_pos+1,data.length()); //456
+
+    int step1 = num1.toInt();
+    int step2 = num2.toInt();
+
+    Serial.print("제어작업 시작");
+    long positions[] = {step1, step2};
+    steppers.moveTo(positions);
+    steppers.runSpeedToPosition(); // Blocks until all are in position
+    delay(1000);
+  
+    positions[0] = 0;
+    positions[1] = 0;
+    steppers.moveTo(positions);
+    steppers.runSpeedToPosition(); // Blocks until all are in position
+    Serial.print("제어작업 종료");
+  }
+  
+}

@@ -1,0 +1,40 @@
+
+#define BLYNK_PRINT Serial
+
+//클라우드와 연계할경우 기입하는데 간단하게 쓸때는 필요없음!
+//#define BLYNK_TEMPLATE_ID   "YourTemplateID"
+
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+#include "nockanda_blynk.h"
+
+//인증키 집얺기
+//char auth[] = "YourAuthToken";
+
+//내가 연결해야할 인터넷공유기의 ID와 비밀번호
+char ssid[] = "popcorn";
+char pass[] = "11213144";
+
+BLYNK_WRITE(V0)
+{
+  int pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
+  // You can also use:
+  // String i = param.asStr();
+  // double d = param.asDouble();
+  Serial.print("녹칸다의 ESP8266이 수신한값=");
+  Serial.println(pinValue);
+}
+
+void setup()
+{
+  // Debug console
+  Serial.begin(9600);
+
+  Blynk.begin(auth, ssid, pass);
+}
+
+void loop()
+{
+  Blynk.run();
+}

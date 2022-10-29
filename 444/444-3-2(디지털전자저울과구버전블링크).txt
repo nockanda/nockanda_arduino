@@ -1,0 +1,53 @@
+#include "nockanda_blynk.h"
+#include "HX711.h"
+
+const int LOADCELL_DOUT_PIN = D3;
+const int LOADCELL_SCK_PIN = D4;
+
+
+HX711 scale;
+
+
+#define BLYNK_PRINT Serial
+
+//#define BLYNK_TEMPLATE_ID   "TMPLi1GwSh8w"
+
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+
+// You should get Auth Token in the Blynk App.
+// Go to the Project Settings (nut icon).
+//char auth[] = "YourAuthToken";
+
+//나의 인터넷공유기 id pw
+char ssid[] = "popcorn";
+char pass[] = "11213144";
+
+BlynkTimer timer;
+void myTimerEvent()
+{
+  //scale.get_units()*-0.453592 소수점 1자리만 유효숫자로 하겠다!
+  Blynk.virtualWrite(V0, String(scale.get_units()*-0.453592,1));
+}
+
+void setup()
+{
+  // Debug console
+  Serial.begin(9600);
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+
+  scale.set_scale(-10800);
+  scale.tare();  
+  Blynk.begin(auth, ssid, pass);
+  timer.setInterval(500L, myTimerEvent);
+}
+
+void loop()
+{
+  //가급적이면 딜레이를 쓰지마시오!
+  Blynk.run();
+  timer.run();
+}
+
+

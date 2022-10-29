@@ -1,0 +1,23 @@
+#define mosfet 2
+#define btn_on 3
+#define btn_off 4
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //아두이노의 결과를 PC에 출력하겠다!
+  pinMode(mosfet,OUTPUT); //모스펫핀을 출력으로 설정!
+  pinMode(btn_on,INPUT_PULLUP); //아두이노에 내장된 저항을 이용해서 버튼을 활용하겠다!
+  pinMode(btn_off,INPUT_PULLUP); //아두이노에 내장된 저항을 이용해서 버튼을 활용하겠다!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(btn_on) == LOW){
+    //버튼이 눌려진것!
+    digitalWrite(mosfet,HIGH);
+  }
+  if(digitalRead(btn_off) == LOW){
+    //버튼이 눌려진것!
+    digitalWrite(mosfet,LOW);
+  }
+}

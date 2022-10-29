@@ -1,0 +1,116 @@
+#include <SoftwareSerial.h>
+#include <ArduinoJson.h>
+
+#include "nockanda_blynk.h" //삭제하세용~
+
+#define BLYNK_PRINT Serial
+
+/* Fill-in your Template ID (only if using Blynk.Cloud) */
+//#define BLYNK_TEMPLATE_ID   "YourTemplateID"
+
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+
+//char auth[] = "YourAuthToken";
+
+char ssid[] = "nockanda";
+char pass[] = "11213144";
+
+SoftwareSerial uno(D5,D6);
+
+BLYNK_WRITE(V1)
+{
+  int pinValue = param.asInt(); //0 or 1
+  // '0'을 보내면 펌프가 꺼진다
+  // '1'을보내면 펌프가 켜진다
+  if(pinValue == 0){
+    uno.write('0');  
+  }else if(pinValue == 1){
+    uno.write('1');
+  }
+}
+BLYNK_WRITE(V2)
+{
+  int pinValue = param.asInt(); //2
+  // '2'을 보내면 유량을 초기화한다
+  if(pinValue == 2){
+    uno.write('2');  
+  }
+}
+void setup()
+{
+  // Debug console
+  Serial.begin(115200);
+  uno.begin(9600); //스마트팜모듈하고 연결된 통신라인
+  
+  Blynk.begin(auth, ssid, pass);
+}
+
+void loop()
+{
+  Blynk.run();
+  if(uno.available()){
+    String data = uno.readStringUntil('\n'); //JSON을 압축을 풀어야한다!
+    
+    StaticJsonDocument<300> doc;
+
+    DeserializationError error = deserializeJson(doc, data);
+    
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      return;
+    }
+    
+    int cds = doc["cds"]; // 10
+    int soil_humi = doc["soil_humi"]; // 10
+    float tempC = doc["tempC"]; // 10.11
+    float h = doc["h"]; // 10.22
+    float t = doc["t"]; // 10.33
+    int co2 = doc["co2"]; // 10
+    float water = doc["water"]; // 10.22
+    String water_level = doc["water_level"]; // "적정"
+    String pump_state = doc["pump_state"]; // "작동"
+
+    Blynk.virtualWrite(V0, "update", 0,"광센서",cds);
+    Blynk.virtualWrite(V0, "update", 1,"토양습도",soil_humi);
+    Blynk.virtualWrite(V0, "update", 2,"토양온도",String(tempC)+"'C");
+    Blynk.virtualWrite(V0, "update", 3,"대기습도",String(h)+"%");
+    Blynk.virtualWrite(V0, "update", 4,"대기온도",String(t)+"'C");
+    Blynk.virtualWrite(V0, "update", 5,"이산화탄소농도",String(co2)+"PPM");
+    Blynk.virtualWrite(V0, "update", 6,"유량",String(water)+"ml");
+    Blynk.virtualWrite(V0, "update", 7,"물탱크수위",water_level);
+    Blynk.virtualWrite(V0, "update", 8,"펌프작동상태",pump_state);
+    /*
+    Blynk.virtualWrite(V0, "add");
+    Blynk.virtualWrite(V1, soil_humi);
+    Blynk.virtualWrite(V2, tempC);
+    Blynk.virtualWrite(V3, h);
+    Blynk.virtualWrite(V4, t);
+    Blynk.virtualWrite(V5, co2);
+    Blynk.virtualWrite(V6, water);
+    Blynk.virtualWrite(V7, water_level);
+    Blynk.virtualWrite(V8, pump_state);
+    */
+    /*
+    Serial.print(cds);
+    Serial.print(",");
+    Serial.print(soil_humi);
+    Serial.print(",");
+    Serial.print(tempC);
+    Serial.print(",");
+    Serial.print(h);
+    Serial.print(",");
+    Serial.print(t);
+    Serial.print(",");
+    Serial.print(co2);
+    Serial.print(",");
+    Serial.print(water);
+    Serial.print(",");
+    Serial.print(water_level);
+    Serial.print(",");
+    Serial.println(pump_state);
+    */
+  }
+}

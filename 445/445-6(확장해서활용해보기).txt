@@ -1,0 +1,69 @@
+#define BLYNK_PRINT Serial
+
+#define DS D5 //데이터핀
+#define LATCH D6 //레치핀
+#define CLK D7 //클락핀
+
+/* Fill-in your Template ID (only if using Blynk.Cloud) */
+//#define BLYNK_TEMPLATE_ID   "YourTemplateID"
+#include "nockanda_blynk.h"
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+
+// You should get Auth Token in the Blynk App.
+// Go to the Project Settings (nut icon).
+//char auth[] = "YourAuthToken";
+
+// Your WiFi credentials.
+// Set password to "" for open networks.
+char ssid[] = "nockanda";
+char pass[] = "11213144";
+
+byte relay = 0b11111111; //우에서 좌순서로 0->7
+int ch = 0;
+
+BLYNK_WRITE(V0)
+{
+  //채널번호 1~8까지가 여기 전송된다!
+  ch = param.asInt(); //0또는 1
+  //블링크앱에서 채널번호를 바꾸고 있다는 의미이다!
+  //현재 릴레이의 상태를 읽어들여서 V1값을 업데이트한다!
+  int state = bitRead(relay, ch-1); //0이면 켜진거고 1이면 꺼진상태!
+  Blynk.virtualWrite(V1, !state);
+}
+BLYNK_WRITE(V1)
+{
+  //채널 1만 전담하는 부분!
+  int pinValue = param.asInt(); //0또는 1
+  //변수가 업데이트 된것!
+  if(ch >= 1 && ch <=8){
+    bitWrite(relay, ch-1, !pinValue);
+    digitalWrite(LATCH,LOW);
+    shiftOut(DS,CLK,MSBFIRST,relay);
+    digitalWrite(LATCH,HIGH);
+  }
+}
+
+BLYNK_CONNECTED() {
+  //지금버전에서는 의미가 없다
+    Blynk.syncVirtual(V1,V2,V3,V4,V5,V6,V7,V8);
+}
+void setup()
+{
+  // Debug console
+  Serial.begin(115200);
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay);
+  digitalWrite(LATCH,HIGH);
+  
+  Blynk.begin(auth, ssid, pass);
+}
+
+void loop()
+{
+  Blynk.run();
+}

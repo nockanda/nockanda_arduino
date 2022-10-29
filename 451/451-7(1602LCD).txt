@@ -1,0 +1,47 @@
+esphome:
+  name: nockanda
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+# Example configuration entry
+sensor:
+  - platform: adc
+    pin: A0
+    id: nockanda_cds
+    name: "CDS SENSOR"
+    update_interval: 1s
+    filters:
+      - multiply: 3.3
+
+# Example configuration entry
+i2c:
+
+display:
+  - platform: lcd_pcf8574
+    dimensions: 16x2
+    address: 0x27
+    lambda: |-
+      it.printf("Sensor value: %f", id(nockanda_cds).state);
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "4de48bf22b324332a2421c7a316ecad8"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Nockanda Fallback Hotspot"
+    password: "fVTDpvCSyniQ"
+
+captive_portal:
+    
+

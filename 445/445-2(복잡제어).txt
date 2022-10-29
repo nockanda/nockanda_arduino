@@ -1,0 +1,52 @@
+#define DS D5 //데이터핀
+#define LATCH D6 //레치핀
+#define CLK D7 //클락핀
+
+//8개의 바이너리 정보를 담을 수 있는 변수가 뭐냐?
+//byte
+
+//byte relay = 255;
+//byte relay = 0xFF
+byte relay = 0b11111111; //우에서 좌순서로 0->7
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  //모든 제어핀을 출력으로 설정한다
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+
+  //74HC595모듈이 초심자들에게 고통스러운 이유는 비트연산을 해야하기 때문이다!
+  //bitRead();
+  //bitSet();
+
+  //처음에 켰을때 모든 릴레이를 OFF한다!
+  //레치핀을 LOW로 한다!
+  //데이터 전송하고
+  //레치핀을 HIGH로 한다!
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay);
+  digitalWrite(LATCH,HIGH);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    //유저가 시리얼모니터에서 뭔가 값을 날렸다!
+    char c = Serial.read();
+
+    //유저에게서 입력받은 문자가 '0'보다 작거나, '8'보다 클경우 안함!
+    if(c < '1' || c > '8') return;
+
+    int index = c - '0';
+    
+    bool state = bitRead(relay, index-1); //0b0000000?
+    bitWrite(relay, index-1, !state);
+
+    //업데이트된 값을 전송한다!
+    digitalWrite(LATCH,LOW);
+    shiftOut(DS,CLK,MSBFIRST,relay);
+    digitalWrite(LATCH,HIGH);
+  }
+}

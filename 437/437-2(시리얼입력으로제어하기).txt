@@ -1,0 +1,22 @@
+#define mosfet 2
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //아두이노의 결과를 PC에 출력하겠다!
+  pinMode(mosfet,OUTPUT); //모스펫핀을 출력으로 설정!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    //PC에서 유저가 뭔가 전송을 했다!
+    char c = Serial.read(); //문자 1개를 읽겠다!
+    if(c == '0'){
+      //끈다
+      digitalWrite(mosfet,LOW);
+    }else if(c == '1'){
+      //켠다
+      digitalWrite(mosfet,HIGH);
+    }
+  }
+}

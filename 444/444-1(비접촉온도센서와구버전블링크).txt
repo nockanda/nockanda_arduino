@@ -1,0 +1,48 @@
+#include "nockanda_blynk.h"
+#include <Wire.h>
+#include <Adafruit_MLX90614.h>
+
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+
+#define BLYNK_PRINT Serial
+
+//#define BLYNK_TEMPLATE_ID   "TMPLi1GwSh8w"
+
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+
+// You should get Auth Token in the Blynk App.
+// Go to the Project Settings (nut icon).
+//char auth[] = "YourAuthToken";
+
+//나의 인터넷공유기 id pw
+char ssid[] = "popcorn";
+char pass[] = "11213144";
+
+BlynkTimer timer;
+void myTimerEvent()
+{
+  float atemp = mlx.readAmbientTempC();
+  float otemp = mlx.readObjectTempC();
+  Blynk.virtualWrite(V0, atemp);
+  Blynk.virtualWrite(V1, otemp);
+  Serial.println("앰비언트=");
+  Serial.print(atemp);
+  Serial.print(", 오브젝트=");
+  Serial.println(otemp);
+}
+void setup()
+{
+  // Debug console
+  Serial.begin(9600);
+  mlx.begin();
+  Blynk.begin(auth, ssid, pass);
+  timer.setInterval(1000L, myTimerEvent);
+}
+
+void loop()
+{
+  Blynk.run();
+  timer.run();
+}

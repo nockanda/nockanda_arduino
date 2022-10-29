@@ -1,0 +1,49 @@
+#include "nockanda_blynk.h"
+#include <SoftwareSerial.h>
+
+#define hallsensor D7
+
+SoftwareSerial uno(D5,D6);
+
+#define BLYNK_PRINT Serial
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+
+//char auth[] = "YourAuthToken";
+
+// Your WiFi credentials.
+// Set password to "" for open networks.
+char ssid[] = "nockanda";
+char pass[] = "11213144";
+
+BlynkTimer timer;
+
+void myTimerEvent()
+{
+  int valve = digitalRead(hallsensor); //LOW면 잠금(OFF), HIGH면 열림(ON)
+  Blynk.virtualWrite(V1, valve);
+}
+
+void setup()
+{
+  // Debug console
+  Serial.begin(9600);
+  uno.begin(9600);//아두이노 우노와 통신라인!
+  pinMode(hallsensor,INPUT);
+  timer.setInterval(1000L, myTimerEvent);
+  Blynk.begin(auth, ssid, pass);
+}
+
+void loop()
+{
+  Blynk.run();
+  timer.run();
+  if(uno.available()){
+    //MQ-6쪽에서 데이터가 전송되었느냐?
+    //Serial.println(mq6);
+    String data = uno.readStringUntil('\n');
+    Blynk.virtualWrite(V0, data);
+    //Serial.println(data);
+  }
+}

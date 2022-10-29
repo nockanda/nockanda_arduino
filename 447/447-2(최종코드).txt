@@ -1,0 +1,136 @@
+#include "nockanda_blynk.h"
+#include <SoftwareSerial.h>
+
+#define hallsensor D7
+
+SoftwareSerial uno(D5,D6);
+
+#define BLYNK_PRINT Serial
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+
+//char auth[] = "YourAuthToken";
+
+// Your WiFi credentials.
+// Set password to "" for open networks.
+char ssid[] = "nockanda";
+char pass[] = "11213144";
+
+BlynkTimer timer;
+unsigned long t = 0; //사용시간측정
+unsigned long t2 = 0; //인터발 확보
+unsigned long t3 = 0; //가스농도 알람 간격조정
+int old_valve = LOW;
+bool limit_check = false;
+bool gas_check = false;
+bool alram_turn_on = true;
+
+//int limit_time = 1800;
+int limit_time = 10;
+//int inverval = 600;
+int inverval = 3;
+
+float limit_gas = 500;
+
+BLYNK_WRITE(V3)
+{
+  //1 == true == HIGH
+  //0 == false == LOW
+  alram_turn_on = param.asInt(); //0 또는 1
+  //0이면 알람 끄기!
+  //1이면 알람 켜기!
+}
+
+void myTimerEvent()
+{
+  int valve = digitalRead(hallsensor); //LOW면 잠금(OFF), HIGH면 열림(ON)
+  Blynk.virtualWrite(V1, valve);
+
+  if(old_valve == LOW && valve == HIGH){
+    //밸브 ON
+    t = millis(); //시작지점
+    limit_check = false;
+  }
+
+  if(valve == HIGH){
+    //밸브의 열림이 지속되는 상태
+    unsigned long run_time = (millis() - t)/1000; //s
+    //Serial.println(run_time);
+    Blynk.virtualWrite(V2, run_time);
+
+    //지금 문제가 되는 상황이냐?
+    if(run_time > limit_time){
+      //어라~~~ 너무 오래쓰고 있는데~~~?
+      //inverval간격으로 메시지를 출력한다!
+
+      //1개의 시작지점을 확보하는 과정!
+      if(!limit_check){
+        t2 = millis();
+        limit_check = true;
+        //지금 now 알람을 1개 발싱시켜야 하는 상황!
+        if(alram_turn_on){
+          Blynk.notify("지금 정상적으로 가스를 사용하는게 맞나요?");
+        }
+      }
+
+      if(millis() - t2 > inverval*1000){
+        t2 = millis();
+        //Serial.println("지금 정상적으로 가스를 사용하는게 맞나요?");
+        if(alram_turn_on){
+          Blynk.notify("지금 정상적으로 가스를 사용하는게 맞나요?");
+        }
+      }
+    }
+    //limit_time
+    //inverval
+  }
+ 
+  //할거다하고 마지막에 now값을 old에게 전달한다
+  old_valve = valve;
+}
+
+void setup()
+{
+  // Debug console
+  Serial.begin(9600);
+  uno.begin(9600);//아두이노 우노와 통신라인!
+  pinMode(hallsensor,INPUT);
+  timer.setInterval(1000L, myTimerEvent);
+  Blynk.begin(auth, ssid, pass);
+}
+
+void loop()
+{
+  Blynk.run();
+  timer.run();
+  if(uno.available()){
+    //MQ-6쪽에서 데이터가 전송되었느냐?
+    //Serial.println(mq6);
+    String data = uno.readStringUntil('\n'); //500ms
+
+    float mq6 = data.toFloat();
+    if(mq6 > limit_gas){
+      //푸시알람을 발생시키겠다!
+      //5초에 한번씩 보내도록 하시오!
+      if(!gas_check){
+        t3 = millis();
+        if(alram_turn_on){
+          Blynk.notify("위험! 현재 가스 농도가 ["+ data +"]입니다!");
+        }
+        gas_check = true;
+      }
+
+      if(millis() - t3 > 5000){
+        t3 = millis();
+        if(alram_turn_on){
+          Blynk.notify("위험! 현재 가스 농도가 ["+ data +"]입니다!");
+        }
+      }
+    }else{
+      gas_check = false;
+    }
+    Blynk.virtualWrite(V0, data);
+    //Serial.println(data);
+  }
+}

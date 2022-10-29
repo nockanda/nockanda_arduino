@@ -1,0 +1,55 @@
+#include <SoftwareSerial.h>
+#include <ArduinoJson.h>
+
+SoftwareSerial uno(D5,D6);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //ESP8266과 PC가 통신하기 위한 통신라인
+  uno.begin(9600); //스마트팜모듈하고 연결된 통신라인
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(uno.available()){
+    String data = uno.readStringUntil('\n'); //JSON을 압축을 풀어야한다!
+    
+    StaticJsonDocument<300> doc;
+
+    DeserializationError error = deserializeJson(doc, data);
+    
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      return;
+    }
+    
+    int cds = doc["cds"]; // 10
+    int soil_humi = doc["soil_humi"]; // 10
+    float tempC = doc["tempC"]; // 10.11
+    float h = doc["h"]; // 10.22
+    float t = doc["t"]; // 10.33
+    int co2 = doc["co2"]; // 10
+    float water = doc["water"]; // 10.22
+    String water_level = doc["water_level"]; // "적정"
+    String pump_state = doc["pump_state"]; // "작동"
+
+    Serial.print(cds);
+    Serial.print(",");
+    Serial.print(soil_humi);
+    Serial.print(",");
+    Serial.print(tempC);
+    Serial.print(",");
+    Serial.print(h);
+    Serial.print(",");
+    Serial.print(t);
+    Serial.print(",");
+    Serial.print(co2);
+    Serial.print(",");
+    Serial.print(water);
+    Serial.print(",");
+    Serial.print(water_level);
+    Serial.print(",");
+    Serial.println(pump_state);
+  }
+}

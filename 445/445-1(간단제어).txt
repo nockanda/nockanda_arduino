@@ -1,0 +1,105 @@
+#define DS D5 //데이터핀
+#define LATCH D6 //레치핀
+#define CLK D7 //클락핀
+
+//8개의 바이너리 정보를 담을 수 있는 변수가 뭐냐?
+//byte
+
+//byte relay = 255;
+//byte relay = 0xFF
+byte relay = 0b11111111; //우에서 좌순서로 0->7
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  //모든 제어핀을 출력으로 설정한다
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+
+  //74HC595모듈이 초심자들에게 고통스러운 이유는 비트연산을 해야하기 때문이다!
+  //bitRead();
+  //bitSet();
+
+  //처음에 켰을때 모든 릴레이를 OFF한다!
+  //레치핀을 LOW로 한다!
+  //데이터 전송하고
+  //레치핀을 HIGH로 한다!
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay);
+  digitalWrite(LATCH,HIGH);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    //유저가 시리얼모니터에서 뭔가 값을 날렸다!
+    char c = Serial.read();
+    if(c == '1'){
+      //채널 1번이 열려있다면 닫고 닫혀있다면 연다!
+      bool state = bitRead(relay, 0); //0b0000000?
+      bitWrite(relay, 0, !state);
+
+      //업데이트된 값을 전송한다!
+      digitalWrite(LATCH,LOW);
+      shiftOut(DS,CLK,MSBFIRST,relay);
+      digitalWrite(LATCH,HIGH);
+    }else if(c == '2'){
+      bool state = bitRead(relay, 1); //0b0000000?
+      bitWrite(relay, 1, !state);
+
+      //업데이트된 값을 전송한다!
+      digitalWrite(LATCH,LOW);
+      shiftOut(DS,CLK,MSBFIRST,relay);
+      digitalWrite(LATCH,HIGH);
+    }else if(c == '3'){
+      bool state = bitRead(relay, 2); //0b0000000?
+      bitWrite(relay, 2, !state);
+
+      //업데이트된 값을 전송한다!
+      digitalWrite(LATCH,LOW);
+      shiftOut(DS,CLK,MSBFIRST,relay);
+      digitalWrite(LATCH,HIGH);
+    }else if(c == '4'){
+      bool state = bitRead(relay, 3); //0b0000000?
+      bitWrite(relay, 3, !state);
+
+      //업데이트된 값을 전송한다!
+      digitalWrite(LATCH,LOW);
+      shiftOut(DS,CLK,MSBFIRST,relay);
+      digitalWrite(LATCH,HIGH);
+    }else if(c == '5'){
+      bool state = bitRead(relay, 4); //0b0000000?
+      bitWrite(relay, 4, !state);
+
+      //업데이트된 값을 전송한다!
+      digitalWrite(LATCH,LOW);
+      shiftOut(DS,CLK,MSBFIRST,relay);
+      digitalWrite(LATCH,HIGH);
+    }else if(c == '6'){
+      bool state = bitRead(relay, 5); //0b0000000?
+      bitWrite(relay, 5, !state);
+
+      //업데이트된 값을 전송한다!
+      digitalWrite(LATCH,LOW);
+      shiftOut(DS,CLK,MSBFIRST,relay);
+      digitalWrite(LATCH,HIGH);
+    }else if(c == '7'){
+      bool state = bitRead(relay, 6); //0b0000000?
+      bitWrite(relay, 6, !state);
+
+      //업데이트된 값을 전송한다!
+      digitalWrite(LATCH,LOW);
+      shiftOut(DS,CLK,MSBFIRST,relay);
+      digitalWrite(LATCH,HIGH);
+    }else if(c == '8'){
+      bool state = bitRead(relay, 7); //0b0000000?
+      bitWrite(relay, 7, !state);
+
+      //업데이트된 값을 전송한다!
+      digitalWrite(LATCH,LOW);
+      shiftOut(DS,CLK,MSBFIRST,relay);
+      digitalWrite(LATCH,HIGH);
+    }
+  }
+}

@@ -1,0 +1,45 @@
+
+#define BLYNK_PRINT Serial
+
+//클라우드와 연계할경우 기입하는데 간단하게 쓸때는 필요없음!
+//#define BLYNK_TEMPLATE_ID   "YourTemplateID"
+
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+#include "nockanda_blynk.h"
+
+//인증키 집얺기
+//char auth[] = "YourAuthToken";
+
+//내가 연결해야할 인터넷공유기의 ID와 비밀번호
+char ssid[] = "popcorn";
+char pass[] = "11213144";
+
+BlynkTimer timer;
+
+void nockanda_work()
+{
+  //ESP8266보드에 있는 센서값을 측정해서 스마트폰쪽으로 전송하는데
+  //V0다가 값을 담아서 전송할거다!
+  int data = random(0,1000); //0~999사이의 랜덤값을 뽑아라!
+  //가상의 센서값을 측정해서 V0에 담아서 스마트폰으로 전송하겠다!
+  Blynk.virtualWrite(V0, data);
+}
+
+void setup()
+{
+  // Debug console
+  Serial.begin(9600);
+
+  Blynk.begin(auth, ssid, pass);
+
+  //타이머가 할일 : 1초마다 한번씩 함수를 호출해라!
+  timer.setInterval(1000L, nockanda_work);
+}
+
+void loop()
+{
+  Blynk.run();
+  timer.run();
+}

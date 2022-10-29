@@ -1,0 +1,127 @@
+#define DS D5 //데이터핀
+#define LATCH D6 //레치핀
+#define CLK D7 //클락핀
+
+// Fill-in information from your Blynk Template here
+#define BLYNK_TEMPLATE_ID "TMPLi1GwSh8w"
+#define BLYNK_DEVICE_NAME "nockanda"
+
+#define BLYNK_FIRMWARE_VERSION        "0.1.5"
+
+#define BLYNK_PRINT Serial
+//#define BLYNK_DEBUG
+
+#define APP_DEBUG
+
+// Uncomment your board, or configure a custom board in Settings.h
+//#define USE_SPARKFUN_BLYNK_BOARD
+//#define USE_NODE_MCU_BOARD
+//#define USE_WITTY_CLOUD_BOARD
+//#define USE_WEMOS_D1_MINI
+
+#include "BlynkEdgent.h"
+
+byte relay = 0b11111111; //우에서 좌순서로 0->7
+
+BLYNK_WRITE(V1)
+{
+  //채널 1만 전담하는 부분!
+  int pinValue = param.asInt(); //0또는 1
+  //변수가 업데이트 된것!
+  bitWrite(relay, 0, !pinValue);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay);
+  digitalWrite(LATCH,HIGH);
+}
+BLYNK_WRITE(V2)
+{
+  //채널 1만 전담하는 부분!
+  int pinValue = param.asInt(); //0또는 1
+  //변수가 업데이트 된것!
+  bitWrite(relay, 1, !pinValue);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay);
+  digitalWrite(LATCH,HIGH);
+}
+BLYNK_WRITE(V3)
+{
+  //채널 1만 전담하는 부분!
+  int pinValue = param.asInt(); //0또는 1
+  //변수가 업데이트 된것!
+  bitWrite(relay, 2, !pinValue);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay);
+  digitalWrite(LATCH,HIGH);
+}
+BLYNK_WRITE(V4)
+{
+  //채널 1만 전담하는 부분!
+  int pinValue = param.asInt(); //0또는 1
+  //변수가 업데이트 된것!
+  bitWrite(relay, 3, !pinValue);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay);
+  digitalWrite(LATCH,HIGH);
+}
+BLYNK_WRITE(V5)
+{
+  //채널 1만 전담하는 부분!
+  int pinValue = param.asInt(); //0또는 1
+  //변수가 업데이트 된것!
+  bitWrite(relay, 4, !pinValue);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay);
+  digitalWrite(LATCH,HIGH);
+}
+BLYNK_WRITE(V6)
+{
+  //채널 1만 전담하는 부분!
+  int pinValue = param.asInt(); //0또는 1
+  //변수가 업데이트 된것!
+  bitWrite(relay, 5, !pinValue);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay);
+  digitalWrite(LATCH,HIGH);
+}
+BLYNK_WRITE(V7)
+{
+  //채널 1만 전담하는 부분!
+  int pinValue = param.asInt(); //0또는 1
+  //변수가 업데이트 된것!
+  bitWrite(relay, 6, !pinValue);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay);
+  digitalWrite(LATCH,HIGH);
+}
+BLYNK_WRITE(V8)
+{
+  //채널 1만 전담하는 부분!
+  int pinValue = param.asInt(); //0또는 1
+  //변수가 업데이트 된것!
+  bitWrite(relay, 7, !pinValue);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay);
+  digitalWrite(LATCH,HIGH);
+}
+
+BLYNK_CONNECTED() {
+    Blynk.syncVirtual(V1,V2,V3,V4,V5,V6,V7,V8);
+}
+void setup()
+{
+  Serial.begin(115200);
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay);
+  digitalWrite(LATCH,HIGH);
+  
+  delay(100);
+
+  BlynkEdgent.begin();
+}
+
+void loop() {
+  BlynkEdgent.run();
+}
