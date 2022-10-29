@@ -1,0 +1,32 @@
+/*
+ * 예제78-4-3 (슬레이브2코드/주소0x09)
+ * 마스터에서 값을 입력받는다.
+ * 받은값이 0이면 LED를 끄고
+ * 1이면 LED를 켠다.
+ */
+#include <Wire.h>
+#define LED 2
+
+void setup() {
+  Wire.begin(9);               
+  Wire.onReceive(receiveEvent);
+  Serial.begin(9600); 
+  pinMode(LED,OUTPUT);
+}
+
+void loop() {
+  delay(100);
+}
+
+void receiveEvent(int howMany) {
+  while(Wire.available()>0){
+    byte data = Wire.read();
+    if(data == 0){
+      //LED끄기
+      digitalWrite(LED,LOW);
+    }else{
+      //LED켜기
+      digitalWrite(LED,HIGH);
+    }
+  }
+}

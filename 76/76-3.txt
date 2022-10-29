@@ -1,0 +1,33 @@
+/*
+ * 예제76-3 블루투스2.0모듈(HC06)을
+ * 소프트웨어 시리얼기능을 이용해서
+ * 디지털 2,3번핀에 연결해라!
+ * 온습도센서의 값을 스마트폰으로 읽어보자!
+ * 온습도센서는 DHT-11이고 D4에 연결했다.
+ * 온도랑 습도는 소수점 2자리를 유효숫자로 하자!
+ */
+#include <SoftwareSerial.h>
+#include "DHT.h"
+
+#define DHTPIN 4
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+SoftwareSerial mySerial(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  mySerial.begin(9600);
+  dht.begin();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  delay(2000);
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  mySerial.print("temp=");
+  mySerial.print(t);
+  mySerial.print(", humi=");
+  mySerial.println(h);
+}

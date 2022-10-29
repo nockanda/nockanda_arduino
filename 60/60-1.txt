@@ -1,0 +1,38 @@
+/*
+ * 예제 60-1 지문인식센서를 연결하고 등록된 사용자면
+ * 등록된 지문번호가 출력되고
+ * 등록이 안된 지문이면 등록이 안된 지문이라고 알려주기
+ * 지문센서는 Rx를 D3에 연결 Tx를 D2연결했다
+ * VCC는 3.3v로 gnd는 gnd이다.
+ */
+
+#include <Adafruit_Fingerprint.h>
+SoftwareSerial mySerial(2, 3);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  finger.begin(57600);
+  Serial.println("시작합니다");
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK){
+    Serial.println("등록안된 지문입니다..");
+    return;
+  }
+  
+  // found a match!
+  Serial.print("Found ID #"); Serial.print(finger.fingerID); 
+  Serial.print(" with confidence of "); Serial.println(finger.confidence);  
+}
+

@@ -1,0 +1,28 @@
+/*
+ * 예제 67-2-2
+ * 2번 아두이노용 코드
+ * A0포트에 녹색 LED를 하나 장착하고
+ * 1번아두이노로부터 0이 날라오면 끄고
+ * 1이 날라오면 켜지도록 해보자!
+ */
+void setup()
+{
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for Native USB only
+  }
+  pinMode(A0,OUTPUT);//녹색 LED
+}
+
+void loop() // run over and over
+{
+  if (Serial.available()){
+    int recv = Serial.parseInt();
+    if(recv == 0) digitalWrite(A0,LOW);
+    if(recv == 1) digitalWrite(A0,HIGH);
+  }
+}
+
+
+

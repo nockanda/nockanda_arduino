@@ -1,0 +1,26 @@
+/*
+ * 예제 78-3-2 (슬레이브코드)
+ * 버튼을 D2에 연결해서 마스터가 데이터를
+ * 요청한 그 시점에 버튼을 누르고 있었다면
+ * 마스터에 연결된 LED가 켜질 수 있도록 해보자.
+ */
+
+#include <Wire.h>
+#define button 2
+
+void setup() {
+  Wire.begin(8);                // join i2c bus with address #8
+  Wire.onRequest(requestEvent); // register event
+  pinMode(button,INPUT_PULLUP);
+}
+
+void loop() {
+  delay(100);
+}
+
+// function that executes whenever data is requested by master
+// this function is registered as an event, see setup()
+void requestEvent() {
+  //버튼이 눌러졌으면 == LOW 0
+  Wire.write((byte)(!digitalRead(button)));
+}

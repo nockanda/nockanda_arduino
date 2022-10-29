@@ -1,0 +1,126 @@
+/*
+ * 예제81-1 2.4인치 TFT LCD에 2축 서버프레임을 장착해서
+ * 서보 2개의 각도 상태를 모니터에 디스플레이 해보자!
+ */
+
+#include <SPFD5408_Adafruit_GFX.h>    // Core graphics library
+#include <SPFD5408_Adafruit_TFTLCD.h> // Hardware-specific library
+#include <SPFD5408_TouchScreen.h>
+#include <Servo.h>
+
+Servo myservo1;
+Servo myservo2;
+
+#define LCD_CS A3 
+#define LCD_CD A2
+#define LCD_WR A1 
+#define LCD_RD A0
+#define LCD_RESET A4
+
+#define  BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+
+int degree1= 0;
+int degree2= 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  tft.reset();
+  tft.begin(0x9341);
+
+  //까만색으로 배경을 칠하자
+  tft.fillScreen(BLACK);
+  //240 320
+  //세로모드
+  Serial.print(tft.width());
+  Serial.print("/");
+  Serial.println(tft.height());
+  //가로모드
+  tft.setRotation(3); //0,1,2,3
+  Serial.print(tft.width());
+  Serial.print("/");
+  Serial.println(tft.height());
+
+  myservo1.attach(10); //top
+  myservo2.attach(11); //bottom
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available() > 0){
+    int angle1 = Serial.parseInt();
+    int angle2 = Serial.parseInt();
+    if(angle1 > 180 || angle1 < 0) return;
+    if(angle2 > 180 || angle2 < 0) return;
+
+    myservo1.write(angle1); 
+    myservo2.write(angle2);
+    degree1 = angle1;
+    degree2 = angle2;
+  }
+  drawMonitor(degree1,degree2);
+  delay(1000);
+}
+
+int graph1_x = 10;
+int graph1_y = 180;
+int graph1_width = 140;
+int graph1_height = 50; 
+int graph2_x = 170;
+int graph2_y = 180;
+int graph2_width = 140;
+int graph2_height = 50; 
+void clearMonitor(){
+  tft.fillRect(10,110,160,70,BLACK);
+  tft.fillRect(170,110,160,70,BLACK);
+}
+void drawMonitor(int d, int h){
+    //제목
+  tft.fillScreen(BLACK);
+  tft.drawRect(0,0,159,239,YELLOW);
+  tft.drawRect(160,0,159,239,GREEN);
+  tft.setTextColor(YELLOW);
+  tft.setTextSize(4);
+  tft.setCursor(10, 10);
+  tft.println("TOP");
+  tft.setTextColor(GREEN);
+  tft.setCursor(170, 10);
+  tft.println("BOTTOM");
+  //온도
+  tft.setTextColor(YELLOW);
+  tft.setCursor(10, 70);
+  tft.print(d);
+  tft.println("'");
+  tft.setCursor(170, 70);
+  //습도
+  tft.setTextColor(GREEN);
+  tft.print(h);
+  tft.println("'");
+  //RPM그래프 만들기(240*320)
+  printRPM(80,240,160,120,d,0,180,YELLOW); //탑
+  printRPM(240,240,160,120,h,0,180,GREEN); //보톰
+}
+
+void printRPM(int cen_x,int cen_y,int width,int height,float value,int vmin,int vmax,uint16_t color){
+  float rpm_value = value;
+  int rpm_width = width;
+  int rpm_height = height;
+  int rpm_x = cen_x;
+  int rpm_y = cen_y;
+  int rpm_pin_length = (rpm_width/2)-10;
+  int rpm_min = vmin;
+  int rpm_max =vmax;
+  float rpm_degree = rpm_value * (180.0f/rpm_max);
+  int rpm_pin_x = rpm_x+rpm_pin_length*cos(rpm_degree*(PI/180));
+  int rpm_pin_y = rpm_y-rpm_pin_length*sin(rpm_degree*(PI/180));
+
+  tft.drawCircle(rpm_x, rpm_y, rpm_width/2, color);
+  tft.drawLine(rpm_x,rpm_y,rpm_pin_x,rpm_pin_y,color);
+}

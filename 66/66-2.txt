@@ -1,0 +1,54 @@
+/*
+ * 예제66-2 TFT LCD로 사인파형을 한번 그려보자!
+ */
+
+#include <SPFD5408_Adafruit_GFX.h>    // Core graphics library
+#include <SPFD5408_Adafruit_TFTLCD.h> // Hardware-specific library
+#include <SPFD5408_TouchScreen.h>
+#define LCD_CS A3 
+#define LCD_CD A2
+#define LCD_WR A1 
+#define LCD_RD A0
+#define LCD_RESET A4
+
+#define  BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  tft.reset();
+  tft.begin(0x9341);
+
+  //까만색으로 배경을 칠하자
+  tft.fillScreen(BLACK);
+  //240 320
+  //세로모드
+  Serial.print(tft.width());
+  Serial.print("/");
+  Serial.println(tft.height());
+  //가로모드
+  tft.setRotation(3); //0,1,2,3
+  Serial.print(tft.width());
+  Serial.print("/");
+  Serial.println(tft.height());
+}
+//320 * 240
+int sin_x = 0;
+void loop() {
+  float value =120-100*sin(sin_x*(PI/180));
+  tft.fillRect(sin_x+1,0,1,240,BLACK);
+  tft.fillRect(sin_x,value,1,1,RED);
+  sin_x++;
+  if(sin_x>320) sin_x=0;
+  delay(10);
+}
+
+

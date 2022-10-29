@@ -1,0 +1,29 @@
+/*
+ * 예제72-3 아두이노에 블루투스모듈을 연결해서
+ * PC에서 시리얼통신으로 보내는 내용을
+ * 그대로 블루투스모듈을 통해 전달하고
+ * 받을때는 역순으로 받도록 하자
+ * 일단 블루투스모듈의 RX핀을 D3에 연결하고
+ * TX핀을 D2에 연결해보자
+ * -----------------------------------
+ * 택트스위치(버튼) A0에 연결해서
+ * 버튼이 눌려지면 1을 스마트폰에 보내보자
+ * 
+ */
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신
+  mySerial.begin(9600); //아두이노-블루트스간 통신
+  pinMode(A0,INPUT_PULLUP);//버튼
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(A0) == LOW){
+    //버튼이 눌려진경우
+    mySerial.write((byte)1); //0x01
+  }
+  delay(100);
+}

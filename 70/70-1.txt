@@ -1,0 +1,75 @@
+/*
+ * 예제70-1 CDS4개를 이용해서 태양을 추적하는 해바라기를 만들어보자!
+ * CDS는 각각 A0~A3포트에 연결했고 각각 1k옴 저항을 사용해서
+ * 전압분배로 아날로그값을 읽었다.
+ * 2축 팬틸트프레임에 달린 서보는 아래쪽서보를 D10에 위쪽서보를 D9에 연결했다.
+ * 각각의 아날로그값은 로우패스필터로 부드러운 값으로 바꿨다.
+ */
+
+#include <Servo.h>
+
+Servo myservo1;
+Servo myservo2;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  myservo1.attach(9); 
+  myservo2.attach(10); 
+  myservo1.write(90); //위쪽서보 
+  myservo2.write(90); //바닥서보
+}
+int sensor1 = 0;
+int sensor2 = 0;
+int sensor3 = 0;
+int sensor4 = 0;
+int pre_sensor1=0;
+int pre_sensor2=0;
+int pre_sensor3=0;
+int pre_sensor4=0;
+int degree1 = 90;
+int degree2 = 90;
+void loop() {
+  // put your main code here, to run repeatedly:
+  sensor1 = analogRead(A0); //왼쪽위
+  sensor2 = analogRead(A1); //오른쪽위
+  sensor3 = analogRead(A2); //왼쪽아래
+  sensor4 = analogRead(A3); //오른쪽아래
+  float alpha = 0.05;
+  int filtered_sensor1 = (sensor1*alpha)+(pre_sensor1*(1-alpha));
+  int filtered_sensor2 = (sensor2*alpha)+(pre_sensor2*(1-alpha));
+  int filtered_sensor3 = (sensor3*alpha)+(pre_sensor3*(1-alpha));
+  int filtered_sensor4 = (sensor4*alpha)+(pre_sensor4*(1-alpha));
+  
+  int top = filtered_sensor1 + filtered_sensor2; //위에거 합
+  int bottom = filtered_sensor3+filtered_sensor4; //아래거 합
+  int right = filtered_sensor2 + filtered_sensor4; //오른쪽합
+  int left = filtered_sensor1 + filtered_sensor3;//왼쪽합
+/*
+  Serial.print(top);
+  Serial.print(",");
+  Serial.println(bottom);
+*/
+  if(top>bottom)degree1--;
+  else degree1++;
+  degree1 = constrain(degree1,0,90); 
+  myservo1.write(degree1);
+
+  if(right>left)degree2++;
+  else degree2--;
+  degree2 = constrain(degree2,30,150); 
+  myservo2.write(degree2);
+  
+  Serial.print(filtered_sensor1);
+  Serial.print(",");
+  Serial.print(filtered_sensor2);
+  Serial.print(",");
+  Serial.print(filtered_sensor3);
+  Serial.print(",");
+  Serial.println(filtered_sensor4);
+
+  pre_sensor1 = filtered_sensor1;
+  pre_sensor2 = filtered_sensor2;
+  pre_sensor3 = filtered_sensor3;
+  pre_sensor4 = filtered_sensor4;
+}

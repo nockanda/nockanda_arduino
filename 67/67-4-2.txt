@@ -1,0 +1,30 @@
+/*
+ * 예제 67-4-2
+ * 2번 아두이노용 코드
+ * 2번 아두이노에 달린 버튼(A0)을 누르면
+ * 1번 아두이노에 달린 LED(A0)가 켜지고 꺼지고..
+ */
+void setup()
+{
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for Native USB only
+  }
+  pinMode(A0,INPUT_PULLUP);//택트스위치
+}
+bool prestate= HIGH;
+void loop() // run over and over
+{
+  bool nowState = digitalRead(A0);
+  if(prestate == HIGH && nowState == LOW){
+    //눌려진 바로 그 순간! 켜라!
+    Serial.write((byte)1);
+  }
+  if(prestate == LOW && nowState == HIGH){
+    //눌렀다가 뗀 그순간! 꺼라!
+    Serial.write((byte)0);
+  }
+  prestate = nowState;
+}
+

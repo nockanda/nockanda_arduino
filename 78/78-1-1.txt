@@ -1,0 +1,25 @@
+/*
+ * 예제78-1 (바지사장코드)
+ * 슬레이브의 주소는 0x08이다
+ * 여기로 0을 보내면 LED를 끄는것이고
+ * 1을 보내면 LED를 켜는 명령이다.
+ */
+
+#include <Wire.h>
+
+void setup() {
+  Wire.begin(); // join i2c bus (address optional for master)
+}
+
+byte x = 0;
+
+void loop() {
+  Wire.beginTransmission(8);
+  Wire.write((byte)0);        
+  Wire.endTransmission();  
+  delay(1000);
+  Wire.beginTransmission(8);
+  Wire.write((byte)1);        
+  Wire.endTransmission();  
+  delay(1000);
+}

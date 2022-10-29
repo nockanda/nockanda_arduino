@@ -1,0 +1,105 @@
+/*
+ * 예제68-1 TFT LCD로 온습도센서가 있다고 그냥 치고
+ * 화면을 한번 꾸며보기!
+ * (실제 온도센서를 달아서 해보기)
+ * 온도센서는 D10에 연결했다!
+ */
+
+#include <SPFD5408_Adafruit_GFX.h>    // Core graphics library
+#include <SPFD5408_Adafruit_TFTLCD.h> // Hardware-specific library
+#include <SPFD5408_TouchScreen.h>
+#include "DHT.h"
+#define DHTPIN 10 
+#define DHTTYPE DHT11 
+#define LCD_CS A3 
+#define LCD_CD A2
+#define LCD_WR A1 
+#define LCD_RD A0
+#define LCD_RESET A4
+
+#define  BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+DHT dht(DHTPIN, DHTTYPE);
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  tft.reset();
+  tft.begin(0x9341);
+
+  //까만색으로 배경을 칠하자
+  tft.fillScreen(BLACK);
+  //240 320
+  //세로모드
+  Serial.print(tft.width());
+  Serial.print("/");
+  Serial.println(tft.height());
+  //가로모드
+  tft.setRotation(3); //0,1,2,3
+  Serial.print(tft.width());
+  Serial.print("/");
+  Serial.println(tft.height());
+
+  
+  dht.begin();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  delay(2000);
+  int d = (int)dht.readTemperature();
+  int h = (int)dht.readHumidity();
+  drawMonitor(d,h);
+}
+
+int graph1_x = 10;
+int graph1_y = 180;
+int graph1_width = 140;
+int graph1_height = 50; 
+int graph2_x = 170;
+int graph2_y = 180;
+int graph2_width = 140;
+int graph2_height = 50; 
+void clearMonitor(){
+  tft.fillRect(10,110,160,70,BLACK);
+  tft.fillRect(170,110,160,70,BLACK);
+}
+void drawMonitor(int d, int h){
+    //제목
+  clearMonitor();
+  tft.drawRect(0,0,159,239,YELLOW);
+  tft.drawRect(160,0,159,239,GREEN);
+  tft.setTextColor(YELLOW);
+  tft.setTextSize(5);
+  tft.setCursor(10, 10);
+  tft.println("TEMP.");
+  tft.setTextColor(GREEN);
+  tft.setCursor(170, 10);
+  tft.println("HUMI.");
+  //온도
+  tft.setTextColor(YELLOW);
+  tft.setCursor(10, 110);
+  tft.print(d);
+  tft.println("'C");
+  tft.setCursor(170, 110);
+  //습도
+  tft.setTextColor(GREEN);
+  tft.print(h);
+  tft.println("%");
+  //온도그래프(60도가 max온도라고 가정)
+  drawGraph(graph1_x,graph1_y,graph1_width,graph1_height,(d/60.0f),YELLOW);
+  //습도그래프(100%가 max임)
+  drawGraph(graph2_x,graph2_y,graph2_width,graph2_height,(h/100.0f),GREEN);
+}
+
+void drawGraph(int bar_x, int bar_y,int bar_width,int bar_height,float value,uint16_t color){
+  tft.fillRect(bar_x,bar_y,bar_width*value,bar_height,color);
+  tft.fillRect(bar_x+bar_width*value,bar_y,bar_width-bar_width*value,bar_height,BLACK);
+  tft.drawRect(bar_x,bar_y,bar_width,bar_height,color);
+}

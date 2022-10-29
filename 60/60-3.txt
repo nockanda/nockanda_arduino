@@ -1,0 +1,62 @@
+/*
+ * 예제 60-3 지문인식센서를 연결하자
+ * 인식결과를 OLED디스플레이에 표시해보자
+ * 지문센서는 Rx를 D3에 연결 Tx를 D2연결했다
+ * VCC는 3.3v로 gnd는 gnd이다.
+ */
+#include <Wire.h>
+#include <Adafruit_Fingerprint.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 32
+#define OLED_RESET     4
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+SoftwareSerial mySerial(2, 3);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  finger.begin(57600);
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+  display.display();
+  display.clearDisplay();
+  Serial.println("시작합니다");
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK){
+    Serial.println("등록안된 지문입니다..");
+    setdisplay("YOU DON'T NOW ME!");
+    return;
+  }
+  
+  // found a match!
+  Serial.print("Found ID #"); Serial.print(finger.fingerID); 
+  Serial.print(" with confidence of "); Serial.println(finger.confidence);  
+  setdisplay("I KNOW YOU");
+}
+
+void setdisplay(String text){
+  display.clearDisplay();
+
+  display.setTextSize(2); // Draw 2X-scale text
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(10, 0); //128 *32
+  display.println(text);
+  display.display();
+}

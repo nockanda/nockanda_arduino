@@ -1,0 +1,303 @@
+/*
+ * ----------------------------------------------------------------------------
+ * This is a MFRC522 library example; see https://github.com/miguelbalboa/rfid
+ * for further details and other examples.
+ * 
+ * NOTE: The library file MFRC522.h has a lot of useful info. Please read it.
+ * 
+ * Released into the public domain.
+ * ----------------------------------------------------------------------------
+ * Example sketch/program which will try the most used default keys listed in 
+ * https://code.google.com/p/mfcuk/wiki/MifareClassicDefaultKeys to dump the
+ * block 0 of a MIFARE RFID card using a RFID-RC522 reader.
+ * 
+ * Typical pin layout used:
+ * -----------------------------------------------------------------------------------------
+ *             MFRC522      Arduino       Arduino   Arduino    Arduino          Arduino
+ *             Reader/PCD   Uno/101       Mega      Nano v3    Leonardo/Micro   Pro Micro
+ * Signal      Pin          Pin           Pin       Pin        Pin              Pin
+ * -----------------------------------------------------------------------------------------
+ * RST/Reset   RST          9             5         D9         RESET/ICSP-5     RST
+ * SPI SS      SDA(SS)      10            53        D10        10               10
+ * SPI MOSI    MOSI         11 / ICSP-4   51        D11        ICSP-4           16
+ * SPI MISO    MISO         12 / ICSP-1   50        D12        ICSP-1           14
+ * SPI SCK     SCK          13 / ICSP-3   52        D13        ICSP-3           15
+ *
+ */
+ /*
+  * 예제79-1 RFID모듈은 RC522를 일단 위에 주석을참고해서 연결하시오!
+  * 버튼3개와 LED 3개를 아래 define을 참고해서 연결하도록 하시오!
+  * 노말모드, 등록모드, 해제모드 3개의 모드가 있다.
+  * 버튼과 LED는 모드를 전환하는 기능 이외에는 아무것도 없다.
+  * 노말모드에서 태깅이되면 권한이 있는 사용자/권한이 없는 사용자/미등록태드
+  * 3개로 구분을 해서 인식을하고
+  * 등록모드에서는 첫번째 등록에 권한이 없는 사용자로 등록이되고
+  * 다시 등록절차를 거치면 권한이 있는 사용자로 등록이 된다.
+  * 해제모드에서는 카드를 태깅하면 등록이 된 사용자의 경우에 한해서
+  * 아이디를 삭제한다.
+  */
+
+#include <SPI.h>
+#include <MFRC522.h>
+
+#define RST_PIN         9           // Configurable, see typical pin layout above
+#define SS_PIN          10          // Configurable, see typical pin layout above
+
+#define LED1 2
+#define LED2 3
+#define LED3 4
+#define button1 5
+#define button2 6
+#define button3 7
+
+String tag1 = " a7 3c bb 7a"; //열쇠고리
+String tag2 = " d4 6d a2 2a"; //1
+String tag3 = " 4d 94 a0 3d"; //2
+String tag4 = " 1c 75 84 3d"; //3
+String tag5 = " bf 5f a0 3d"; //4
+String tag6 = " 17 83 a0 3d"; //5
+String tag7 = " 6b 08 a0 3d"; //6
+
+//등록이 되어있으면서 권한이 있는 그룹
+String admin = " a7 3c bb 7a/ d4 6d a2 2a/";
+//등록이 되어있으면서 권한이 없는 그룹
+String noadmin = " 4d 94 a0 3d/ 1c 75 84 3d/";
+
+MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance.
+
+// Number of known default keys (hard-coded)
+// NOTE: Synchronize the NR_KNOWN_KEYS define with the defaultKeys[] array
+#define NR_KNOWN_KEYS   8
+// Known keys, see: https://code.google.com/p/mfcuk/wiki/MifareClassicDefaultKeys
+byte knownKeys[NR_KNOWN_KEYS][MFRC522::MF_KEY_SIZE] =  {
+    {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, // FF FF FF FF FF FF = factory default
+    {0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5}, // A0 A1 A2 A3 A4 A5
+    {0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5}, // B0 B1 B2 B3 B4 B5
+    {0x4d, 0x3a, 0x99, 0xc3, 0x51, 0xdd}, // 4D 3A 99 C3 51 DD
+    {0x1a, 0x98, 0x2c, 0x7e, 0x45, 0x9a}, // 1A 98 2C 7E 45 9A
+    {0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7}, // D3 F7 D3 F7 D3 F7
+    {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff}, // AA BB CC DD EE FF
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}  // 00 00 00 00 00 00
+};
+
+/*
+ * Initialize.
+ */
+void setup() {
+    Serial.begin(9600);         // Initialize serial communications with the PC
+    while (!Serial);            // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
+    SPI.begin(); 
+    
+    mfrc522.PCD_Init();         // Init MFRC522 card
+    Serial.println(F("Try the most used default keys to print block 0 of a MIFARE PICC."));
+    pinMode(LED1,OUTPUT);
+    pinMode(LED2,OUTPUT);
+    pinMode(LED3,OUTPUT);
+    pinMode(button1,INPUT_PULLUP);
+    pinMode(button2,INPUT_PULLUP);
+    pinMode(button3,INPUT_PULLUP);
+    digitalWrite(LED1,HIGH);
+    digitalWrite(LED2,LOW);
+    digitalWrite(LED3,LOW);
+}
+/*
+ * Helper routine to dump a byte array as hex values to Serial.
+ */
+String dump_byte_array(byte *buffer, byte bufferSize) {
+  String output = "";
+    for (byte i = 0; i < bufferSize; i++) {
+        //Serial.print(buffer[i] < 0x10 ? " 0" : " ");
+        //Serial.print(buffer[i], HEX);
+        output += buffer[i] < 0x10 ? " 0" : " ";
+        output += String(buffer[i], HEX);
+    }
+    return output;
+}
+
+/*
+ * Try using the PICC (the tag/card) with the given key to access block 0.
+ * On success, it will show the key details, and dump the block data on Serial.
+ *
+ * @return true when the given key worked, false otherwise.
+ */
+bool try_key(MFRC522::MIFARE_Key *key)
+{
+    bool result = false;
+    byte buffer[18];
+    byte block = 0;
+    MFRC522::StatusCode status;
+
+    // Serial.println(F("Authenticating using key A..."));
+    status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, key, &(mfrc522.uid));
+    if (status != MFRC522::STATUS_OK) {
+        // Serial.print(F("PCD_Authenticate() failed: "));
+        // Serial.println(mfrc522.GetStatusCodeName(status));
+        return false;
+    }
+
+    // Read block
+    byte byteCount = sizeof(buffer);
+    status = mfrc522.MIFARE_Read(block, buffer, &byteCount);
+    if (status != MFRC522::STATUS_OK) {
+        // Serial.print(F("MIFARE_Read() failed: "));
+        // Serial.println(mfrc522.GetStatusCodeName(status));
+    }
+    else {
+        // Successful read
+        result = true;
+        //Serial.print(F("Success with key:"));
+        //dump_byte_array((*key).keyByte, MFRC522::MF_KEY_SIZE);
+        //Serial.println();
+        // Dump block data
+        //Serial.print(F("Block ")); Serial.print(block); Serial.print(F(":"));
+        //dump_byte_array(buffer, 16);
+        //Serial.println();
+    }
+    //Serial.println();
+
+    mfrc522.PICC_HaltA();       // Halt PICC
+    mfrc522.PCD_StopCrypto1();  // Stop encryption on PCD
+    return result;
+}
+
+
+/*
+ * Main loop.
+ */
+ byte mode = 0; //0=nomal mode
+void loop() {
+    // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
+    if(digitalRead(button1) == LOW){
+      //1번버튼이 눌러졌으면~
+      modechange(0);
+    }
+    else if(digitalRead(button2) == LOW){
+      //2번버튼이 눌러졌으면~
+      modechange(1);
+    }
+    else if(digitalRead(button3) == LOW){
+      //3번버튼이 눌러졌으면~
+      modechange(2);
+    }
+
+    
+    if ( ! mfrc522.PICC_IsNewCardPresent())
+        return;
+
+    // Select one of the cards
+    if ( ! mfrc522.PICC_ReadCardSerial())
+        return;
+
+    // Show some details of the PICC (that is: the tag/card)
+    Serial.print(F("Card UID:"));
+    String uid = dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
+    uid = uid+"/";
+    Serial.println(uid);
+     if(mode == 0){
+      //노말모드
+       if(admin.indexOf(uid) != -1){
+         Serial.println("권한이 있는 사용자입니다!");
+         return;
+      }
+      if(noadmin.indexOf(uid) != -1){
+        Serial.println("권한이 없는 사용자입니다!");
+
+        return;
+      }
+       Serial.println("미등록 태그!");
+    }else if(mode == 1){
+      //등록모드
+      //이미 등록이 된 카드면 등록되면 안됨
+      if(admin.indexOf(uid) != -1){
+         Serial.println("이미 등록된 카드입니다.");
+         modechange(0);
+         return;
+      }
+      if(noadmin.indexOf(uid) != -1){
+        //권한이 없는 사용자인데 한번더 등록이 될경우
+        //권한이없는 사용자 부분을 삭제해야함
+        noadmin.remove(noadmin.indexOf(uid),13);
+        Serial.println("관리자로 권한을 올리겠습니다!");
+        admin += uid;
+        modechange(0);
+        return;
+      }
+      //미등록카드...
+      Serial.println(noadmin);
+      noadmin += uid;
+      Serial.println(noadmin);
+      modechange(0);
+    }else if(mode == 2){
+      //해제모드
+      //없는데 빼라고하는경우
+      //카드ID
+      int num1 = admin.indexOf(uid);
+      int num2 = noadmin.indexOf(uid);
+      if(num1 == -1 && num2 == -1){
+        //등록 자체가 안된 경우
+        Serial.println("등록된 카드가 아닌데요?");
+        modechange(0);
+        return;
+      }
+      if(num1 != -1){
+        //권한이 있는 사용자에 등록이 된경우
+        Serial.println(admin);
+        admin.remove(num1,13);
+        Serial.println(admin);
+      }
+      if(num2 != -1){
+        //권한이 없는 사용자에 등록이 된경우
+        Serial.println(noadmin);
+        noadmin.remove(num2,13);
+        Serial.println(noadmin);
+      }
+      
+      modechange(0);
+    }
+    
+    
+    
+    Serial.println();
+    //Serial.print(F("PICC type: "));
+    MFRC522::PICC_Type piccType = mfrc522.PICC_GetType(mfrc522.uid.sak);
+    //Serial.println(mfrc522.PICC_GetTypeName(piccType));
+    
+    // Try the known default keys
+    MFRC522::MIFARE_Key key;
+    for (byte k = 0; k < NR_KNOWN_KEYS; k++) {
+        // Copy the known key into the MIFARE_Key structure
+        for (byte i = 0; i < MFRC522::MF_KEY_SIZE; i++) {
+            key.keyByte[i] = knownKeys[k][i];
+        }
+        // Try the key
+        if (try_key(&key)) {
+            // Found and reported on the key and block,
+            // no need to try other keys for this PICC
+            break;
+        }
+        
+        // http://arduino.stackexchange.com/a/14316
+        if ( ! mfrc522.PICC_IsNewCardPresent())
+            break;
+        if ( ! mfrc522.PICC_ReadCardSerial())
+            break;
+    }
+}
+
+void modechange(byte n){
+  if(n==0){
+    digitalWrite(LED1,HIGH);
+    digitalWrite(LED2,LOW);
+    digitalWrite(LED3,LOW);
+  }else if(n==1){
+    digitalWrite(LED1,LOW);
+    digitalWrite(LED2,HIGH);
+    digitalWrite(LED3,LOW);
+  }else if(n==2){
+    digitalWrite(LED1,LOW);
+    digitalWrite(LED2,LOW);
+    digitalWrite(LED3,HIGH);
+  }
+   
+      mode=n;
+}

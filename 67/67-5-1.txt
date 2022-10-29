@@ -1,0 +1,27 @@
+/*
+ * 67-5-1 1:2연결 예제
+ * 1번 아두이노용 코드
+ * 1번 아두이노에서 0을 보내면 LED끔
+ * 1번 아두이노에서 1을 보내면 LED켬
+ * 2번/3번 아두이노의 A0에 동일하게 LED가 연결되어 있음.
+  */
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(2, 3); // RX, TX
+
+void setup() {
+  Serial.begin(9600); //PC
+  mySerial.begin(9600); //2번/3번아두이노
+}
+
+void loop() {
+  if(Serial.available() > 0){
+    int recv = Serial.parseInt();
+    if(recv == 0){
+      //끔
+      mySerial.write((byte)0);
+    }else{
+      //켬
+      mySerial.write((byte)1);
+    }
+  }
+}

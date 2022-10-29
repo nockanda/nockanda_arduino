@@ -1,0 +1,24 @@
+/*
+ * 67-5-2 1:2연결 예제
+ * 2번/3번 아두이노용 코드
+ * 1번 아두이노에서 0을 보내면 LED끔
+ * 1번 아두이노에서 1을 보내면 LED켬
+ * 2번/3번 아두이노의 A0에 동일하게 LED가 연결되어 있음.
+  */
+void setup() {
+  Serial.begin(9600);
+  pinMode(A0,OUTPUT); //LED
+}
+
+void loop() {
+  if(Serial.available() > 0){
+    byte recv = Serial.read();
+    if(recv == 0){
+      //끔
+      digitalWrite(A0,LOW);
+    }else{
+      //켬
+      digitalWrite(A0,HIGH);
+    }
+  }
+}

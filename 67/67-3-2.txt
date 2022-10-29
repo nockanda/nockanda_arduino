@@ -1,0 +1,30 @@
+/*
+ * 예제 67-3-2
+ * 2번 아두이노용 코드
+ * 시리얼모니터로 숫자 2개를 보내면
+ * 2개의 아두이노가 각각 제어되도록 해보자
+ * 아래와 같이 동작되도록 하라
+ * 0 0 : 둘다 꺼짐
+ * 0 1 : 2번 아두이노 LED ON
+ * 1 1 : 1번/2번 아두이노 LED ON
+ * LED는 A0에 연결해라!
+ */
+void setup()
+{
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for Native USB only
+  }
+  pinMode(A0,OUTPUT);//녹색 LED
+}
+
+void loop() // run over and over
+{
+  if (Serial.available()){
+    int recv = Serial.parseInt();
+    if(recv == 0) digitalWrite(A0,LOW);
+    if(recv == 1) digitalWrite(A0,HIGH);
+  }
+}
+

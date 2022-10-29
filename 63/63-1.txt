@@ -1,0 +1,33 @@
+/*
+ * 예제63-1 수위센서를 D2포트에 연결하고
+ * 시리얼모니터로 신호 관찰해보기!
+ * 결과-> 센서가 일직선이되면 LOW
+ * 너덜너덜하면 HIGH
+ * 버튼을 D4에 연결해서 버튼을 누르면
+ * 워터펌프작동이 시작되고 수위센서에 감지가되면
+ * 워터펌프를 무조건 멈추도록 하자!
+ * 모스펫에 워터펌프를 연결하고 물이 넘치지
+ * 않을 정도로 채워보자
+ * 모스펫은 D3에 연결해서 아두이노가지고 제어해보자!
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,INPUT_PULLUP); //수위센서
+  pinMode(3,OUTPUT); //모스펫
+  pinMode(4,INPUT_PULLUP); //작동버튼
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(4) == LOW){
+    //버튼작동
+    digitalWrite(3,HIGH);//펌프작동
+  }
+  if(digitalRead(2) == LOW){
+    //수위센서 작동
+    digitalWrite(3,LOW); //펌프중지
+  }
+  delay(100);
+}

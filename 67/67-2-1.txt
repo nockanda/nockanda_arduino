@@ -1,0 +1,41 @@
+/*
+ * 예제 67-2-1
+ * 1번 아두이노용 코드
+ * A0포트에 빨간 LED를 하나 장착하고
+ * 시리얼모니터에서 0을 입력하면 LED를 끄고
+ * 1을 입력하면 LED를 켤수 있게 구현하는 한편,
+ * 1번 아두이노의 LED가 켜져있을때는 
+ * 2번 아두이노의 LED를 끄고 반대가 되도록 해보자!
+ */
+#include <SoftwareSerial.h>
+
+SoftwareSerial mySerial(2, 3); // RX, TX
+
+void setup()
+{
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for Native USB only
+  }
+  mySerial.begin(9600);
+  pinMode(A0,OUTPUT);//LED
+}
+
+void loop() // run over and over
+{
+  if (Serial.available()){
+    int recv = Serial.parseInt();
+    if(recv == 0){
+      //끔
+      digitalWrite(A0,LOW);
+      mySerial.print("1");
+    }else{
+      //컴
+      digitalWrite(A0,HIGH);
+      mySerial.print("0");
+    }
+  }
+    
+}
+

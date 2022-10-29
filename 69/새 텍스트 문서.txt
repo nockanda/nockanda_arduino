@@ -1,0 +1,21 @@
+[아두이노강의] 포로리야 공대가자 #69 3단인증시스템 구현하기/4x4키패드/RFID(RC522)/지문(FPM10A)
+
+
+69-1.txt
+0.01MB
+(3단인증시스템 구현하기/4x4키패드/RFID/지문)
+키패드로 비밀번호를 입력한뒤 일정시간내 RFID카드를 찍고 일정시간내 지문을 찍으면 본인 인증이 되도록 해보자!
+
+ 
+
+관련라이브러리(keypad)
+
+https://github.com/Chris--A/Keypad
+
+필요라이브러리(RC522)
+
+https://github.com/miguelbalboa/rfid
+
+관련라이브러리(finger print)
+
+https://github.com/adafruit/Adafruit-Fingerprint-Sensor-Library

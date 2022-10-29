@@ -1,0 +1,32 @@
+/*
+ * 예제72-4 아두이노에 블루투스모듈을 연결해서
+ * PC에서 시리얼통신으로 보내는 내용을
+ * 그대로 블루투스모듈을 통해 전달하고
+ * 받을때는 역순으로 받도록 하자
+ * 일단 블루투스모듈의 RX핀을 D3에 연결하고
+ * TX핀을 D2에 연결해보자
+ * -----------------------------------
+ * TM1637 FND모듈을 스마트폰으로 제어해보자
+ * 스마트폰으로 날린 숫자를 뛰워보자
+ * FND모듈의 CLK를 D4에/DIO핀을 D5에 연결했다.
+ */
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(2, 3); // RX, TX
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK 4
+#define DIO 5
+TM1637Display display(CLK, DIO);
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신
+  mySerial.begin(9600); //아두이노-블루트스간 통신
+  display.setBrightness(0x0f);
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(mySerial.available()>0){
+    byte data = mySerial.read();
+    display.showNumberDec(data, false);    
+  }
+}

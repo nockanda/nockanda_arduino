@@ -1,0 +1,194 @@
+/*
+ * 예제 71-1 4x4키패드로 디지털 도어락 만들기!
+ * 키패드는 D6부터 D13까지 순서대로 연결!
+ * 솔레노이드를 대리작동할 모스펫은 D2에 연결!
+ * MP3 모듈은 D3,4에 연결!
+ * mp3모듈의 Rx핀이 D4에 연결 tx핀이 D3
+ * 음성파일은 별도로 첨부할 예정!
+ */
+
+#include <Keypad.h>
+#include <SoftwareSerial.h>
+#include <DFMiniMp3.h>
+
+class Mp3Notify
+{
+public:
+  static void PrintlnSourceAction(DfMp3_PlaySources source, const char* action)
+  {
+    if (source & DfMp3_PlaySources_Sd) 
+    {
+        Serial.print("SD Card, ");
+    }
+    if (source & DfMp3_PlaySources_Usb) 
+    {
+        Serial.print("USB Disk, ");
+    }
+    if (source & DfMp3_PlaySources_Flash) 
+    {
+        Serial.print("Flash, ");
+    }
+    Serial.println(action);
+  }
+  static void OnError(uint16_t errorCode)
+  {
+    // see DfMp3_Error for code meaning
+    Serial.println();
+    Serial.print("Com Error ");
+    Serial.println(errorCode);
+  }
+  static void OnPlayFinished(DfMp3_PlaySources source, uint16_t track)
+  {
+    Serial.print("Play finished for #");
+    Serial.println(track);  
+  }
+  static void OnPlaySourceOnline(DfMp3_PlaySources source)
+  {
+    PrintlnSourceAction(source, "online");
+  }
+  static void OnPlaySourceInserted(DfMp3_PlaySources source)
+  {
+    PrintlnSourceAction(source, "inserted");
+  }
+  static void OnPlaySourceRemoved(DfMp3_PlaySources source)
+  {
+    PrintlnSourceAction(source, "removed");
+  }
+};
+
+const byte ROWS = 4;
+const byte COLS = 4;
+char hexaKeys[ROWS][COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+byte rowPins[ROWS] = {6, 7, 8, 9};
+byte colPins[COLS] = {10, 11, 12, 13};
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+SoftwareSerial secondarySerial(3, 4); //RX TX
+DFMiniMp3<SoftwareSerial, Mp3Notify> mp3(secondarySerial);
+
+unsigned long vpassword = 123456;
+unsigned long tpassword = 0;//임시변수
+unsigned long pw = 0;
+byte errorcount = 0;
+unsigned long pre_time = 0;
+
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,OUTPUT); //모스펫
+  mp3.begin();
+  mp3.setVolume(30);
+  mp3.playMp3FolderTrack(5);
+  delay(10000);
+}
+//0 이면 일반모드 (1이면 잠금해제모드)
+//2이면 비밀번호 변경모드
+//3이면 유배모드
+byte lockmode = 0;
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(lockmode == 0){
+    char customKey = customKeypad.getKey();
+  
+    if (customKey >= '0' && customKey <= '9'){
+       pw = (pw * 10) + (customKey-'0');
+
+      if(pw > 999999) pw = pw % 1000000;
+
+       Serial.println(pw);
+    }
+    if(customKey == '#'){
+      //확인커맨드
+      if(vpassword == pw){
+       //비밀번호 일치
+       //잠금장치 해제
+       digitalWrite(2,HIGH);
+       Serial.println("비밀번호가 맞네요!");
+       mp3.playMp3FolderTrack(1);
+       delay(5000);
+       lockmode = 1;
+       errorcount=0;
+      }else{
+       //틀린
+       Serial.println("비밀번호가 틀렸습니다!");
+       mp3.playMp3FolderTrack(2);
+       delay(5000);
+       errorcount++;
+       if(errorcount >= 3){
+          //유배모드 ㄱㄱ
+          Serial.println("비밀번호를 3회 틀렸습니다");
+          Serial.println("유배모드로 진입합니다");
+          mp3.playMp3FolderTrack(4);
+          delay(5000);
+          pre_time = millis();
+          lockmode = 3;
+          errorcount=0;
+       }
+      }
+      pw = 0;
+    }
+    if(customKey == '*'){
+      if(vpassword == pw){
+         //비밀번호 변경모드
+         Serial.println("비밀번호 변경모드로 진입합니다");
+         lockmode = 2;
+      }
+      pw=0;
+    }
+  }else if(lockmode == 1){
+    //잠금이 풀린 지점..
+    char customKey = customKeypad.getKey();
+    if(customKey == '#'){
+      //다시 잠금
+      digitalWrite(2,LOW);
+      Serial.println("다시 잠그겠습니다!");
+      lockmode = 0;
+    }
+  }else if(lockmode == 2){
+    //기존 비밀번호는 일단 그대로 유지한채로
+    //새로운 변수에다가 비밀번호를 입력받는다
+    //새로운 비밀번호가 6자리를 충족할때
+    //그상태에서 *을 누르면 비밀번호가 스왑된다.
+    char customKey = customKeypad.getKey();
+  
+    if (customKey >= '0' && customKey <= '9'){
+       tpassword = (tpassword * 10) + (customKey-'0');
+
+      if(tpassword > 999999) tpassword = tpassword % 1000000;
+
+       Serial.println(tpassword);
+    } 
+    if(customKey == '*'){
+      //비밀번호 변경 커맨드
+      //6자리인지를 확인
+      if(tpassword/100000 > 0){
+        //6자리 이상인 경우
+        vpassword = tpassword;
+        mp3.playMp3FolderTrack(3);
+        delay(5000);
+        Serial.println("비밀번호를 성공적으로 변경했습니다");
+        lockmode =0;
+      }else{
+        //6자리가 아닌 상태
+        Serial.println("6자리미만 비번을 입력했습니다!");
+        Serial.println("다시입력해주세요!");
+        tpassword = 0;
+      }
+    }
+  }else if(lockmode == 3){
+    //유배모드
+    unsigned long ubetime = millis();
+    if(ubetime - pre_time > 5000){
+       //유배모드 진입후 N초 경과했을때..
+       Serial.println("유배가 끝났습니다!");
+       lockmode =0;
+    }
+  }
+}

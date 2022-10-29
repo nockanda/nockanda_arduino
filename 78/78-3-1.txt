@@ -1,0 +1,31 @@
+/*
+ * 예제78-3-1 (마스터코드)
+ * 슬레이브에 일정주기로 버튼의 상태를
+ * 요청하고 버튼이 눌려진 상태였다면
+ * LED를 켜고 아니면 끄도록 하자!
+ */
+
+#include <Wire.h>
+#define LED 2
+
+void setup() {
+  Wire.begin();      
+  Serial.begin(9600);
+  pinMode(LED,OUTPUT);
+}
+
+void loop() {
+  Wire.requestFrom(8, 1);
+  while (Wire.available()) { 
+    byte c = Wire.read(); 
+    if(c==0){
+      //LED를 끈다  
+      digitalWrite(LED,LOW);    
+    }else{
+      //LED를 켠다
+      digitalWrite(LED,HIGH);
+    }
+  }
+
+  delay(500);
+}

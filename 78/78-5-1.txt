@@ -1,0 +1,40 @@
+/*
+ * 예제78-5-1 (바지사장코드)
+ * 슬레이브1의 주소는 0x08이다
+   슬레이브2의 주소는 0x09이다
+ * 버튼 2개를 연결해서
+ * 왼쪽버튼을 누르면 1번 슬레이브의LED가 점멸되고
+ * 오른쪽버튼을 누르면 2번 슬레이브의 LED가 점멸되도록하라
+ * 눌러졌을때 마스터는 무조건 1을보낸다
+ * 슬레이브는 1을 받아서
+ * LED가 켜져있었으면 끄고, 꺼져있었으면 켜라
+ */
+
+#include <Wire.h>
+#define slave1 2
+#define slave2 3
+
+void setup() {
+  Wire.begin(); // join i2c bus (address optional for master)
+  pinMode(slave1,INPUT_PULLUP);
+  pinMode(slave2,INPUT_PULLUP);
+}
+
+byte x = 0;
+
+void loop() {
+  if(digitalRead(slave1) == LOW){
+    //1번슬레이브 버튼이 눌러졌으면
+    Wire.beginTransmission(8);
+    Wire.write((byte)1);        
+    Wire.endTransmission();
+  }
+  if(digitalRead(slave2) == LOW){
+    //2번슬레이브 버튼이 눌러졌으면
+    Wire.beginTransmission(9);
+    Wire.write((byte)1);        
+    Wire.endTransmission();
+  }
+   
+  
+}

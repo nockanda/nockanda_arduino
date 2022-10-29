@@ -1,0 +1,116 @@
+/*
+ * 예제80-1 지문인식모듈을 D2,D3에 적당히 연결하고
+ * 4x4키패드를 D6~13까지 적당히 연결해서
+ * 8비트로된 유저의 권한정보를 설정 또는 해제할수있는 시스템을 구현하라!
+ */
+
+#include <Adafruit_Fingerprint.h>
+#include <Keypad.h>
+SoftwareSerial mySerial(2, 3);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+
+const byte ROWS = 4;
+const byte COLS = 4;
+char hexaKeys[ROWS][COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+byte rowPins[ROWS] = {6, 7, 8, 9}; 
+byte colPins[COLS] = {10, 11, 12, 13}; 
+
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+
+byte finger_auth[128];
+//00000001
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  finger.begin(57600);
+  finger_auth[0] = 0xF0;
+  Serial.println("지문인식 시작~");
+}
+byte mode = 0;
+int usernum = 0;
+byte userauth = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  //키패드에 *을 누르면 권한을 등록/해제하는 모드이다.
+  //*을 누른다음에 지문을 찍으면 등록/해제 기능이 실행된다.
+  char customKey = customKeypad.getKey();
+  
+  if (customKey == '*'){
+    Serial.print("입력한 유저의 권한을 설정합니다. 유저넘버를 입력해주세요!");
+    while(customKey != '#'){
+      customKey = customKeypad.getKey();
+      if(customKey == 'C') usernum =0;
+      if(customKey >= '0' && customKey <= '9'){
+        usernum = (usernum *10) + customKey-'0';
+        Serial.println(usernum);
+      }
+    }
+    if(usernum < 0 || usernum > 127) return;
+    Serial.print("입력한 유저넘버 = ");
+    Serial.println(usernum);
+    Serial.println("세팅할 권한의 번호를 입력하면 스위칭 됩니다!");
+    customKey = ' ';
+    while(customKey != '#'){
+      customKey = customKeypad.getKey(); 
+      if(customKey >= '1' && customKey <= '8'){
+         Serial.println(customKey);
+         //1이라고 입력... 1번쨰 권한을 on/off
+         //('1'-'0'-1)
+         //00001111
+         Serial.println(finger_auth[usernum-1],BIN);
+         //10000
+         //00001 = 1
+         //0000 0001
+         if((((finger_auth[usernum-1] >> (customKey-'1'))) & 1) == 0){
+          //권한없음
+          Serial.println("권한없음 -> 권한있음");
+          finger_auth[usernum-1] = finger_auth[usernum-1] | (1<<(customKey-'1'));
+         }else{
+          //권한있음
+          Serial.println("권한있음 -> 권한없음");
+          finger_auth[usernum-1] = finger_auth[usernum-1] ^ (1<<(customKey-'1'));
+         }
+      }
+    }
+    Serial.print("권한설정을 완료했습니다!");
+    Serial.println(finger_auth[usernum-1],BIN);
+    usernum=0;
+  }
+
+  
+  
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK)  return;
+
+  Serial.print(finger.fingerID);
+  Serial.println("번째 사용자의 권한정보입니다!");
+  // found a match!
+  //finger.fingerID : 인식된 손까락의 넘버
+  byte auth = finger_auth[finger.fingerID-1];
+
+   for(int i = 0;i<8;i++){
+     if((auth & (1<<i)) == 0){
+       //권한없음
+       Serial.print(i+1);
+       Serial.println("번째 권한 없음");
+     }else{
+       //권한있음
+       Serial.print(i+1);
+       Serial.println("번째 권한 있음");
+     }
+     
+   }
+  
+}

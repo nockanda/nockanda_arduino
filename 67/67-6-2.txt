@@ -1,0 +1,33 @@
+/*
+ * 67-6-2 1:2연결 예제
+ * 2번 아두이노용 코드
+ * 서브 아두이노에 ID를 줘서 각각 제어를 해보자
+ * 2번 아두이노는 0번 주소를 가지고
+ * 3번 아두이노는 1번 주소를 가진다.
+ * 아래와 같이 동작 시켜라
+ * 0 0 : 2번 아두이노에 달린 LED 끄기
+ * 0 1 : 2번 아두이노에 달린 LED 켜기
+ * 1 0 : 3번 아두이노에 달린 LED 끄기
+ * 1 1 : 3번 아두이노에 달린 LED 켜기
+  */
+#define ARDUINOID 0
+void setup() {
+  Serial.begin(9600);
+  pinMode(A0,OUTPUT); //LED
+}
+
+void loop() {
+  if(Serial.available() > 0){
+    int recv1 = Serial.parseInt();
+    int recv2 = Serial.parseInt();
+    if(recv1 == ARDUINOID){
+      if(recv2 == 0){
+        //끔
+        digitalWrite(A0,LOW);
+      }else{
+        //켬
+        digitalWrite(A0,HIGH);
+      }
+    }
+  }
+}

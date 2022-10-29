@@ -1,0 +1,70 @@
+/*
+ * 예제76-2 블루투스2.0모듈(HC06)을
+ * 소프트웨어 시리얼기능을 이용해서
+ * 디지털 2,3번핀에 연결해라!
+ * 부저를 스마트폰으로 제어해보자!
+ * 부저는 D8에 연결했다.
+ * 피아노의 한옥타브를 스마트폰으로 제어해보자
+ */
+#include <SoftwareSerial.h>
+#define buzzerpin 8
+#define NOTE_C5  523 //0
+#define NOTE_CS5 554 //1
+#define NOTE_D5  587 //2
+#define NOTE_DS5 622 //3
+#define NOTE_E5  659 //4
+#define NOTE_F5  698 //5
+#define NOTE_FS5 740 //6
+#define NOTE_G5  784 //7
+#define NOTE_GS5 831 //8
+#define NOTE_A5  880 //9
+#define NOTE_AS5 932 //A
+#define NOTE_B5  988 //B
+#define NOTE_C6  1047 //C
+//0x00 0x04 0x07 도미솔
+//0x00 0x04 0x07 도미솔
+//0x09 0x09 0x09 0x07 라라라솔
+//0x05 0x05 0x05 파파파
+//0x04 0x04 0x04 미미미
+//0x02 0x02 0x02 레레레
+//0x00 도
+
+int piano[] = {
+  NOTE_C5,
+  NOTE_CS5,
+  NOTE_D5,
+  NOTE_DS5,
+  NOTE_E5,
+  NOTE_F5,
+  NOTE_FS5,
+  NOTE_G5,
+  NOTE_GS5,
+  NOTE_A5,
+  NOTE_AS5,
+  NOTE_B5,
+  NOTE_C6};
+
+
+SoftwareSerial mySerial(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  mySerial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(mySerial.available()>0){
+    //블루투스쪽 시리얼포트에서
+    //뭔가 날라오는 값이 있다면~
+    byte data = mySerial.read();
+    if(data >12) return;
+    tone(buzzerpin, piano[data], 200);
+    delay(200);
+    noTone(buzzerpin);
+    Serial.println(data);
+  }
+  
+  
+}

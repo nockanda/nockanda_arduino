@@ -1,0 +1,129 @@
+/*
+ * 예제82-1 HSV의 매개변수를 입력하면
+ * RGB칼러로 값을 반환하고
+ * 그값을 color565함수를 통해서
+ * TFT전용 16비트 컬러로 표현하는 예제
+ */
+
+#include <SPFD5408_Adafruit_GFX.h>    // Core graphics library
+#include <SPFD5408_Adafruit_TFTLCD.h> // Hardware-specific library
+#include <SPFD5408_TouchScreen.h>
+#define LCD_CS A3 // Chip Select goes to Analog 3
+#define LCD_CD A2 // Command/Data goes to Analog 2
+#define LCD_WR A1 // LCD Write goes to Analog 1
+#define LCD_RD A0
+#define LCD_RESET A4
+
+#define BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  tft.reset();
+  tft.begin(0x9341); 
+  tft.setRotation(3); 
+  tft.fillScreen(BLACK);
+  //아래는HSV 컬러를 스펙트럼으로 보여주는 코드다
+  
+  int h = tft.height();
+  for(int x = 0;x<340;x++){
+    tft.drawFastVLine(x, 0, h, ColorFromHSV(x,1.0,1.0));
+  }
+
+}
+
+int angle = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  /*
+  double sig = 160*sin(angle*(PI/180.0)) + 160;
+  //0 ~ 320
+  tft.fillRect(30,30,100,100,ColorFromHSV(sig,1.0,1.0));
+  tft.setCursor(30, 30);
+  tft.setTextColor(BLACK);
+  tft.setTextSize(5);
+  tft.println(sig);
+  
+  angle++;
+  if(angle > 360) angle=0;
+
+  delay(10);
+  */
+}
+
+//https://stackoverflow.com/a/1626175
+uint16_t ColorFromHSV(double hue, double saturation, double value)
+{
+    int hi = (int)(floor(hue / 60)) % 6;
+    double f = hue / 60 - floor(hue / 60);
+ 
+    value = value * 255;
+    int v = (int)(value);
+    int p = (int)(value * (1 - saturation));
+    int q = (int)(value * (1 - f * saturation));
+    int t = (int)(value * (1 - (1 - f) * saturation));
+
+    if (hi == 0){
+        //return Color.FromArgb(255, v, t, p);
+        Serial.print("R=");
+        Serial.print(v);
+        Serial.print("G=");
+        Serial.print(t);
+        Serial.print("B=");
+        Serial.println(p);
+        return tft.color565(v,t,p);
+    }else if (hi == 1){
+        //return Color.FromArgb(255, q, v, p);
+        Serial.print("R=");
+        Serial.print(q);
+        Serial.print("G=");
+        Serial.print(v);
+        Serial.print("B=");
+        Serial.println(p);
+        return tft.color565(q,v,p);
+    }else if (hi == 2){
+        //return Color.FromArgb(255, p, v, t);
+        Serial.print("R=");
+        Serial.print(p);
+        Serial.print("G=");
+        Serial.print(v);
+        Serial.print("B=");
+        Serial.println(t);
+        return tft.color565(p,v,t);
+    }else if (hi == 3){
+        //return Color.FromArgb(255, p, q, v);
+        Serial.print("R=");
+        Serial.print(p);
+        Serial.print("G=");
+        Serial.print(q);
+        Serial.print("B=");
+        Serial.println(v);
+        return tft.color565(p,q,v);
+    }else if (hi == 4){
+        //return Color.FromArgb(255, t, p, v);
+        Serial.print("R=");
+        Serial.print(t);
+        Serial.print("G=");
+        Serial.print(p);
+        Serial.print("B=");
+        Serial.println(v);
+        return tft.color565(t,p,v);
+    }else{
+        //return Color.FromArgb(255, v, p, q);
+        Serial.print("R=");
+        Serial.print(v);
+        Serial.print("G=");
+        Serial.print(p);
+        Serial.print("B=");
+        Serial.println(q);
+        return tft.color565(v,p,q);
+    }
+}

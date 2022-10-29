@@ -1,0 +1,32 @@
+/*
+ * 예제 67-1-1
+ * 1번 아두이노용 코드(PC랑 연결된..)
+ */
+#include <SoftwareSerial.h>
+
+SoftwareSerial mySerial(2, 3); // RX, TX
+
+void setup()
+{
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for Native USB only
+  }
+
+
+  Serial.println("Goodnight moon!");
+
+  // set the data rate for the SoftwareSerial port
+  mySerial.begin(9600);
+  mySerial.println("Hello, world?");
+}
+
+void loop() // run over and over
+{
+  if (mySerial.available())
+    Serial.println("[1]" + mySerial.readStringUntil('\n'));
+  if (Serial.available())
+    mySerial.println("[1]" + Serial.readStringUntil('\n'));
+}
+

@@ -1,0 +1,15 @@
+[아두이노강의] 포로리야 공대가자 #64 2.4인치 TFT LCD 터치스크린쉴드/Spfd5408/도전과제/하얀화면 뜰때
+
+(2.4인치 TFT LCD 터치스크린쉴드/Spfd5408/도전과제/하얀화면 뜰때)
+github.com/adafruit/Adafruit-GFX-Library
+
+www.arduinolibraries.info/libraries/spfd5408-tft-library
+
+설치&사용
+Spfd5408 흰화면뜰때/하얀화면뜰때
+예제코드 분석해보기
+SD카드 리더
+활용가능한 방법 찾아보기
+---------------------------------------
+호환이 잘 안되는 물건이구만유..
+2편에서 어떻게든 활용가능하게 해보겠습니다.

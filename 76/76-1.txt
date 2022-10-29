@@ -1,0 +1,42 @@
+/*
+ * 예제76-1 블루투스2.0모듈(HC06)을
+ * 소프트웨어 시리얼기능을 이용해서
+ * 디지털 2,3번핀에 연결해라!
+ * 스탭핑모터를 연결해서 스마트폰으로 제어해보기!
+ * IN1(11),IN2(10),IN3(9)IN4(8)
+ * 예제에 사용한 5V스탭모터는 1:64 기어비로 된 제품이라고함
+ * 그리고 전체 스탭은 2048스탭이고
+ * 최소 스탭이 32스탭이다.
+ * 그러니 2048/32 = 64이다.
+ * 스탭합수로 32스탭씩 이동시켜서 64회 이동하면 360도이다.
+ * 음의방향을 위해서 최대 한바퀴만 회전가능하다고 가정함
+ */
+#include <SoftwareSerial.h>
+#include <Stepper.h>
+
+const int stepsPerRevolution = 2048;
+SoftwareSerial mySerial(2, 3); // RX, TX
+                                     //4 2 3 1
+                         //IN1(11),IN2(10),IN3(9)IN4(8)
+Stepper myStepper(stepsPerRevolution, 8, 10, 9, 11);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  mySerial.begin(9600);
+  myStepper.setSpeed(10);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(mySerial.available()>0){
+    //블루투스쪽 시리얼포트에서
+    //뭔가 날라오는 값이 있다면~
+    byte data = mySerial.read();
+    long mystep= (data-64) * 32;
+    myStepper.step(mystep);
+    Serial.println(data);
+  }
+  
+  
+}

@@ -1,0 +1,112 @@
+/*
+ * 예제61-1 mp3 모듈을 사용해보자
+ * rx핀은 D11번에 tx는 D10번에 연결했다.
+ * rx핀은 1k옴저항을 반드시 연결해야 작동했다.
+ * 첫번째버튼(D3)을 누르면 0001.mp3가 재생된다
+ * 두번쨰버튼(D4)를 누르면 0002.mp3가 재생된다.
+ * busy핀은 D2에 연결되어있고 HIGH면 쉬는중 LOW면 재생중이었다.
+ * 별도로 버튼을 모듈에 더 부착하면 볼륨조절과 곡넘기기가 가능했다.
+ * 스피커는 극성구분이 필요하지 않았다.
+
+ */
+// sd:/mp3/0001.mp3
+// sd:/mp3/0002.mp3
+// sd:/mp3/0003.mp3
+
+#include <SoftwareSerial.h>
+#include <DFMiniMp3.h>
+
+class Mp3Notify
+{
+public:
+  static void PrintlnSourceAction(DfMp3_PlaySources source, const char* action)
+  {
+    if (source & DfMp3_PlaySources_Sd) 
+    {
+        Serial.print("SD Card, ");
+    }
+    if (source & DfMp3_PlaySources_Usb) 
+    {
+        Serial.print("USB Disk, ");
+    }
+    if (source & DfMp3_PlaySources_Flash) 
+    {
+        Serial.print("Flash, ");
+    }
+    Serial.println(action);
+  }
+  static void OnError(uint16_t errorCode)
+  {
+    // see DfMp3_Error for code meaning
+    Serial.println();
+    Serial.print("Com Error ");
+    Serial.println(errorCode);
+  }
+  static void OnPlayFinished(DfMp3_PlaySources source, uint16_t track)
+  {
+    Serial.print("Play finished for #");
+    Serial.println(track);  
+  }
+  static void OnPlaySourceOnline(DfMp3_PlaySources source)
+  {
+    PrintlnSourceAction(source, "online");
+  }
+  static void OnPlaySourceInserted(DfMp3_PlaySources source)
+  {
+    PrintlnSourceAction(source, "inserted");
+  }
+  static void OnPlaySourceRemoved(DfMp3_PlaySources source)
+  {
+    PrintlnSourceAction(source, "removed");
+  }
+};
+SoftwareSerial secondarySerial(10, 11); // RX, TX
+DFMiniMp3<SoftwareSerial, Mp3Notify> mp3(secondarySerial);
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(2,INPUT);
+  pinMode(3,INPUT_PULLUP);//버튼1
+  pinMode(4,INPUT_PULLUP);//버튼2
+  Serial.println("initializing...");
+  
+  mp3.begin();
+
+  uint16_t volume = mp3.getVolume();
+  Serial.print("volume ");
+  Serial.println(volume);
+  mp3.setVolume(24);
+  
+  uint16_t count = mp3.getTotalTrackCount(DfMp3_PlaySource_Sd);
+  Serial.print("files ");
+  Serial.println(count);
+  
+  Serial.println("starting...");
+}
+void waitMilliseconds(uint16_t msWait)
+{
+  uint32_t start = millis();
+  
+  while ((millis() - start) < msWait)
+  {
+    // calling mp3.loop() periodically allows for notifications 
+    // to be handled without interrupts
+    mp3.loop(); 
+    delay(1);
+  }
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  bool isbusy = digitalRead(2);
+  if(digitalRead(3) == LOW && isbusy==HIGH){
+    //버튼을 누른 경우//노래가 재생중이 아닌경우
+    Serial.println("track 1"); 
+    mp3.playMp3FolderTrack(1);  // sd:/mp3/0001.mp3
+  }
+  if(digitalRead(4) == LOW && isbusy==HIGH){
+    Serial.println("track 1"); 
+    mp3.playMp3FolderTrack(2);  // sd:/mp3/0001.mp3
+  }
+  delay(100);
+  
+}

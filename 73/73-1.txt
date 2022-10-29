@@ -1,0 +1,114 @@
+/*
+ * 예제73-1 MP3모듈과 지문인식모듈을 동시에 연결해서
+ * 지문인식결과를 음성으로 안내하는 시스템
+ * MP3모듈은 RX핀과 TX핀에 각각 1k옴 저항을 연결해서
+ * H/W시리얼 포트인 0번핀과 1번핀에 크로스로 연결하고
+ * 지문인식 모듈은 S/W시리얼 포트를 2,3번핀에 설정해서
+ * 연결하도록하자!
+ * 주의할 것은 지문인식모듈은 3.3V이고
+ * MP3모듈은 5V에 연결해야한다!
+ */
+
+#include <Adafruit_Fingerprint.h>
+#include <DFMiniMp3.h>
+SoftwareSerial mySerial(2, 3);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+
+class Mp3Notify
+{
+public:
+  static void PrintlnSourceAction(DfMp3_PlaySources source, const char* action)
+  {
+    if (source & DfMp3_PlaySources_Sd) 
+    {
+        Serial.print("SD Card, ");
+    }
+    if (source & DfMp3_PlaySources_Usb) 
+    {
+        Serial.print("USB Disk, ");
+    }
+    if (source & DfMp3_PlaySources_Flash) 
+    {
+        Serial.print("Flash, ");
+    }
+    Serial.println(action);
+  }
+  static void OnError(uint16_t errorCode)
+  {
+    // see DfMp3_Error for code meaning
+    Serial.println();
+    Serial.print("Com Error ");
+    Serial.println(errorCode);
+  }
+  static void OnPlayFinished(DfMp3_PlaySources source, uint16_t track)
+  {
+    Serial.print("Play finished for #");
+    Serial.println(track);  
+  }
+  static void OnPlaySourceOnline(DfMp3_PlaySources source)
+  {
+    PrintlnSourceAction(source, "online");
+  }
+  static void OnPlaySourceInserted(DfMp3_PlaySources source)
+  {
+    PrintlnSourceAction(source, "inserted");
+  }
+  static void OnPlaySourceRemoved(DfMp3_PlaySources source)
+  {
+    PrintlnSourceAction(source, "removed");
+  }
+};
+DFMiniMp3<HardwareSerial, Mp3Notify> mp3(Serial);
+
+void waitMilliseconds(uint16_t msWait)
+{
+  uint32_t start = millis();
+  
+  while ((millis() - start) < msWait)
+  {
+    // calling mp3.loop() periodically allows for notifications 
+    // to be handled without interrupts
+    mp3.loop(); 
+    delay(1);
+  }
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  finger.begin(57600);
+  mp3.begin();
+  mp3.setVolume(30);
+  //0001.mp : 안녕하세요 녹칸다의 지문인식시스템입니다.
+  mp3.playMp3FolderTrack(1);
+  waitMilliseconds(5000);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK){
+    //지문인식이 완료는 되었는데
+    //등록된 지문이 아닌경우
+    mp3.playMp3FolderTrack(4);
+    waitMilliseconds(2000);
+    return;
+  }
+  //지문이 성공적으로 인식된 경우(0002.mp3)
+  
+  if(finger.fingerID == 1){
+    //녹칸다의 엄지손가락 지문 ID
+    mp3.playMp3FolderTrack(2);
+    waitMilliseconds(2000);
+  }else if(finger.fingerID == 2){
+    //녹칸다의 검지손가락 지문 ID
+    mp3.playMp3FolderTrack(3);
+    waitMilliseconds(2000);
+  }
+  //finger.fingerID
+}
