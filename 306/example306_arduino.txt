@@ -1,0 +1,111 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include "DHT.h"
+#include <SoftwareSerial.h>
+#include <MHZ19.h>
+
+#define ONE_WIRE_BUS 3
+#define TEMPERATURE_PRECISION 12
+#define DHTPIN 4
+#define DHTTYPE DHT11
+#define pump 7
+#define min_level 8
+#define max_level 9
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+DeviceAddress tempDeviceAddress;
+DHT dht(DHTPIN, DHTTYPE);
+SoftwareSerial ss(5,6);
+MHZ19 mhz(&ss);
+
+volatile double water = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(pump,OUTPUT);
+  pinMode(min_level,INPUT);
+  pinMode(max_level,INPUT);
+  sensors.begin();
+  sensors.getAddress(tempDeviceAddress, 0);
+  sensors.setResolution(tempDeviceAddress, TEMPERATURE_PRECISION);
+  dht.begin();
+  ss.begin(9600);
+  attachInterrupt(digitalPinToInterrupt(2), flow, FALLING);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //PC에서 아두이노쪽으로 제어신호가 날라온다!
+  // 'F'을 수신하면 펌프를 멈추고, 'T'을 수신하면 펌프를 작동시켜라!
+  if(Serial.available()){
+    //아두이노의 H/W Serial로 뭔가 데이터가 날라왔다!
+    char recv = Serial.read();
+    if(recv == 'F'){
+      //펌프를 끈다!
+      digitalWrite(pump,LOW);  
+      //Serial.println("펌프를 끈다..!");
+    }else if(recv == 'T'){
+      //펌프를 켠다!
+      digitalWrite(pump,HIGH);
+      //Serial.println("펌프를 켠다..!");
+    }else if(recv == 'C'){
+      //유량센서에서 측정된 값을 0으로 초기화시킨다!
+      water = 0;
+    }
+  }
+  
+  int cds = analogRead(A0);
+  int soil = analogRead(A1);
+  sensors.requestTemperatures(); 
+  float tempC = sensors.getTempCByIndex(0);
+  float humi = dht.readHumidity();
+  float temp = dht.readTemperature();
+  MHZ19_RESULT response = mhz.retrieveData();
+  int co2 = mhz.getCO2();
+  bool level1 = digitalRead(min_level);
+  bool level2 = digitalRead(max_level);
+
+  int tank_state = 0;
+  if(level1 == LOW && level2 == LOW){
+    //물부족(0)
+    tank_state = 0;
+    //Serial.println("물이 부족한 상태이다..");
+  }else if(level1 == HIGH && level2 == LOW){
+    //적당(1)
+    tank_state = 1;
+    //Serial.println("물이 적당한 상태이다..");
+  }else if(level1 == HIGH && level2 == HIGH){
+    //넘침(2)
+    tank_state = 2;
+    //Serial.println("물이 넘치는 상태이다..");
+  }
+
+  bool pump_state = digitalRead(pump);
+
+  Serial.println("{\"cds\":"+String(cds)+",\"soil\":"+String(soil)+",\"s_temp\":"+String(tempC)+",\"humi\":"+String(humi)+",\"temp\":"+String(temp)+",\"co2\":"+String(co2)+",\"flow\":"+String(water)+",\"tank\":"+String(tank_state)+",\"pump\":"+String(pump_state)+"}");
+  /*
+  Serial.print(cds);
+  Serial.print("\t");
+  Serial.print(soil);
+  Serial.print("\t");
+  Serial.print(tempC);
+  Serial.print("\t");
+  Serial.print(humi);
+  Serial.print("\t");
+  Serial.print(temp);
+  Serial.print("\t");
+  Serial.print(co2);
+  Serial.print("\t");
+  Serial.print(water);
+  Serial.print("\t");
+  Serial.print(tank_state);
+  Serial.println();
+  */
+  delay(1000);
+}
+
+void flow(){
+  water += (1/5888.0)*1000; //단위mL
+}

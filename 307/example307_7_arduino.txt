@@ -1,0 +1,101 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+
+#ifndef STASSID
+#define STASSID "popcorn"
+#define STAPSK  "11213144"
+#endif
+
+#define LED1 D5
+#define LED2 D6
+#define LED3 D7
+#define LED4 D8
+
+const char* ssid     = STASSID;
+const char* password = STAPSK;
+
+ESP8266WebServer server(80);
+
+const int led = LED_BUILTIN;
+
+
+void nockanda() {
+  if (server.method() != HTTP_POST) {
+    digitalWrite(led, 1);
+    server.send(405, "text/plain", "Method Not Allowed");
+    digitalWrite(led, 0);
+  } else {
+    digitalWrite(led, 1);
+    
+    for (uint8_t i = 0; i < server.args()-1; i++) {
+      if(server.argName(i) == "LED1"){
+        if(server.arg(i) == "false"){
+          digitalWrite(LED1,LOW);
+        }else if(server.arg(i) == "true"){
+          digitalWrite(LED1,HIGH);
+        }
+      }else if(server.argName(i) == "LED2"){
+        if(server.arg(i) == "false"){
+          digitalWrite(LED2,LOW);
+        }else if(server.arg(i) == "true"){
+          digitalWrite(LED2,HIGH);
+        }
+      }else if(server.argName(i) == "LED3"){
+        if(server.arg(i) == "false"){
+          digitalWrite(LED3,LOW);
+        }else if(server.arg(i) == "true"){
+          digitalWrite(LED3,HIGH);
+        }
+      }else if(server.argName(i) == "LED4"){
+        if(server.arg(i) == "false"){
+          digitalWrite(LED4,LOW);
+        }else if(server.arg(i) == "true"){
+          digitalWrite(LED4,HIGH);
+        }
+      }
+      Serial.println(server.argName(i) + ": " + server.arg(i));
+    }
+    
+    server.send(200, "text/plain", "OK!");
+    digitalWrite(led, 0);
+  }
+}
+
+void setup(void) {
+  pinMode(led, OUTPUT);
+  pinMode(LED1,OUTPUT);
+  pinMode(LED2,OUTPUT);
+  pinMode(LED3,OUTPUT);
+  pinMode(LED4,OUTPUT);
+  digitalWrite(led, 0);
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  if (MDNS.begin("esp8266")) {
+    Serial.println("MDNS responder started");
+  }
+
+
+  server.on("/nockanda/", nockanda);
+
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop(void) {
+  server.handleClient();
+}

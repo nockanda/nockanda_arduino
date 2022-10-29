@@ -1,0 +1,39 @@
+#include <SoftwareSerial.h>
+
+#define IN3 7 //디지털제어
+#define IN4 6 //디지털제어
+#define ENB 5 //아날로그제어
+
+SoftwareSerial HC06(2, 3);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  HC06.begin(9600);//아두이노-블루투스간 통신
+  pinMode(IN3,OUTPUT);
+  pinMode(IN4,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //앱인벤터로부터..
+  //전진 F
+  //후진 B
+  //좌회전 L
+  //우회전 R
+  if(HC06.available()){
+    String recv = HC06.readStringUntil(0x0a); //0,255
+    char data1 = recv[0];
+    String data2 = recv.substring(2,recv.length());
+    if(data1 == '0'){
+      //정방향으로 설정
+      digitalWrite(IN3,HIGH);
+      digitalWrite(IN4,LOW);
+    }else if(data1 == '1'){
+      //역방향으로 설정
+      digitalWrite(IN3,LOW);
+      digitalWrite(IN4,HIGH);
+    }
+    analogWrite(ENB,data2.toInt());
+  }
+}

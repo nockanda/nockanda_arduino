@@ -1,0 +1,82 @@
+#include <ESP8266WiFi.h>
+#include <SoftwareSerial.h>
+#include <MHZ19.h>
+
+SoftwareSerial ss(D5,D6);
+MHZ19 mhz(&ss);
+
+#ifndef STASSID
+#define STASSID "popcorn"
+#define STAPSK  "11213144"
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+
+void setup() {
+  Serial.begin(115200);
+  ss.begin(9600);
+  
+  // prepare LED
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, 0);
+
+  // Connect to WiFi network
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available(); //클라이언트를 기다리는상태
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  //수신데이터(request)를 처리하는 부분!
+  // Read the first line of the request
+  String req = client.readStringUntil('\r');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  //일단 지우지 말것!
+  while (client.available()) {
+    client.read();
+  }
+
+  //데이터를 측정하는 지점!
+  MHZ19_RESULT response = mhz.retrieveData();
+  int co2 = mhz.getCO2(); //0~5000 (PPM)
+
+  //응답데이터를 만들어서 응답하는 지점
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"));
+  client.print(co2);
+
+  Serial.println(F("Disconnecting from client"));
+}

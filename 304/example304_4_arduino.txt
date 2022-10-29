@@ -1,0 +1,69 @@
+#include <SoftwareSerial.h>
+#define ENA 10
+#define IN1 9
+#define IN2 8
+#define IN3 7 //디지털제어
+#define IN4 6 //디지털제어
+#define ENB 5 //아날로그제어
+
+SoftwareSerial HC06(2, 3);
+
+int wheel_speed = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  HC06.begin(9600);//아두이노-블루투스간 통신
+  pinMode(IN1,OUTPUT);
+  pinMode(IN2,OUTPUT);
+  pinMode(IN3,OUTPUT);
+  pinMode(IN4,OUTPUT);
+  analogWrite(ENA,255);
+  analogWrite(ENB,255);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //앱인벤터로부터..
+  //전진 F
+  //후진 B
+  //좌회전 L
+  //우회전 R
+  if(HC06.available()){
+    char recv = HC06.read();
+    if(recv == 'F'){
+      //전진신호가 들어오면 방향을 앞으로 한다
+      Serial.println("전진신호");
+      digitalWrite(IN1,HIGH);
+      digitalWrite(IN2,LOW);
+      digitalWrite(IN3,HIGH);
+      digitalWrite(IN4,LOW);
+     
+    }else if(recv == 'B'){
+      Serial.println("후진신호");
+      digitalWrite(IN1,LOW);
+      digitalWrite(IN2,HIGH);
+      digitalWrite(IN3,LOW);
+      digitalWrite(IN4,HIGH);
+      
+    }else if(recv == 'L'){
+      Serial.println("좌회전신호");
+      digitalWrite(IN1,HIGH);
+      digitalWrite(IN2,LOW);
+      digitalWrite(IN3,LOW);
+      digitalWrite(IN4,HIGH);
+    }else if(recv == 'R'){
+      Serial.println("우회전신호");
+      digitalWrite(IN1,LOW);
+      digitalWrite(IN2,HIGH);
+      digitalWrite(IN3,HIGH);
+      digitalWrite(IN4,LOW);
+    }else if(recv == 'Q'){
+      
+      digitalWrite(IN1,LOW);
+      digitalWrite(IN2,LOW);
+      digitalWrite(IN3,LOW);
+      digitalWrite(IN4,LOW);
+    }
+  }
+}

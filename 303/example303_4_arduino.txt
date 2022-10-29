@@ -1,0 +1,23 @@
+#include <SoftwareSerial.h>
+#include <Stepper.h>
+
+const int stepsPerRevolution = 2048;
+//IN 1 2 3 4 = 7 6 5 4
+                                    //IN4 2 3 1
+Stepper myStepper(stepsPerRevolution, 4, 6, 5, 7);
+SoftwareSerial HC06(2, 3);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노 간 통신라인
+  HC06.begin(9600);//아두이노-블루투스 모듈간 통신라인
+  myStepper.setSpeed(15);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(HC06.available()){
+    String data = HC06.readStringUntil(0x0a);
+    myStepper.step(data.toInt());
+  }
+}

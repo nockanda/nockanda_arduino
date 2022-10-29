@@ -1,0 +1,18 @@
+#include <SoftwareSerial.h>
+#define mosfet 5
+SoftwareSerial HC06(2, 3);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//PC-아두이노간 통신
+  HC06.begin(9600);//아두이노-블루투스간 통신
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //앱인벤터로부터 "0"~"255"
+  if(HC06.available()){
+    String recv = HC06.readStringUntil(0x0a);
+    analogWrite(mosfet,recv.toInt());
+  }
+}

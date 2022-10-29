@@ -1,0 +1,20 @@
+#include <Servo.h>
+
+Servo myservo;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //아두이노-블루투스
+  myservo.attach(4);
+  myservo.write(0); 
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //앱인벤터에서 각도값을 전송받아서 서보모터를 회전시킨다!
+  if(Serial.available()){
+    String degree = Serial.readStringUntil(0x0A); //0x0A == '\n'
+    myservo.write(degree.toInt()); 
+  }
+  
+}
