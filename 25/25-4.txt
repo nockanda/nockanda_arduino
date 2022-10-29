@@ -1,0 +1,33 @@
+/*
+ * 예제 25-4
+ * 적외선근접센서의 신호선을 D3포트에 연결하고
+ * 서보모터의 신호선을 D5에 연결하고
+ * 근접센서에 감지가 되었을때 서보모터의 각도를 90도로하고
+ * 감지가 안됬을때 0도로 바꿔라~!
+ */
+#include <Servo.h>
+
+Servo myservo; 
+ 
+//감지가 되었을때 LOW신호..
+int sensor = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(3,INPUT); 
+  myservo.attach(5); //5번에 서보모터 신호선
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  sensor = digitalRead(3);
+  if(sensor == LOW){
+    //감지
+    myservo.write(90);
+  }else{
+    //안감지
+    myservo.write(0);
+  }
+  delay(100);
+}

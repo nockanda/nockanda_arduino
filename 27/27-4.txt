@@ -1,0 +1,39 @@
+/*
+ * 예제 27-3
+ * 초음파 센서의 trig핀을 D2에 연결하고 echo핀을 D3에 연결해서
+ * 실측거리를 FND디스플레이(TM1637)에 출력하시오!
+ * FND디스플레이의 CLK는 D4에 DIO는 D5에 연결하시오!
+ */
+
+//초음파 : 29us에 1cm를 이동
+//delayMicroseconds(us)
+//duration = pulseIn(pin, HIGH);
+
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK 4
+#define DIO 5
+
+TM1637Display display(CLK, DIO);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,OUTPUT); //trig 발사
+  pinMode(3,INPUT); //echo 받기
+  display.setBrightness(0x0f);
+}
+int duration = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  digitalWrite(2,LOW);
+  delayMicroseconds(2);
+  digitalWrite(2,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(2,LOW);
+  duration = (pulseIn(3, HIGH)/29.0)/2; //cm
+  //Serial.print(duration);
+  //Serial.println("CM");
+  display.showNumberDec(duration, false); 
+  delay(100);
+}

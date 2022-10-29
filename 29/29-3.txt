@@ -1,0 +1,33 @@
+/*
+ * 예제29-3
+ * 피에조부저를 D3(PWM)에 연결하고
+ * 버튼하나를 A0에 연결해서 누르면 C5음이 나오도록 하라!
+ */
+#define NOTE_C5  523
+#define NOTE_CS5 554
+#define NOTE_D5  587
+#define NOTE_DS5 622
+#define NOTE_E5  659
+#define NOTE_F5  698
+#define NOTE_FS5 740
+#define NOTE_G5  784
+#define NOTE_GS5 831
+#define NOTE_A5  880
+#define NOTE_AS5 932
+#define NOTE_B5  988
+#define NOTE_C6  1047
+
+int value = 0;
+void setup() {
+  // put your setup code here, to run once:
+}
+
+void loop() {
+  value = digitalRead(A0); //버튼
+  if(value == LOW){
+    //눌러진거
+    tone(3,NOTE_C5 , 200);
+    delay(200);
+    noTone(3);
+  }
+}

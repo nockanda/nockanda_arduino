@@ -1,0 +1,29 @@
+﻿/*
+ * 예제 24-2
+ * 시리얼 통신으로 2개의 각도값을 보내주면 그값으로
+ * 팬틸트 프레임(아래쪽D5, 위쪽D6)을 조절하라!
+ */
+
+#include <Servo.h>
+
+Servo myservo1;
+Servo myservo2;
+int deg1=0;
+int deg2=0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  myservo1.attach(5);
+  myservo2.attach(6);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (Serial.available() > 0) {
+    deg1 = Serial.parseInt();
+    deg2 = Serial.parseInt();
+    myservo1.write(deg1);
+    myservo2.write(deg2);
+  }
+}

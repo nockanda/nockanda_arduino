@@ -1,0 +1,57 @@
+﻿/*
+ * 예제 24-3
+ * 버튼 4개(D8,D9,D10,D11)를 설치를해서 2개는 바닥쪽 서보모터(D5)를 제어하고
+ * 나머지2개는 위쪽 서보모터(D6)를 제어해라!
+ */
+
+#include <Servo.h>
+
+Servo myservo1;
+Servo myservo2;
+int deg1=0;
+int deg2=0;
+int servo1_left=0;
+int servo1_right=0;
+int servo2_left=0;
+int servo2_right=0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  myservo1.attach(5);
+  myservo2.attach(6);
+  pinMode(8,INPUT_PULLUP); //S1_L
+  pinMode(9,INPUT_PULLUP); //s1_R
+  pinMode(10,INPUT_PULLUP); //S2_L
+  pinMode(11,INPUT_PULLUP); //S2_R
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  servo1_left = digitalRead(8);
+  servo1_right = digitalRead(9);
+  servo2_left = digitalRead(10);
+  servo2_right = digitalRead(11);
+  if(servo1_left == LOW){
+    //눌러진거
+    deg1--;
+  }
+  if(servo1_right == LOW){
+    //눌러진거
+    deg1++;
+  }
+  if(servo2_left == LOW){
+    //눌러진거
+    deg2--;
+  }
+  if(servo2_right == LOW){
+    //눌러진거
+    deg2++;
+  }
+  deg1 = constrain(deg1,0,180);
+  deg2 = constrain(deg2,0,180);
+
+  myservo1.write(deg1);
+  myservo2.write(deg2);
+  delay(10);
+}

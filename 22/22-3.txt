@@ -1,0 +1,44 @@
+/*
+ * 예제22-3
+ * 디지털 충격센서(D2)에 충격이 감지되면 노란색LED(D3)에
+ * 불이 2초동안 켜지게 만들어라!
+ * 단 빨간색LED(D4)가 켜져있을때만 노란LED가
+ * 작동을하고 꺼져있으면 작동하지 않는다.
+ * 빨간색 LED를 켜고 끄는것은 버튼으로 한다.
+ */
+int sensor = 0;
+int button = 0;
+bool red_led = false; //true면 켜지는거
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,INPUT); //충격센서
+  pinMode(3,OUTPUT); //노란LED
+  pinMode(4,OUTPUT); //빨간LED
+  pinMode(5,INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  sensor = digitalRead(2);
+  button = digitalRead(5);
+
+  if(button == LOW){
+    //버튼이 눌려진거!
+    red_led = !red_led;
+  }
+  if(red_led) digitalWrite(4,HIGH);
+  else digitalWrite(4,LOW);
+  
+  //Serial.println(sensor);
+  if(sensor == HIGH && red_led){
+    //센서가 작동한것
+    //Serial.println("충격이 감지되었습니다!");
+    digitalWrite(3,HIGH); //볼켜기
+    delay(2000);
+  }else{
+    digitalWrite(3,LOW); //불끄기
+  }
+  
+  delay(100);
+}

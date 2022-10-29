@@ -1,0 +1,72 @@
+/*
+ * 예제32-1 측정량을 LED여러개로 표시해보기
+ * 젓가록토양센서는 A0에 연결해서 0~1023으로 측정하고
+ * 전압분배에 사용되는 고정저항은 1K옴 저항을 사용했다.
+ * 물에 그냥 풍덩 빠뜨렸더니 아날로그값 300정도가 측정되었다.
+ * LED를 D2(빨),D3(빨),D4(노),D5(노),D6(녹),D7(녹)에 연결하고
+ * 아날로그값 0~50 50~100 100~150 이런식으로
+ * LED를 하나씩 누적해서 켜는 코드를 만들어보자!
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,OUTPUT);
+  pinMode(3,OUTPUT);
+  pinMode(4,OUTPUT);
+  pinMode(5,OUTPUT);
+  pinMode(6,OUTPUT);
+  pinMode(7,OUTPUT);
+}
+
+float volt = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  volt = analogRead(A0);
+  //volt 0~1023
+  if(volt < 50){
+    digitalWrite(2,HIGH);
+    digitalWrite(3,LOW);
+    digitalWrite(4,LOW);
+    digitalWrite(5,LOW);
+    digitalWrite(6,LOW);
+    digitalWrite(7,LOW);
+  }else if(volt < 100){
+    digitalWrite(2,HIGH);
+    digitalWrite(3,HIGH);
+    digitalWrite(4,LOW);
+    digitalWrite(5,LOW);
+    digitalWrite(6,LOW);
+    digitalWrite(7,LOW);
+  }else if(volt < 150){
+    digitalWrite(2,HIGH);
+    digitalWrite(3,HIGH);
+    digitalWrite(4,HIGH);
+    digitalWrite(5,LOW);
+    digitalWrite(6,LOW);
+    digitalWrite(7,LOW);
+  }else if(volt < 200){
+    digitalWrite(2,HIGH);
+    digitalWrite(3,HIGH);
+    digitalWrite(4,HIGH);
+    digitalWrite(5,HIGH);
+    digitalWrite(6,LOW);
+    digitalWrite(7,LOW);
+  }else if(volt < 250){
+    digitalWrite(2,HIGH);
+    digitalWrite(3,HIGH);
+    digitalWrite(4,HIGH);
+    digitalWrite(5,HIGH);
+    digitalWrite(6,HIGH);
+    digitalWrite(7,LOW);
+  }else if(volt < 300){
+    digitalWrite(2,HIGH);
+    digitalWrite(3,HIGH);
+    digitalWrite(4,HIGH);
+    digitalWrite(5,HIGH);
+    digitalWrite(6,HIGH);
+    digitalWrite(7,HIGH);
+  }
+  //Serial.println(volt);
+  delay(100);
+}

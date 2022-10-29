@@ -1,0 +1,23 @@
+/*
+ * 예제34-3 광센서(A0)로 미니카 전원 제어
+ * 릴레이D2 광센서의 저항은 1k옴을 사용했다.
+ * 실험적으로 아날로그값이 150을 기준으로해서
+ * 높으면 미니카가 꺼지고 낮으면 켜지게하라!
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,OUTPUT);
+}
+int cds = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  cds = analogRead(A0);
+  if(cds > 150){
+    digitalWrite(2,LOW);
+  }else{
+    digitalWrite(2,HIGH);
+  }
+  delay(100);
+}

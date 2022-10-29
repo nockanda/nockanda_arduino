@@ -1,0 +1,23 @@
+/*
+ * 예제34-2 버튼(D3)으로 미니카 전원 제어
+ * 릴레이D2
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,OUTPUT);
+  pinMode(3,INPUT_PULLUP);
+}
+int button = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  button = digitalRead(3);
+  if(button == LOW){
+    //눌려진거
+    digitalWrite(2,HIGH);
+  }else{
+    //안눌ㄹ진거
+    digitalWrite(2,LOW);
+  }
+}

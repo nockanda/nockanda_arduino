@@ -1,0 +1,20 @@
+/*
+ * 예제 25-1
+ * 적외선근접센서의 신호선을 D3포트에 연결하고
+ * 시리얼 플로터로 확인하라!
+ */
+//감지가 되었을때 LOW신호..
+int sensor = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(3,INPUT); 
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  sensor = digitalRead(3);
+  Serial.println(sensor);
+  delay(100);
+}

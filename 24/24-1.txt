@@ -1,0 +1,38 @@
+﻿/*
+ * 예제 24-1
+ * 바닥쪽에 있는 서보모터(D5)를 0~180~0도 회전시키고
+ * 이어서 위에있는 서보모터(D6)를 0~180~0도 회전시키는 것을 반복해라!
+ */
+
+#include <Servo.h>
+
+Servo myservo1;
+Servo myservo2;
+
+void setup() {
+  // put your setup code here, to run once:
+  myservo1.attach(5);
+  myservo2.attach(6);
+  myservo1.write(0);
+  myservo2.write(0);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  for(int i = 0;i<=180;i++){
+    myservo1.write(i);
+    delay(100);
+  }
+  for(int i = 180;i>=0;i--){
+    myservo1.write(i);
+    delay(100);
+  }
+  for(int i = 0;i<=180;i++){
+    myservo2.write(i);
+    delay(100);
+  }
+  for(int i = 180;i>=0;i--){
+    myservo2.write(i);
+    delay(100);
+  }
+}

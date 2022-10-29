@@ -1,0 +1,27 @@
+/*
+ * 예제 20-2
+ * 아두이노가 브로커가 되어가지고 문이 열렸을때 LED를 켜고
+ * 문이 닫혔을때 LED를 끄는 프로그램!
+ */
+int mag_sensor = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,INPUT_PULLUP);
+  pinMode(3,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  mag_sensor = digitalRead(2);
+  if(mag_sensor == LOW){
+    //달라붙어있는거 = 닫힘
+    digitalWrite(3,LOW);
+    Serial.println("아! 닫혔네요!");
+  }else{
+    //열림
+    digitalWrite(3,HIGH);
+    Serial.println("열렸습니다!");
+  }
+  delay(100);
+}

@@ -1,0 +1,27 @@
+/*
+ * 예제 18-6(최고난이도)
+ * 버튼6개로 10진수를 시리얼 모니터에 출력해라!
+ * 단 DDRD, PORTD, PIND 등을 사용해서 구현하라!
+ * (하위)버튼3개는 포트D를쓰고 (상위)3개는 포트C를써서 구현하라!
+ */
+int result = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,INPUT_PULLUP); //PIND(D0~D7)
+  pinMode(3,INPUT_PULLUP); //PIND(D0~D7)
+  pinMode(4,INPUT_PULLUP); //PIND(D0~D7)
+  pinMode(A0,INPUT_PULLUP); //PINC(A0~A5)
+  pinMode(A1,INPUT_PULLUP); //PINC(A0~A5)
+  pinMode(A2,INPUT_PULLUP); //PINC(A0~A5)
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  result = (PIND >> 2) | (PINC << 3); //point!
+  result = ~result; //bit not
+  result = result & B111111; //bit and
+  
+  Serial.println(result);
+  delay(100);
+}

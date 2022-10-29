@@ -1,0 +1,33 @@
+/*
+ * 예제26-4
+ * 포토인터럽트(모듈)를 D3포트에 연결하고
+ * FND디스플레이(TM1637)를 연결(DIO/D4,CLK/D5)해서
+ * 가려진 횟수를 디스플레이에 카운팅하라!
+ */
+ #include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK 5
+#define DIO 4
+TM1637Display display(CLK, DIO);
+int value = 0;
+int count = 0;
+const byte interruptPin = 3; //인터럽트핀
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  display.setBrightness(0x0f); //밝기세팅 필수!
+  pinMode(interruptPin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), blink, FALLING);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  value = digitalRead(3);
+  display.showNumberDec(count, false); //시각화부분
+  delay(100);
+}
+
+void blink() {
+  count++;
+}

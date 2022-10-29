@@ -1,0 +1,34 @@
+/*
+ * 예제33-1 일정 무게(1kg) 이상이면
+ * 빨간색LED(D4)가 켜지게 해보기
+ */
+#include "HX711.h"
+
+
+// HX711 circuit wiring
+const int LOADCELL_DOUT_PIN = 2;
+const int LOADCELL_SCK_PIN = 3;
+
+
+HX711 scale;
+float value = 23600.f;
+void setup() {
+  Serial.begin(38400);
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+                    // this value is obtained by calibrating the scale with known weights; see the README for details
+  scale.set_scale(value);
+  scale.tare();                // reset the scale to 0
+  pinMode(4,OUTPUT); //LED
+}
+float weight = 0;
+void loop() {
+  weight = scale.get_units(5);
+  Serial.print("one reading:\t");
+  Serial.println(weight, 2);
+  if(weight > 1){
+    digitalWrite(4,HIGH);
+  }else{
+    digitalWrite(4,LOW);
+  }
+  delay(100);
+}

@@ -1,0 +1,22 @@
+/*
+ * 예제 28-1
+ * 슬라이드 가변저항 1번을 A0에 연결하고
+ * 슬라이드 가변저항 2번을 A1에 연결해서
+ * 시리얼 플로터로 2개의 값을 살펴보세요!
+ */
+int value1 = 0;
+int value2 = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  value1 = analogRead(A0);
+  value2 = analogRead(A1);
+  Serial.print(value1);
+  Serial.print(" ");
+  Serial.println(value2);
+  delay(100);
+}

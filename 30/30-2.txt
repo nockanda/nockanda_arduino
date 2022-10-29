@@ -1,0 +1,18 @@
+/*
+ * 예제30-2 광센서(A0)의 광량으로 LED(D3) 밝기조절하기
+ */
+
+double volt = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  volt = 5*(analogRead(A0)/1023.0); //0~1023
+  //0~3 -> 0~255
+  digitalWrite(3,map(volt,0,3,0,255));
+  //Serial.println(volt);
+  delay(100);
+}

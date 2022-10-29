@@ -1,0 +1,35 @@
+/*
+ * 예제 21-4
+ * 가변저항으로 스탭모터의 각도를 조절하라!
+ * 가변저항은 A0에 연결하고 스탭모터는 디지털 2,3,4,5번에 연결해서
+ * 가변저항을 오른쪽으로 꺽으면 시계방향으로 회전
+ * 왼쪽으로 꺽으면 반시계방향으로 회전시켜라!
+ */
+#include <Stepper.h>
+const int stepsPerRevolution = 2048; //제품특성
+                                    //1234 => 2345
+                                    //4 2 3 1
+Stepper myStepper(stepsPerRevolution, 5, 3, 4, 2);
+
+int rawdata = 0;
+int output = 0;
+int deg = 0;
+void setup() {
+  Serial.begin(9600);
+  myStepper.setSpeed(10); //제품특성 0~15rpm
+  // put your setup code here, to run once:
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  rawdata = analogRead(A0);
+  
+  if(rawdata > 700){
+    //양의방향으로 회전
+    myStepper.step(32);
+  }else{
+    //음의방향으로 회전
+    myStepper.step(-32);
+  }
+  delay(100);
+}

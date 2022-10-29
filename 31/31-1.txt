@@ -1,0 +1,23 @@
+/*
+ * 예제 31-1 자석이 감지되면 LED에 불켜기
+ * 홀센서는 D2에 빨간색LED는 D3에 연결했다!
+ */
+int hallsensor = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,INPUT);
+  pinMode(3,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  hallsensor = digitalRead(2);
+  if(hallsensor == LOW){
+    //자석이 근처에 있는것
+    digitalWrite(3,HIGH);
+  }else{
+    digitalWrite(3,LOW);
+  }
+  delay(100);
+}

@@ -1,0 +1,40 @@
+/*
+ * 예제 25-3
+ * 적외선근접센서의 신호선을 D3포트에 연결하고
+ * FND디스플레이모듈(TM1647)을 DIO는 D4포트에 CLK는 D5포트에 
+ * 연결해서 근접센서에 감지된 횟수를 표현하라!
+ * 참고로 이코드를 쓰려면 TM1637라이브러리를 다운받아야합니다~!
+ */
+#include <Arduino.h> //왜있는지 사실 잘 모르겠는 부분...
+#include <TM1637Display.h>
+
+#define CLK 5
+#define DIO 4
+
+TM1637Display display(CLK, DIO);
+ 
+//감지가 되었을때 LOW신호..
+int sensor = 0;
+int pre_sensor = 0;
+int counter = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  display.setBrightness(0x0f); //밝기설정부분
+  pinMode(3,INPUT); 
+  pinMode(4,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  sensor = digitalRead(3);
+  //now = sensor, pre = pre_sensor
+  if(sensor == LOW && pre_sensor == HIGH){
+    counter++;
+  }
+  pre_sensor = sensor;
+  display.showNumberDec(counter, false);
+  //Serial.println(sensor);
+  delay(100);
+}

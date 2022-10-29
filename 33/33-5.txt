@@ -1,0 +1,65 @@
+/*
+ * 예제33-5 (스몰프로젝트) 2축 팬틸트 프레임을
+ * 사용해서 일정무게 이상이면 오른쪽으로 분류하고
+ * 일정무게 이하면 왼쪽으로 분류하는 분류기를 만들어보라!
+ * 팬틸트에 서보모터는 D5(아래), D6(위)에 연결했다.
+ * 저울에서 측정한 무게가 0.5kg~1kg까지는
+ * 아래쪽 서보가 0도인채로 갖다버리고
+ * 측정한 무게가 1kg~2kg이면 아래쪽 서보를 90도 회전해서
+ * 투척하도록 만들어보시오!
+ */
+#include "HX711.h"
+#include <Servo.h>
+
+Servo myservo;
+Servo myservo2;
+// HX711 circuit wiring
+const int LOADCELL_DOUT_PIN = 2;
+const int LOADCELL_SCK_PIN = 3;
+
+HX711 scale;
+float value = 23600.f;
+void setup() {
+  Serial.begin(38400);
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+                    // this value is obtained by calibrating the scale with known weights; see the README for details
+  scale.set_scale(value);
+  scale.tare(); 
+  myservo.attach(5);
+  myservo2.attach(6);
+
+  myservo.write(0);
+  myservo2.write(0);
+}
+float weight = 0;
+void loop() {
+  weight = scale.get_units(5);
+  //Serial.print("one reading:\t");
+  //Serial.println(weight, 2);
+  Serial.println(weight);
+  if(weight > 1.0){
+    //1kg 이상의 조건
+    delay(1000);
+    Serial.println("1번조건");
+    myservo.write(90);
+    delay(1000);
+    myservo2.write(120);
+    delay(1000);
+    myservo2.write(0);
+    delay(1000);
+    myservo.write(0);
+    delay(1000);
+  }else if(weight > 0.5){
+    //0.5~1.0kg
+    delay(1000);
+    Serial.println("2번조건");
+    myservo.write(0);
+    delay(1000);
+    myservo2.write(120);
+    delay(1000);
+    myservo2.write(0);
+    delay(1000);
+  }
+  //myservo.write(deg);
+  delay(100);
+}

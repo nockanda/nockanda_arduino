@@ -1,0 +1,17 @@
+/*
+ * 예제26-1
+ * 포토인터럽트(모듈)를 A0포트에 연결해서 시리얼 플로터로 관찰해보기!
+ */
+int value = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  value = analogRead(A0);
+  Serial.println(value);
+  delay(10);
+}

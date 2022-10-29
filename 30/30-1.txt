@@ -1,0 +1,24 @@
+/*
+ * 예제30-1 광량으로 낮밤구분해서 LED로 표시하기
+ * (단 예제에서는 1k옴짜리 저항을 사용했다)
+ */
+
+double volt = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  volt = 5*(analogRead(A0)/1023.0); //0~1023
+  if(volt > 0.5){
+    //조명이 환하다
+    Serial.println("와 밝다~~~");
+  }else{
+    //어둡다
+    Serial.println("와 어둡다~~~");
+  }
+  //Serial.println(volt);
+  delay(100);
+}

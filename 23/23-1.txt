@@ -1,0 +1,34 @@
+/*
+ * 예제 23-1
+ * 버튼(D4)을 누르면 0에서부터 숫자가 9999까지 올라가게 하라!
+ * 9999를 넘어가면 0으로 초기화 시켜라!
+ * 결과를 TM1637(clk2,dio3)로 표현하라
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK 2
+#define DIO 3
+TM1637Display display(CLK, DIO);
+int num = 9950;
+int button = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(4,INPUT_PULLUP);
+  display.setBrightness(0x0f);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  button = digitalRead(4);
+  if(button == LOW){
+    //버튼이 눌려진경우
+    if(num >= 9999){
+      num = 0;
+    }else{
+      num++;
+    }
+  }
+  display.showNumberDec(num, false);
+  delay(10);
+}

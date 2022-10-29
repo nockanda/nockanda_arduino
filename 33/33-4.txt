@@ -1,0 +1,32 @@
+/*
+ * 예제33-4 무게를 서보모터(D5)에 연결해서 바늘처럼 사용해보기
+ * 무게가0이면 0도 6kg이면 180도가되게 조정하시오!
+ */
+#include "HX711.h"
+#include <Servo.h>
+
+Servo myservo;
+// HX711 circuit wiring
+const int LOADCELL_DOUT_PIN = 2;
+const int LOADCELL_SCK_PIN = 3;
+
+HX711 scale;
+float value = 23600.f;
+void setup() {
+  Serial.begin(38400);
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+                    // this value is obtained by calibrating the scale with known weights; see the README for details
+  scale.set_scale(value);
+  scale.tare(); 
+  myservo.attach(5);
+}
+float weight = 0;
+void loop() {
+  weight = scale.get_units(5);
+  //Serial.print("one reading:\t");
+  //Serial.println(weight, 2);
+  int deg = map(weight,0,6,0,180);
+  Serial.println(deg);
+  myservo.write(deg);
+  delay(100);
+}

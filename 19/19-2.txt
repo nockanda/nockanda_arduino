@@ -1,0 +1,57 @@
+/*
+ * 예제 19-2
+ * 온도를 Fnd 2개로 표현을 해보세요!
+ */
+
+#include "DHT.h"
+
+#define DHTPIN 2
+#define DHTTYPE DHT11 
+
+DHT dht(DHTPIN, DHTTYPE);
+
+int port[7] = {3,4,5,6,7,8,9}; //첫번째FND(왼쪽)
+int port2[7] = {A0,A1,A2,A3,A4,A5,13}; //두번쨰FND(오른쪽)
+int fnd[10][7] = {
+  {LOW,LOW,LOW,LOW,LOW,LOW,HIGH},
+  {HIGH,LOW,LOW,HIGH,HIGH,HIGH,HIGH},
+  {LOW,LOW,HIGH,LOW,LOW,HIGH,LOW},
+  {LOW,LOW,LOW,LOW,HIGH,HIGH,LOW},
+  {HIGH,LOW,LOW,HIGH,HIGH,LOW,LOW},
+  {LOW,HIGH,LOW,LOW,HIGH,LOW,LOW},
+  {HIGH,HIGH,LOW,LOW,LOW,LOW,LOW},
+  {LOW,LOW,LOW,HIGH,HIGH,HIGH,HIGH},
+  {LOW,LOW,LOW,LOW,LOW,LOW,LOW},
+  {LOW,LOW,LOW,HIGH,HIGH,LOW,LOW}
+};
+int output1 = 0;
+int output2 = 0;
+void setup() {
+  Serial.begin(9600);
+  for(int i =0;i<7;i++){
+    pinMode(port[i],OUTPUT); //포트출력설정
+    pinMode(port2[i],OUTPUT);//포트출력설정
+  }
+  dht.begin();
+}
+
+void loop() {
+  delay(2000);
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  float f = dht.readTemperature(true);
+
+  // Check if any reads failed and exit early (to try again).
+  if (isnan(h) || isnan(t) || isnan(f)) {
+    Serial.println(F("Failed to read from DHT sensor!"));
+    return;
+  }
+  output1 = (int)(t/10);
+  output2 = ((int)t)%10;
+
+  for(int i =0;i<7;i++){
+     digitalWrite(port[i],fnd[output1][i]); //십의자리
+     digitalWrite(port2[i],fnd[output2][i]); //일의자리
+  }
+  
+}

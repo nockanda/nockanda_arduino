@@ -1,0 +1,27 @@
+/*
+ * 예제 21-2
+ * 가변저항으로 LED의 밝기를 조절하라!
+ * 가변저항은 A0에 연결하고 LED 1개를 디지털 10번에 연결해서
+ * PWM제어를 하라!
+ */
+int rawdata = 0;
+int output = 0;
+void setup() {
+  Serial.begin(9600);
+  // put your setup code here, to run once:
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  rawdata = analogRead(A0);
+  //문제점 raw => 0~1023  // pwm => 0~255
+  /*
+  rawdata : pwm = 1023 : 255
+  1024 * pwm = 256 * rawdata
+  pwm = rawdata/4
+  */
+  output = map(rawdata,0,1023,0,255);
+  analogWrite(10,output);
+  //Serial.println(output);
+  delay(100);
+}

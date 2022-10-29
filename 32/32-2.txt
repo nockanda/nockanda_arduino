@@ -1,0 +1,29 @@
+/*
+ * 예제32-2 측정량을 FND디스플레이에 표시하기
+ * 젓가록토양센서는 A0에 연결했다.
+ * 전압분배에 사용하는 저항은 1키로옴을 사용했다.
+ * FND디스플레이는 TMI1637이고 CLK를 D2 DIO를 D3에 연결했다.
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+// Module connection pins (Digital Pins)
+#define CLK 2
+#define DIO 3
+TM1637Display display(CLK, DIO);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  display.setBrightness(0x0f);
+}
+
+float volt = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  volt = analogRead(A0);
+  //volt 0~1023
+  display.showNumberDec(volt, false); 
+  //Serial.println(volt);
+  delay(100);
+}

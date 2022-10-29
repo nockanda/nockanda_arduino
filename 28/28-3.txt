@@ -1,0 +1,30 @@
+/*
+ * 예제 28-3
+ * 슬라이드 가변저항 1번을 A0에 연결하고
+ * 슬라이드 가변저항 2번을 A1에 연결해서
+ * 슬라이드 가변저항 1번은 D5(PWM)에 연결된 서보모터1번의 각을 제어하고
+ * 슬라이드 가변저항 2번은 D6에 연결된 서보모터 2번의 각을 제어하시오!
+ */
+#include <Servo.h>
+Servo myservo1;
+Servo myservo2;
+int value1 = 0;
+int value2 = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  myservo1.attach(5);
+  myservo2.attach(6);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  value1 = analogRead(A0);
+  value2 = analogRead(A1);
+  myservo1.write(map(value1,0,1023,0,180));
+  myservo2.write(map(value2,0,1023,0,180));
+  //Serial.print(value1);
+  //Serial.print(" ");
+  //Serial.println(value2);
+  delay(100);
+}

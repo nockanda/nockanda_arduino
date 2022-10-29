@@ -1,0 +1,37 @@
+/*
+ * 예제 27-3
+ * 초음파 센서의 trig핀을 D2에 연결하고 echo핀을 D3에 연결해서
+ * 실측거리를 바탕으로 20cm이내에 물체가 감지되면
+ * 빨간색LED(D4)가 켜지도록 해보시오!
+ */
+
+//초음파 : 29us에 1cm를 이동
+//delayMicroseconds(us)
+//duration = pulseIn(pin, HIGH);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,OUTPUT); //trig 발사
+  pinMode(3,INPUT); //echo 받기
+  pinMode(4,OUTPUT); //빨간색LED
+}
+int duration = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  digitalWrite(2,LOW);
+  delayMicroseconds(2);
+  digitalWrite(2,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(2,LOW);
+  duration = (pulseIn(3, HIGH)/29.0)/2; //cm
+  //Serial.print(duration);
+  //Serial.println("CM");
+  if(duration < 20){
+    //가깝네~
+    digitalWrite(4,HIGH);
+  }else{
+    digitalWrite(4,LOW);
+  }
+  delay(100);
+}

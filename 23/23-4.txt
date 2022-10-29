@@ -1,0 +1,30 @@
+/*
+ * 예제 23-4
+ * 조이스틱(x축->A0, y축->A1, 버튼->D4)으로 서보모터의 각도를 조절해라!
+ * 그리고 서보모터의 각도를 TM1637에 표현하라!
+ * 단 서보모터는 x축값으로 한다.
+ * 단 버튼을 누르면 서보모터는 0도로 초기화된다.
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+#include <Servo.h>
+Servo myservo;
+#define CLK 2
+#define DIO 3
+TM1637Display display(CLK, DIO);
+int num = 0;
+int x =0;
+
+void setup() {
+  // put your setup code here, to run once:
+  display.setBrightness(0x0f);
+  myservo.attach(9);
+}
+
+void loop() {
+  x = analogRead(A0);//축 0~1023
+  x = map(x,0,1023,0,180);
+  myservo.write(x); //0~180
+  display.showNumberDec(x, false);
+  delay(100);
+}

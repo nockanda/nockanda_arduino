@@ -1,0 +1,30 @@
+/*
+ * 예제 31-2 자석이 감지되면 감지된 횟수를
+ * FND디스플레이에 표시하자
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK 3
+#define DIO 4
+TM1637Display display(CLK, DIO);
+
+const byte interruptPin = 2;
+int count = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(interruptPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), blink, RISING);
+  display.setBrightness(0x0f);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //Serial.println(count/2); 횟수
+  display.showNumberDec(count/2, false);
+  delay(100);
+}
+
+void blink() {
+  count++;
+}

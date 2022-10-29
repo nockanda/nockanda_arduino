@@ -1,0 +1,95 @@
+/*
+ * 예제36-3 (스몰프로젝트) 먼지센서(A0/D2)와 온도센서(D7)를
+ * 장착하고 미세먼지가 많거나 온도가 높거나하면
+ * 창문을 활짝 열어서 환기하는 시스템을 만들어보라!
+ * 실제 창문을 열수는 없으므로 창문을 여는 것은
+ * 서보모터(D9)로 구현하고 환풍기는 릴레이(A5)를 이용해서
+ * USB선풍기를 작동시키는것으로 대체하라!
+ * FND디스플레이 1개(D3, D4)는 미세먼지값이 표시되고
+ * 나머지 하나(D5,D6)는 온도센서값이 표시된다.
+ * 단, 온도와 먼지센서값의 변화를 직접 제어하기가 힘드므로
+ * 시리얼통신으로 1을보내면 환풍기가 작동하고
+ * 2를 보내면 멈추도록하라!
+ * 단, 환기창문이 열린다고 하는 것은 서보모터가
+ * 0도에서 90도로 되는것이고
+ * 닫힌다고 하는것은 90도에서 0도로 되는것이다!
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+#include "DHT.h"
+#include <Servo.h>
+#define DHTTYPE DHT11
+#define DHTPIN 7 
+#define CLK 3
+#define DIO 4
+#define CLK2 5
+#define DIO2 6
+TM1637Display display(CLK, DIO);
+TM1637Display display2(CLK2, DIO2);
+DHT dht(DHTPIN, DHTTYPE);
+Servo myservo;
+
+int measurePin = A0; //Connect dust sensor to Arduino A0 pin
+int ledPower = 2;   //Connect 3 led driver pins of dust sensor to Arduino D2
+
+int samplingTime = 280;
+int deltaTime = 40;
+int sleepTime = 9680;
+
+float voMeasured = 0;
+float calcVoltage = 0;
+float dustDensity = 0;
+
+void setup(){
+  Serial.begin(9600);
+  pinMode(ledPower,OUTPUT);
+  display.setBrightness(0x0f);
+  display2.setBrightness(0x0f);
+  dht.begin();
+  pinMode(A5,OUTPUT);
+  myservo.attach(9);
+}
+int fan= 0;
+void loop(){
+  if (Serial.available() > 0) {
+    fan = Serial.parseInt();
+    if(fan == 1){
+      //작동
+      digitalWrite(A5,HIGH);
+      myservo.write(90);
+      delay(1000);
+    }else{
+      //멈춤
+      digitalWrite(A5,LOW);
+      myservo.write(0);
+      delay(1000);
+    }
+  }
+  float t = dht.readTemperature();
+  digitalWrite(ledPower,LOW); // power on the LED
+  delayMicroseconds(samplingTime);
+  voMeasured = analogRead(measurePin); // read the dust value
+
+  delayMicroseconds(deltaTime);
+  digitalWrite(ledPower,HIGH); // turn the LED off
+  delayMicroseconds(sleepTime);
+
+  // 0 - 5V mapped to 0 - 1023 integer values
+  // recover voltage
+  calcVoltage = voMeasured * (5.0 / 1024.0);
+  // linear eqaution taken from http://www.howmuchsnow.com/arduino/airquality/
+  // Chris Nafis (c) 2012
+
+  dustDensity = 0.17 * calcVoltage - 0.1;
+
+  Serial.print("Raw Signal Value (0-1023): ");
+  Serial.print(voMeasured);
+  Serial.print(" - Voltage: ");
+  Serial.print(calcVoltage);
+
+  Serial.print(" - Dust Density: ");
+  Serial.println(dustDensity); // unit: mg/m3
+  display.showNumberDec(voMeasured, false);
+  display2.showNumberDec(t, false);
+  delay(2000);
+}

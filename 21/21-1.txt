@@ -1,0 +1,19 @@
+/*
+ * 예제 21-1
+ * 가변저항을 세팅하고 시리얼통신으로
+ * rawdata을 시리얼 플로터로 확인하라!
+ * 가변저항은 아날로그 0번포트에 꼽아라!
+ */
+int rawdata = 0;
+
+void setup() {
+  Serial.begin(9600);
+  // put your setup code here, to run once:
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  rawdata = analogRead(A0);
+  Serial.println(rawdata);
+  delay(100);
+}

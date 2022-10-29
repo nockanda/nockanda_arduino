@@ -1,0 +1,26 @@
+/*
+ * 예제30-3 광센서(A0)의 광량수치를 FND디스플레이에 표시하기
+ * FND디스플레이(CLK D2, DIO D3)
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK 2
+#define DIO 3
+TM1637Display display(CLK, DIO);
+
+double volt = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  display.setBrightness(0x0f);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //volt = 5*(analogRead(A0)/1023.0); //0~1023
+  volt = analogRead(A0); //0~1023
+  //0~3 -> 0~255
+  //Serial.println(volt);
+  display.showNumberDec(volt, false);
+  delay(100);
+}

@@ -1,0 +1,26 @@
+/*
+ * 예제 28-2
+ * 슬라이드 가변저항 1번을 A0에 연결하고
+ * 슬라이드 가변저항 2번을 A1에 연결해서
+ * 슬라이드 가변저항 1번은 D5(PWM)에 연결된 빨간LED의 밝기를 조절하고
+ * 슬라이드 가변저항 2번은 D6(PWM)에 연결된 녹색LED의 밝기를 조절하시오!
+ */
+int value1 = 0;
+int value2 = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  value1 = analogRead(A0);
+  value2 = analogRead(A1);
+  
+  analogWrite(5,map(value1,0,1023,0,255));
+  analogWrite(6,map(value2,0,1023,0,255));
+  //Serial.print(value1);
+  //Serial.print(" ");
+  //Serial.println(value2);
+  delay(100);
+}

@@ -1,0 +1,35 @@
+/*
+ * 예제33-3 무게를 FND디스플레이로 측정해보기
+ * FND디스플레이의 CLK는 D4 DIO는 D5에 연결했다.
+ */
+#include "HX711.h"
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK 4
+#define DIO 5
+TM1637Display display(CLK, DIO);
+
+// HX711 circuit wiring
+const int LOADCELL_DOUT_PIN = 2;
+const int LOADCELL_SCK_PIN = 3;
+
+
+
+HX711 scale;
+float value = 23600.f;
+void setup() {
+  Serial.begin(38400);
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+                    // this value is obtained by calibrating the scale with known weights; see the README for details
+  scale.set_scale(value);
+  scale.tare(); 
+  display.setBrightness(0x0f);
+}
+float weight = 0;
+void loop() {
+  weight = scale.get_units(5);
+  Serial.print("one reading:\t");
+  Serial.println(weight, 2);
+  display.showNumberDec(weight*100, false);
+  delay(100);
+}

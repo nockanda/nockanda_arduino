@@ -1,0 +1,51 @@
+/*
+ * 예제35-5 FND디스플레이로 뭔가 표시해보기
+ * DC모터는 모터드라이브 M3과 M4에 연결되어있고
+ * FND디스플레이(TM1637)는 2개인데
+ * 1개는 CLK A2, DIO A3에 연결되어있고
+ * 다른 1개는 CLK A4, DIO A5에 연결되어있다.
+ * 슬라이드가변저항으로 조절하는 속도를 디스플레이에 표시되도록 하라!
+ * 
+ */
+
+#include <AFMotor.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+AF_DCMotor motor1(3);
+AF_DCMotor motor2(4);
+#define CLK1 A2
+#define DIO1 A3
+#define CLK2 A4
+#define DIO2 A5
+
+TM1637Display display1(CLK1, DIO1);
+TM1637Display display2(CLK2, DIO2);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); 
+  motor1.setSpeed(200); //set speed 0~255
+  motor2.setSpeed(200); //set speed 0~255
+  motor1.run(RELEASE);
+  motor2.run(RELEASE);
+  display1.setBrightness(0x0f);
+  display2.setBrightness(0x0f);
+}
+int state = 0;
+int s1 = 0;
+int s2 = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  s1 = analogRead(A0);
+  s2 = analogRead(A1);
+  
+  motor1.run(BACKWARD);
+  motor2.run(BACKWARD);
+  s1 = map(s1,0,1023,0,255);
+  s2 = map(s2,0,1023,0,255);
+  motor1.setSpeed(s1);
+  motor2.setSpeed(s2);
+  display1.showNumberDec(s1, false);
+  display2.showNumberDec(s2, false);
+  delay(100);
+}

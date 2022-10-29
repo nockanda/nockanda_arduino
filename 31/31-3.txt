@@ -1,0 +1,40 @@
+/*
+ * 예제 31-3 (스몰프로젝트) 자석으로 선풍기의
+ * 회전속도를 계산하시오!
+ * 조건이 여의치않아서 미니카바퀴로 대채했습니다..
+ * 홀센서는 D2에 연결해서 인터럽트를 사용했고
+ * FND디스플레이(TMI1637)는 CLK를 D3에 DIO를 D4에 연결!
+ * 미니카바퀴에 자석을 부착하고 홀센서로 회전속도를 계산해보자!
+ * 회전속도라고 하는 것은 RPM으로 계산해서 디스플레이에
+ * 보여주도록하자!
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+#define CLK 3
+#define DIO 4
+TM1637Display display(CLK, DIO);
+
+const byte interruptPin = 2;
+int count = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(interruptPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), blink, RISING);
+  display.setBrightness(0x0f);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //Serial.println(count/2); 횟수
+  //루프가 1초를 주기로 회전할동안 count의 증가량이 몇인가?
+  //초당 회전수(n)  n/s ... 60을 곱해서 RPM
+
+  display.showNumberDec((count/2)*60, false);
+  count = 0;
+  delay(1000);
+}
+
+void blink() {
+  count++;
+}

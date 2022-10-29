@@ -1,0 +1,42 @@
+/*
+ * 예제 18-1(가장 쉬운방법)
+ * 버튼4개로 10진수를 시리얼 모니터에 출력해라!
+ */
+int result = 0;
+int button1 =0;
+int button2 =0;
+int button3 =0;
+int button4 =0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,INPUT_PULLUP);
+  pinMode(3,INPUT_PULLUP);
+  pinMode(4,INPUT_PULLUP);
+  pinMode(5,INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  result = 0;
+  button1 = digitalRead(2);
+  button2 = digitalRead(3);
+  button3 = digitalRead(4);
+  button4 = digitalRead(5);
+  
+  if(button1 == LOW){
+    result += 1;
+  }
+  if(button2 == LOW){
+    result += 2;
+  }
+  if(button3 == LOW){
+    result += 4;
+  }
+  if(button4 == LOW){
+    result += 8;
+  }
+  Serial.println(result);
+  delay(100);
+}

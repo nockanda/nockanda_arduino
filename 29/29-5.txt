@@ -1,0 +1,68 @@
+/*
+ * 예제29-5
+ * 피에조부저3를 D3(PWM),D5,D6에 연결하고
+ * 버튼8개를 적절하게 연결해서 피아노를 만들어라!
+ * 버튼 순서 = > {A0,A1,A2,A3,A4,A5,12,13};
+ * 3채널 피아노를 만들어라!
+ */
+#define NOTE_C5  523
+#define NOTE_CS5 554
+#define NOTE_D5  587
+#define NOTE_DS5 622
+#define NOTE_E5  659
+#define NOTE_F5  698
+#define NOTE_FS5 740
+#define NOTE_G5  784
+#define NOTE_GS5 831
+#define NOTE_A5  880
+#define NOTE_AS5 932
+#define NOTE_B5  988
+#define NOTE_C6  1047
+
+int melody[] = {NOTE_C5,NOTE_D5,NOTE_E5,NOTE_F5,NOTE_G5,NOTE_A5,NOTE_B5,NOTE_C6};
+int button[] = {A0,A1,A2,A3,A4,A5,12,13};
+int button_state[8]={HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
+int pushed_button[3]={0,0,0};
+int pushed_button_melody[3]={0,0,0};
+int speaker[] = {3,5,6};
+
+int value = 0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  for(int i = 0;i<8;i++){
+    pinMode(button[i],INPUT_PULLUP);
+  }
+}
+int count = 0;
+void loop() {
+  //초기화부분
+  count = 0;
+  for(int i = 0;i<3;i++){
+     pushed_button[i] = 0;
+     pushed_button_melody[i] = 0;
+  }
+  //
+  for(int i = 0;i<8;i++){
+    button_state[i] = digitalRead(button[i]);
+    if(button_state[i] == LOW){
+      //눌려진거
+      pushed_button[count] = button[i];
+      pushed_button_melody[count] = melody[i];
+      count++;
+      if(count >3) break;
+    }
+  }  
+ 
+  if(count > 0){
+    //소리가 나면 되는 부분
+    //1개, 2개, 3개
+    for(int i = 0;i<count;i++){
+      
+      tone(speaker[i],pushed_button_melody[i] , 100);
+      delay(100* 1.30);
+      noTone(speaker[i]);
+    }
+    
+  }
+}

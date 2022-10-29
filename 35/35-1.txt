@@ -1,0 +1,56 @@
+/*
+ * 예제35-1 L293D 모터드라이브 쉴드를 이용해서
+ * 시리얼통신으로 DC모터를 제어하라!
+ * DC모터는 M3, M4에 연결했다.
+ * 숫자1을 보내면 모터1번 정회전
+ * 숫자2를 보내면 모터1번 역회전
+ * 숫자3을 보내면 모터1번 정지
+ * 숫자4를 보내면 모터2번 정회전
+ * 숫자5를 보내면 모터2번 역회전
+ * 숫자6을 보내면 모터2번 정지
+ */
+
+#include <AFMotor.h>
+AF_DCMotor motor1(3);
+AF_DCMotor motor2(4);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); 
+  motor1.setSpeed(200); //set speed 0~255
+  motor2.setSpeed(200); //set speed 0~255
+  motor1.run(RELEASE);
+  motor2.run(RELEASE);
+}
+int state = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  //숫자 1을 보내면 모터1번 정회전
+  //숫자 2를 보내면 모터1번 역회전
+  //숫자 3을 보내면 모터1번 정지
+  //숫자 4를 보내면 모터2번 정회전
+  //숫자 5를 보내면 모터2번 역회전
+  //숫자 6을 보내면 모터2번 정지
+  if (Serial.available() > 0) {
+    state = Serial.parseInt();
+    if(state == 1){
+       motor1.run(FORWARD);
+    }
+    if(state == 2){
+       motor1.run(BACKWARD);
+    }
+    if(state == 3){
+       motor1.run(RELEASE);
+    }
+    if(state == 4){
+       motor2.run(FORWARD);
+    }
+    if(state == 5){
+       motor2.run(BACKWARD);
+    }
+    if(state == 6){
+       motor2.run(RELEASE);
+    }
+  }
+  delay(100);
+}
