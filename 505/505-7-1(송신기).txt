@@ -1,0 +1,28 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial lora(2,3);
+
+byte myheader[] = {0x00,0x02,0x47};
+
+struct mystruct{
+  int data1;
+  float data2;
+  char data3;
+};
+mystruct mydata;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC하고 아두이노하고의 통신라인!
+  lora.begin(9600); //아두이노하고 로라모듈하고의 통신라인!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  mydata.data1 = 3080;
+  mydata.data2 = 12.34;
+  mydata.data3 = '*';
+  
+  lora.write(myheader,3);
+  lora.write((byte*)&mydata,sizeof(mydata));
+  delay(2000);
+}

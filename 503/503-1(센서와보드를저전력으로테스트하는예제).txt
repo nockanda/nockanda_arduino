@@ -1,0 +1,52 @@
+#include "PMS.h"
+#include <SoftwareSerial.h>
+
+SoftwareSerial nockanda(D1,D2);
+
+PMS pms(nockanda);
+PMS::DATA data;
+
+void setup()
+{
+  Serial.begin(115200);   //PC-아두이노간
+  nockanda.begin(9600);  //미세먼지-아두이노간
+
+  Serial.println();
+  Serial.println("나는 깨어났다!");
+
+  Serial.println("센서값 측정한다!");
+  pms.passiveMode();    // Switch to passive mode
+
+  //센서를 깨운다!
+  pms.wakeUp();
+  delay(5000);
+  //센서값을 측정한다!
+  pms.requestRead();
+  if (pms.readUntil(data))
+  {
+    Serial.print("PM 1.0 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_1_0);
+
+    Serial.print("PM 2.5 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_2_5);
+
+    Serial.print("PM 10.0 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_10_0);
+  }
+  else
+  {
+    Serial.println("No data.");
+  }
+
+  Serial.println("센서값 측정종료! 센서 SLEEP!");
+  //센서를 sleep한다!
+  pms.sleep();
+  Serial.println("나도 DEEPSLEEP!");
+  ESP.deepSleep(15e6); //us
+  //pms.sleep();
+}
+
+void loop()
+{
+  
+}

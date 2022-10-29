@@ -1,0 +1,100 @@
+#include <esp_now.h>
+#include <WiFi.h>
+
+#define uS_TO_S_FACTOR 1000000ULL
+#define TIME_TO_SLEEP  10 //딥슬립 시간(초)
+
+byte board[] = {0x84,0xCC,0xA8,0xAE,0xBB,0xED};
+
+unsigned long t = 0;
+
+struct Mysensor{
+  float temp;
+  float humi;
+  int co2;
+};
+
+Mysensor myvalue;
+
+esp_now_peer_info_t slave;
+
+void setup() {
+  // put your setup code here, to run once:
+
+  Serial.begin(115200);
+  Serial.println("깨어났습니다~~~~!");  
+  WiFi.mode(WIFI_STA); //제일 처음 할일! 와이파이모드를 스테이션 모드로!
+
+  //ESPNOW의 기능을 활성화한다!
+  if (esp_now_init() != 0) {
+    //ESP NOW 시작 실패!
+    Serial.println("ESPNOW 실패!");
+    return;
+  }else{
+     //ESP NOW 시작 성공!
+     Serial.println("ESPNOW 성공!");
+  }
+
+  //지금 이보드의 역할은 주고 받는것을 다하겠다!
+  //esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+
+  //나의 슬레이브를 등록해야겠다!
+  //esp_now_add_peer(board11, ESP_NOW_ROLE_COMBO, 1, NULL, 0);//뒤에 2개는 ID, PW
+
+  Serial.println("나의 데이터를 받을 대상을 등록합니다~~!!");
+  for(int i = 0;i<6;i++){
+    slave.peer_addr[i] = board[i];
+  }
+  slave.channel = 1;  
+  slave.encrypt = false;
+
+  esp_now_add_peer(&slave);
+
+  //송신완료 콜백함수 등록
+ 
+  esp_now_register_send_cb(OnDataSent);
+
+  //수신완료 콜백 함수 등록
+  esp_now_register_recv_cb(OnDataRecv);
+
+  Serial.println("딥슬립 시간을 설정했습니다~~!!");
+  //딥슬립관련된 설정을 여기서 하고
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+
+  Serial.println("센서값을 측정 시작합니다~~!~~!!");
+  //ESPNOW기능이 끝나는 지점
+  myvalue.temp = 20.55;
+  myvalue.humi = 55.22;
+  myvalue.co2 = 1080;
+  delay(2000);
+  Serial.println("센서값을 측정 종료합니다~~!~~!!");
+
+  Serial.println("데이터를 ESPNOW로 전송합니다~!!");  
+  esp_now_send(slave.peer_addr, (uint8_t *) &myvalue, sizeof(myvalue));
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  
+  
+}
+
+//송신콜백함수 원형:
+//void OnDataSent(uint8_t *mac, uint8_t status) {
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+   //어찌되었든 여기 들어온다는 이야기는 송신작업이 완료되었음을 의미
+   //여기서 딥슬립을한다!
+   Serial.println("나는 이제 10초간 딥슬립합니다~~~!");
+   esp_deep_sleep_start();
+}
+
+
+//수신콜백함수 원형:
+//void OnDataRecv(uint8_t * mac, uint8_t * data, uint8_t len) {
+void OnDataRecv(const uint8_t * mac, const uint8_t *data, int len) {
+  String text = "";
+  for(int i = 0;i<len;i++){
+    text += (char)data[i];
+  }
+  Serial.println(text);
+}

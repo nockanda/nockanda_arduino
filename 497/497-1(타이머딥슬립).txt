@@ -1,0 +1,48 @@
+#define uS_TO_S_FACTOR 1000000ULL
+#define TIME_TO_SLEEP  30 //딥슬립 시간(초)
+
+RTC_DATA_ATTR int bootCount = 0;
+
+//딥슬립에서 깨어난 사유!
+void print_wakeup_reason(){
+  esp_sleep_wakeup_cause_t wakeup_reason;
+
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+
+  switch(wakeup_reason)
+  {
+    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break; //이게 출력됨
+    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
+    case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
+    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
+  }
+}
+
+void setup(){
+  Serial.begin(115200);
+  delay(1000); 
+  
+  ++bootCount; //재부팅된 횟수를 출력한다!
+  Serial.println("Boot number: " + String(bootCount));
+
+  
+  print_wakeup_reason();//깨어난 사유가 출력된다!
+
+                                //여기 들어가는 시간값은 us단위가 들어간다!
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+  Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
+  " Seconds");
+
+  //센서값을 측정해서 외부로 전송한다!
+  
+  Serial.println("Going to sleep now");
+  Serial.flush(); 
+  esp_deep_sleep_start(); //이게 바로 딥슬립하는 함수이다!
+  Serial.println("This will never be printed");
+}
+
+void loop(){
+  //This is not going to be called
+}

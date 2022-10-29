@@ -1,0 +1,23 @@
+#define btn D2
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(btn,INPUT);
+  Serial.println("나는 깨어났습니다~~~~~!");
+
+  //내가 꺠어났는데~ 설정버튼이 눌려졌냐?
+  if(digitalRead(btn) == LOW){
+    Serial.println("설정모드로 진입합니다"); 
+  }else{
+    delay(2000);
+    Serial.println("나는 딥슬립하겠습니다!");
+    ESP.deepSleep(0); //영원히 자리!
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  Serial.println("지금은 설정모드입니다");
+  delay(1000);
+}

@@ -1,0 +1,38 @@
+#include <ESP8266WiFi.h>
+#include <espnow.h>
+
+typedef void (*esp_rc_cb_t)(float temp, float humi);
+
+esp_rc_cb_t recv_callback;
+
+struct mysensor{
+  float temp;
+  float humi;
+};
+
+mysensor dht11;
+
+void OnDataRecv(uint8_t * mac, uint8_t * data, uint8_t len) {
+  memcpy(&dht11,data,sizeof(dht11));
+
+  #ifdef ESP_LOGD
+        ESP_LOGD("nockanda", "온도: %f, 습도: %f\n", dht11.temp,dht11.humi);
+  #endif
+  
+  
+  recv_callback(dht11.temp,dht11.humi);
+}
+
+class {
+public:
+    void begin() {
+        WiFi.mode(WIFI_STA);  
+        if (esp_now_init() == 0) {
+            esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+            esp_now_register_recv_cb(OnDataRecv);
+        }
+    }
+    void set_recv_callback(esp_rc_cb_t callback){
+       recv_callback = callback;
+    }
+} NOCKANDA_ESPNOW;

@@ -1,0 +1,76 @@
+
+#define Threshold 40 //터치 패드의 민감도!
+
+RTC_DATA_ATTR int bootCount = 0; //재부팅된 횟수 
+touch_pad_t touchPin;
+
+//웨이크업 사유인데!
+void print_wakeup_reason(){
+  esp_sleep_wakeup_cause_t wakeup_reason;
+
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+
+  switch(wakeup_reason)
+  {
+    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break; //요기 출력될것같다!
+    case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
+    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
+  }
+}
+
+void print_wakeup_touchpad(){
+  touchPin = esp_sleep_get_touchpad_wakeup_status();
+
+  switch(touchPin)
+  {
+    case 0  : Serial.println("Touch detected on GPIO 4"); break;
+    case 1  : Serial.println("Touch detected on GPIO 0"); break;
+    case 2  : Serial.println("Touch detected on GPIO 2"); break;
+    case 3  : Serial.println("Touch detected on GPIO 15"); break;
+    case 4  : Serial.println("Touch detected on GPIO 13"); break;
+    case 5  : Serial.println("Touch detected on GPIO 12"); break;
+    case 6  : Serial.println("Touch detected on GPIO 14"); break;
+    case 7  : Serial.println("Touch detected on GPIO 27"); break;
+    case 8  : Serial.println("Touch detected on GPIO 33"); break;
+    case 9  : Serial.println("Touch detected on GPIO 32"); break;
+    default : Serial.println("Wakeup not by touchpad"); break;
+  }
+}
+
+//터치 웨이크업이 실행된다면 여기가 실행된다!
+void callback1(){
+  //placeholder callback function
+}
+void callback2(){
+  //placeholder callback function
+}
+
+void setup(){
+  Serial.begin(115200);
+  delay(1000); //Take some time to open up the Serial Monitor
+
+  //Increment boot number and print it every reboot
+  ++bootCount;
+  Serial.println("Boot number: " + String(bootCount));
+
+  print_wakeup_reason(); //깨어난 사유를 출력한다
+  print_wakeup_touchpad(); //터치가 된 핀번호를 출력한다
+
+  //T0~T9까지 있는것 같다!
+  touchAttachInterrupt(T4, callback1, Threshold);
+  touchAttachInterrupt(T5, callback2, Threshold);
+
+  esp_sleep_enable_touchpad_wakeup();
+
+  //Go to sleep now
+  Serial.println("Going to sleep now");
+  esp_deep_sleep_start();
+  Serial.println("This will never be printed");
+}
+
+void loop(){
+  //This will never be reached
+}

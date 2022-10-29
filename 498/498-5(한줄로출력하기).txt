@@ -1,0 +1,112 @@
+//아래에 있는 내용은 당연히 있어야한느 것이다!
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#define ONE_WIRE_BUS 2 //몇번핀에 연결했냐
+#define TEMPERATURE_PRECISION 12
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+
+DeviceAddress myaddress1,myaddress2,myaddress3;
+DeviceAddress mysensors[]={
+  {0x28,0x92,0x4B,0x79,0xA2,0x00,0x03,0x38},
+  {0x28,0xA9,0x4B,0x95,0xF0,0x01,0x3C,0x79},
+  {0x28,0xE2,0xEA,0x95,0xF0,0x01,0x3C,0x0A}
+};
+//mysensors[0]
+//mysensors[1]
+//mysensors[2]
+
+float mytemp[3] = {0,0,0};
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  sensors.begin(); //있어야한느거
+
+  //발견한 총 디바이스의 갯수 지금은 1
+  Serial.print("Found ");
+  Serial.print(sensors.getDeviceCount(), DEC);
+  Serial.println(" devices.");
+
+  //단 1개의 온도센서가 연결되었을때 주소값을 확인하겠다!
+  if(sensors.getDeviceCount() == 3){
+    //발견한 주소를 대입한다!
+    sensors.getAddress(myaddress1, 0);  
+    sensors.getAddress(myaddress2, 1);  
+    sensors.getAddress(myaddress3, 2);
+
+    sensors.setResolution(myaddress1, TEMPERATURE_PRECISION);
+    sensors.setResolution(myaddress2, TEMPERATURE_PRECISION);
+    sensors.setResolution(myaddress3, TEMPERATURE_PRECISION);
+  }else{
+    Serial.println("연결되어있지 않거나 2개이상의 센서가 연결되었다!");
+  }
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //Serial.print("Requesting temperatures...");
+  sensors.requestTemperatures();
+  //Serial.println("DONE");
+
+  printTemperature(myaddress1);
+  printTemperature(myaddress2);
+  printTemperature(myaddress3);
+
+  Serial.print(mytemp[0]);
+  Serial.print(",");
+  Serial.print(mytemp[1]);
+  Serial.print(",");
+  Serial.println(mytemp[2]);
+}
+
+void printAddress(DeviceAddress deviceAddress)
+{
+  for (uint8_t i = 0; i < 8; i++)
+  {
+    // zero pad the address if necessary
+    if (deviceAddress[i] < 16) Serial.print("0");
+    Serial.print(deviceAddress[i], HEX);
+    Serial.print(",");
+  }
+}
+
+void printTemperature(DeviceAddress deviceAddress)
+{
+  float tempC = sensors.getTempC(deviceAddress);
+  if(tempC == DEVICE_DISCONNECTED_C) 
+  {
+    Serial.println("Error: Could not read temperature data");
+    return;
+  }
+
+  //지금 입력받은 주소로 온도값을 측정하는데 누구껀지 확인해보자!
+  for(int i =0;i<3;i++){
+    if(is_match(deviceAddress,mysensors[i])){
+       //match
+       //Serial.print(i+1);
+       //Serial.println("번째 센서입니다!");
+       mytemp[i] = tempC;
+       break;
+    }
+  }
+  
+  //Serial.print("Temp C: ");
+  //Serial.println(tempC);
+}
+
+//주소2개를 입력받아서 같은지 아닌지를 반환하는 함수!
+bool is_match(DeviceAddress da1, DeviceAddress da2){
+  //일단 같다고 보고 시작한다!
+  bool result = true;
+  for(int i = 0;i<8;i++){
+    //단 하나라도 틀리면 틀린것이다!
+    if(da1[i] != da2[i]){
+      result = false;
+      break;
+    }
+  }
+
+  return result;
+}
