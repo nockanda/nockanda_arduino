@@ -1,0 +1,71 @@
+/*
+AccelStepper stepper = AccelStepper(연결방식, STEP핀, DIR핀);
+stepper.setMaxSpeed(1000); //최대속도
+stepper.setCurrentPosition(0); //현재 스탭을 설정
+stepper.currentPosition(); //현재 스탭을 반환
+stepper.setSpeed(200); //스탭모터의 방향과 속도를 설정
+stepper.runSpeed(); //스탭모터 작동(고정속도)
+stepper.setAcceleration(2000); //가속량을 설정함
+stepper.moveTo(1000); //목표스탭량을 설정함
+stepper.runToPosition(); //가속도를 붙혀서 스탭모터제어
+*/
+
+#include <AccelStepper.h>
+#include <MultiStepper.h>
+
+#define DIR1 2
+#define STEP1 3
+#define DIR2 4
+#define STEP2 5 
+byte btn_pins[] = {6,7,8,9};
+
+long pos[][2] = {
+  {50,100},
+  {150,200},
+  {50,0},
+  {0,100}
+};
+
+AccelStepper stepper1 = AccelStepper(1, STEP1, DIR1);
+AccelStepper stepper2 = AccelStepper(1, STEP2, DIR2);
+MultiStepper steppers;
+int speed = 1000;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//결과를 시리얼모니터에서 볼거야~
+  for(int i = 0;i<sizeof(btn_pins);i++){
+    pinMode(btn_pins[i],INPUT_PULLUP);
+  }
+  
+  stepper1.setMaxSpeed(200); //초당 몇스탭이냐? 1000/s(초당5회전)
+  stepper1.setCurrentPosition(0); //현재 스탭을 설정
+  stepper2.setMaxSpeed(200); //초당 몇스탭이냐? 1000/s(초당5회전)
+  stepper2.setCurrentPosition(0); //현재 스탭을 설정
+
+  //멀티스테퍼로 등록한다
+  steppers.addStepper(stepper1);
+  steppers.addStepper(stepper2);
+}
+
+//메인스레드
+void loop() {
+  // put your main code here, to run repeatedly:
+  for(int i = 0;i<sizeof(btn_pins);i++){
+    if(digitalRead(btn_pins[i]) == LOW){
+      run_stepper(pos[i][0],pos[i][1]); //이 함수는 요모냥 그대로 써야된다!
+    }
+  }
+}
+
+void run_stepper(long step1, long step2){
+  long positions[] = {step1, step2};
+  steppers.moveTo(positions);
+  steppers.runSpeedToPosition(); // Blocks until all are in position
+  delay(1000);
+
+  positions[0] = 0;
+  positions[1] = 0;
+  steppers.moveTo(positions);
+  steppers.runSpeedToPosition(); // Blocks until all are in position
+}

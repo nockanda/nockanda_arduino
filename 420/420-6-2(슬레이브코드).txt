@@ -1,0 +1,72 @@
+
+#include <SPI.h>
+#include "RF24.h"
+#include <AccelStepper.h>
+
+#define DIR 2
+#define STEP 3
+
+AccelStepper stepper = AccelStepper(1, STEP, DIR);//드라이버를 쓸때는 1을쓴다!
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+int speed = 0;
+int direct = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  stepper.setMaxSpeed(200); 
+  stepper.setAcceleration(50); 
+  stepper.setCurrentPosition(0); //현재 스탭을 설정
+  
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.startListening(); //기본 : 수신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    
+    byte recv;
+    radio.read(&recv,sizeof(recv));
+
+
+    //0은 시계방향 2는 반시계방향 3은 브레이크
+    if(recv == 0){
+      //시계방향으로 가속
+      stepper.moveTo(stepper.currentPosition()+50);
+
+      //응답하는 부분
+      sendmode();
+      long response = stepper.currentPosition();
+      radio.write(&response,sizeof(response));
+      receivemode();
+    }else if(recv == 1){
+      //작동시작지점에서 
+      stepper.moveTo(stepper.currentPosition()-50);
+
+      //응답하는 부분
+      sendmode();
+      long response = stepper.currentPosition();
+      radio.write(&response,sizeof(response));
+      receivemode();
+    }
+  }
+
+  
+   stepper.run();//가감속을 적용해서 스탭모터를 제어하라!
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}

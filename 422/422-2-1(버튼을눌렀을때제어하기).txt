@@ -1,0 +1,102 @@
+#include <SPI.h>
+#include "RF24.h"
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+#define led1 2
+#define led2 3
+#define btn1 4
+#define btn2 5
+#define btn3 6
+#define btn4 7
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+  pinMode(btn3,INPUT_PULLUP);
+  pinMode(btn4,INPUT_PULLUP);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.stopListening(); //기본 : 송신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(btn1) == LOW){
+    //버튼1이 눌려졌가 char '1'을 전송한다
+    digitalWrite(led1,HIGH);
+    digitalWrite(led2,LOW);
+    request('1');
+  }
+  if(digitalRead(btn2) == LOW){
+    //버튼1이 눌려졌가 char '1'을 전송한다
+    digitalWrite(led1,HIGH);
+    digitalWrite(led2,LOW);
+    request('2');
+  }
+  if(digitalRead(btn3) == LOW){
+    //버튼1이 눌려졌가 char '1'을 전송한다
+    digitalWrite(led1,HIGH);
+    digitalWrite(led2,LOW);
+    request('3');
+  }
+  if(digitalRead(btn4) == LOW){
+    //버튼1이 눌려졌가 char '1'을 전송한다
+    digitalWrite(led1,HIGH);
+    digitalWrite(led2,LOW);
+    request('4');
+  }
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}
+
+
+void request(char c){
+    //송신모드
+    sendmode();
+    radio.write(&c,sizeof(c));
+  
+    Serial.print("Request = ");
+    Serial.println(c);
+  
+  
+    //수신모드
+    receivemode();
+  
+    bool is_timeout = false;
+    unsigned long t = millis();
+    while(true){
+      if(radio.available()) break;
+      if(millis() - t > 5000){
+        is_timeout = true;
+        break;
+      }
+    }
+  
+    if(is_timeout){
+      Serial.println("슬레이브가 출타했다!");
+    }else{
+      char c2;
+      radio.read(&c2,sizeof(c2));
+      if(c2 == '1' || c2 == '2' || c2 == '3' || c2 == '4'){
+        digitalWrite(led1,LOW);
+        digitalWrite(led2,HIGH);
+      }
+     
+      Serial.print("Response = ");
+      Serial.println(c2);
+    }
+}

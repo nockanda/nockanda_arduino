@@ -1,0 +1,64 @@
+/*
+AccelStepper stepper = AccelStepper(연결방식, STEP핀, DIR핀);
+stepper.setMaxSpeed(1000); //최대속도
+stepper.setCurrentPosition(0); //현재 스탭을 설정
+stepper.currentPosition(); //현재 스탭을 반환
+stepper.setSpeed(200); //스탭모터의 방향과 속도를 설정
+stepper.runSpeed(); //스탭모터 작동(고정속도)
+stepper.setAcceleration(2000); //가속량을 설정함
+stepper.moveTo(1000); //목표스탭량을 설정함
+stepper.runToPosition(); //가속도를 붙혀서 스탭모터제어
+*/
+
+#include <AccelStepper.h>
+#include <SoftwareSerial.h>
+SoftwareSerial bluetooth(6,7);
+
+#define DIR1 2
+#define STEP1 3
+#define DIR2 4
+#define STEP2 5 
+
+AccelStepper stepper1 = AccelStepper(1, STEP1, DIR1);
+AccelStepper stepper2 = AccelStepper(1, STEP2, DIR2);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//결과를 시리얼모니터에서 볼거야~
+  bluetooth.begin(9600); //앱인벤터쪽
+  stepper1.setMaxSpeed(1000); //초당 몇스탭이냐? 1000/s(초당5회전)
+  stepper1.setCurrentPosition(0); //현재 스탭을 설정
+  stepper2.setMaxSpeed(1000); //초당 몇스탭이냐? 1000/s(초당5회전)
+  stepper2.setCurrentPosition(0); //현재 스탭을 설정
+}
+
+//메인스레드
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(bluetooth.available()){
+    //유저가 시리얼 모니터에서 뭔가 전송했다!
+    String data = bluetooth.readStringUntil('\n');
+    
+    if(data[0] == 'F'){
+      //전진하라
+      String speed = data.substring(1,data.length());
+      bluetooth.write('F');
+      stepper1.setSpeed(speed.toInt());
+      stepper2.setSpeed(speed.toInt() * -1);
+    }else if(data[0] == 'B'){
+      //후진하라
+      String speed = data.substring(1,data.length());
+      bluetooth.write('B');
+      stepper1.setSpeed(speed.toInt() * -1);
+      stepper2.setSpeed(speed.toInt());
+    }else if(data[0] == 'X'){
+      //멈추어라
+      bluetooth.write('X');
+      stepper1.setSpeed(0);
+      stepper2.setSpeed(0);
+    }
+    
+  }
+  stepper1.runSpeed();
+  stepper2.runSpeed();
+}

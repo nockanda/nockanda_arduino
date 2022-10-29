@@ -1,0 +1,51 @@
+/*
+AccelStepper stepper = AccelStepper(연결방식, STEP핀, DIR핀);
+stepper.setMaxSpeed(1000); //최대속도
+stepper.setCurrentPosition(0); //현재 스탭을 설정
+stepper.currentPosition(); //현재 스탭을 반환
+stepper.setSpeed(200); //스탭모터의 방향과 속도를 설정
+stepper.runSpeed(); //스탭모터 작동(고정속도)
+stepper.setAcceleration(2000); //가속량을 설정함
+stepper.moveTo(1000); //목표스탭량을 설정함
+stepper.runToPosition(); //가속도를 붙혀서 스탭모터제어
+*/
+
+#include <AccelStepper.h>
+
+#define DIR 2
+#define STEP 3
+
+#define btn1 4
+#define btn2 5
+#define btn3 6
+
+AccelStepper stepper = AccelStepper(1, STEP, DIR);//드라이버를 쓸때는 1을쓴다!
+
+int speed = 1000;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//결과를 시리얼모니터에서 볼거야~
+  pinMode(DIR,OUTPUT);
+  pinMode(STEP,OUTPUT);
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+  pinMode(btn3,INPUT_PULLUP);
+  stepper.setMaxSpeed(1000); //초당 몇스탭이냐? 1000/s(초당5회전)
+  stepper.setCurrentPosition(0); //현재 스탭을 설정
+}
+
+//메인스레드
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(btn1) == LOW){
+    stepper.setSpeed(200); //시계방향 초당 1회전하는 속도로~
+  }
+  if(digitalRead(btn2) == LOW){
+    stepper.setSpeed(-200);
+  }
+  if(digitalRead(btn3) == LOW){
+    stepper.setSpeed(0);
+  }
+  stepper.runSpeed(); 
+}

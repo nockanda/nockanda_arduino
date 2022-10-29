@@ -1,0 +1,73 @@
+
+#include <SPI.h>
+#include "RF24.h"
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK 2
+#define DIO 3
+TM1637Display display(CLK, DIO);
+
+#define btn1 5
+#define btn2 6
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+  display.setBrightness(0x0f);
+  display.showNumberDec(0, false);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.stopListening(); //기본 : 송신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(btn1) == LOW){
+    control(0);//0을보내면 시계방향으로 가감속제어
+  }
+  if(digitalRead(btn2) == LOW){
+    control(1);//1을보내면 반시계방향으로 가감속제어
+  }
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}
+
+void control(byte input){
+  byte data = input;
+    sendmode();
+    radio.write(&data,sizeof(data));
+    receivemode();
+    //수신값 대기(양방향)
+    bool is_timeout = false;
+    unsigned long t = millis();
+    while(true){
+      if(radio.available()) break;
+      if(millis() - t > 3000){
+        is_timeout = true;
+        break;
+      }
+    }
+  
+    if(is_timeout){
+      Serial.println("슬레이브가 출타했다!");
+    }else{
+      long recv;
+      radio.read(&recv,sizeof(recv));
+  
+      display.showNumberDec(recv, false); //-999 ~ 9999
+    }
+}

@@ -1,0 +1,80 @@
+/*
+AccelStepper stepper = AccelStepper(연결방식, STEP핀, DIR핀);
+stepper.setMaxSpeed(1000); //최대속도
+stepper.setCurrentPosition(0); //현재 스탭을 설정
+stepper.currentPosition(); //현재 스탭을 반환
+stepper.setSpeed(200); //스탭모터의 방향과 속도를 설정
+stepper.runSpeed(); //스탭모터 작동(고정속도)
+stepper.setAcceleration(2000); //가속량을 설정함
+stepper.moveTo(1000); //목표스탭량을 설정함
+stepper.runToPosition(); //가속도를 붙혀서 스탭모터제어
+*/
+#include <SPI.h>
+#include "RF24.h"
+#include <AccelStepper.h>
+
+#define DIR1 2
+#define STEP1 3
+#define DIR2 4
+#define STEP2 5 
+
+AccelStepper stepper1 = AccelStepper(1, STEP1, DIR1);
+AccelStepper stepper2 = AccelStepper(1, STEP2, DIR2);
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.startListening(); //기본 : 수신모드
+
+  stepper1.setMaxSpeed(200); //초당 몇스탭이냐? 1000/s(초당5회전)
+  stepper1.setCurrentPosition(0); //현재 스탭을 설정
+  stepper2.setMaxSpeed(200); //초당 몇스탭이냐? 1000/s(초당5회전)
+  stepper2.setCurrentPosition(0); //현재 스탭을 설정
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+     char c;
+     radio.read(&c,sizeof(c));
+      //유저가 시리얼 모니터에서 뭔가 전송했다!
+
+    if(c == 'F'){
+      //스탭모터 2개가 전진방향으로 설정된다
+      stepper1.setSpeed(200); //초당 200스탭(360도=한바퀴)
+      stepper2.setSpeed(-200);
+    }else if(c == 'B'){
+      //스탭모터 2개가 후진방향으로 설정된다
+      stepper1.setSpeed(-200); //초당 200스탭(360도=한바퀴)
+      stepper2.setSpeed(200);
+    }else if(c == 'X'){
+      stepper1.setSpeed(0);
+      stepper2.setSpeed(0);
+    }
+  
+    sendmode();
+    radio.write(&c,sizeof(c));
+
+    //보낼거 다보내고..수신모드
+    receivemode();
+  }
+
+  stepper1.runSpeed();
+  stepper2.runSpeed();
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}

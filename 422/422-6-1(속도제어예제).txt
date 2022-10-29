@@ -1,0 +1,109 @@
+#include <SPI.h>
+#include "RF24.h"
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK A1
+#define DIO A2
+TM1637Display display(CLK, DIO);
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+#define led1 2
+#define led2 3
+#define btn1 4
+#define btn2 5
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+  display.setBrightness(0x0f);
+  display.showNumberDec(0, false);
+  
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.stopListening(); //기본 : 송신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int wheel_speed = analogRead(A0); //0~1023;
+  wheel_speed = map(wheel_speed,0,1023,0,255); //0~255
+  if(digitalRead(btn1) == LOW){
+    request('F',wheel_speed);
+    delay(500);
+  }else if(digitalRead(btn2) == LOW){
+    request('B',wheel_speed);
+    delay(500);
+  }else{
+    Serial.println(wheel_speed);
+    request('X',wheel_speed);
+    delay(500);
+  }
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}
+
+
+void request(char c, byte speed){
+    //송신모드
+
+    byte data[2];
+    data[0] = c;
+    data[1] = speed;
+    
+    sendmode();
+    radio.write(data,sizeof(data));
+  
+    Serial.print("Request = ");
+    Serial.print((char)data[0]);
+    Serial.println(data[1]);
+  
+  
+    //수신모드
+    receivemode();
+  
+    bool is_timeout = false;
+    unsigned long t = millis();
+    while(true){
+      if(radio.available()) break;
+      if(millis() - t > 5000){
+        is_timeout = true;
+        break;
+      }
+    }
+  
+    if(is_timeout){
+      Serial.println("슬레이브가 출타했다!");
+    }else{
+      byte recv[2];
+      radio.read(recv,sizeof(recv));
+      if(recv[0] == 'F'){
+        digitalWrite(led1,HIGH);
+        digitalWrite(led2,LOW);
+      }else if(recv[0] == 'B'){
+        digitalWrite(led1,LOW);
+        digitalWrite(led2,HIGH);
+      }else if(recv[0] == 'X'){
+        digitalWrite(led1,LOW);
+        digitalWrite(led2,LOW);
+      }
+      display.showNumberDec(map(recv[1],0,255,0,1000), false);
+      Serial.print("Response = ");
+      Serial.print((char)recv[0]);
+      Serial.println(recv[1]);
+    }
+}

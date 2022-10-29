@@ -1,0 +1,88 @@
+/*
+AccelStepper stepper = AccelStepper(연결방식, STEP핀, DIR핀);
+stepper.setMaxSpeed(1000); //최대속도
+stepper.setCurrentPosition(0); //현재 스탭을 설정
+stepper.currentPosition(); //현재 스탭을 반환
+stepper.setSpeed(200); //스탭모터의 방향과 속도를 설정
+stepper.runSpeed(); //스탭모터 작동(고정속도)
+stepper.setAcceleration(2000); //가속량을 설정함
+stepper.moveTo(1000); //목표스탭량을 설정함
+stepper.runToPosition(); //가속도를 붙혀서 스탭모터제어
+*/
+
+#include <AccelStepper.h>
+#include <MsTimer2.h>
+
+#define NOCK_CLK 4
+#define NOCK_DT 5
+
+bool pre_sensorA = LOW;
+
+volatile char rotary = '=';
+volatile int mystep = 0;
+
+#define DIR 2
+#define STEP 3
+
+AccelStepper stepper = AccelStepper(1, STEP, DIR);//드라이버를 쓸때는 1을쓴다!
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//결과를 시리얼모니터에서 볼거야~
+  pinMode(DIR,OUTPUT);
+  pinMode(STEP,OUTPUT);
+  pinMode(NOCK_CLK, INPUT);
+  pinMode(NOCK_DT, INPUT);
+
+  //타이머 인터럽트를 실행하겠다!
+  MsTimer2::set(1, rotary_encoder); //시간, 함수
+  MsTimer2::start();
+  
+  stepper.setMaxSpeed(1000); //얘는 200이 적절한값!
+  stepper.setCurrentPosition(0); //현재 스탭을 설정
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //stepper.moveTo(mystep); //목표지점 설정
+  //stepper.run();
+  if(stepper.currentPosition() != mystep){
+    int diff = mystep - stepper.currentPosition();
+    if(diff > 0)stepper.setSpeed(200);
+    else stepper.setSpeed(-200);
+
+    while(stepper.currentPosition() != mystep){
+      stepper.runSpeed(); //스탭모터 작동(고정속도)
+    }
+  }else{
+    //break
+    //멈춰있는 것!
+    stepper.setSpeed(0);
+  }
+}
+
+void rotary_encoder(){
+  //1.지금 센서값을 확인해야하는 타이밍인가?
+  //(=CLK핀에 상승에지가 발생했는가?)
+  bool sensorA = digitalRead(NOCK_CLK);//N
+  
+  //여기서 할거하고~~
+  if(pre_sensorA == HIGH && sensorA == LOW){
+    //센서A의 Falling edge!
+    //2.센서B의 상태를 가지고 와서 비교를 해본다!
+    bool sensorB = digitalRead(NOCK_DT);
+    if(sensorA != sensorB){
+      //시계방향으로 회전하고 있구나~
+      //Serial.println("시계방향");
+      mystep+=11;
+    }else{
+      //반시계방향으로 회전하고 있구나~
+      //Serial.println("반시계방향");
+      mystep-=11;
+    }
+    //Serial.println(num);
+  }
+
+
+  pre_sensorA = sensorA;
+}

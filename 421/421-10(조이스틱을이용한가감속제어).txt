@@ -1,0 +1,71 @@
+/*
+AccelStepper stepper = AccelStepper(연결방식, STEP핀, DIR핀);
+stepper.setMaxSpeed(1000); //최대속도
+stepper.setCurrentPosition(0); //현재 스탭을 설정
+stepper.currentPosition(); //현재 스탭을 반환
+stepper.setSpeed(200); //스탭모터의 방향과 속도를 설정
+stepper.runSpeed(); //스탭모터 작동(고정속도)
+stepper.setAcceleration(2000); //가속량을 설정함
+stepper.moveTo(1000); //목표스탭량을 설정함
+stepper.runToPosition(); //가속도를 붙혀서 스탭모터제어
+*/
+
+#include <AccelStepper.h>
+
+#define DIR1 2
+#define STEP1 3
+#define DIR2 4
+#define STEP2 5 
+
+AccelStepper stepper1 = AccelStepper(1, STEP1, DIR1);
+AccelStepper stepper2 = AccelStepper(1, STEP2, DIR2);
+
+int speed = 0;
+unsigned long t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//결과를 시리얼모니터에서 볼거야~
+  
+  stepper1.setMaxSpeed(1000); //초당 몇스탭이냐? 1000/s(초당5회전)
+  stepper1.setCurrentPosition(0); //현재 스탭을 설정
+  stepper2.setMaxSpeed(1000); //초당 몇스탭이냐? 1000/s(초당5회전)
+  stepper2.setCurrentPosition(0); //현재 스탭을 설정
+
+}
+
+//메인스레드
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(millis() - t > 10){
+    t = millis();
+    int x = analogRead(A0);
+  
+    if(x > 800){
+      //전진명령
+      speed+=10;
+      if(speed > 1000) speed = 1000;
+    }else if(x < 200){
+      //후진명령
+      speed-=10;
+      if(speed < -1000) speed = -1000;
+    }else{
+      //아무것도 하지않음(브레이크)
+      if(speed > 0){
+        speed-=10;
+        if(speed < 0) speed = 0;
+      }else if(speed <0){
+        speed+=10;
+        if(speed > 0) speed = 0;
+      }
+    }
+    stepper1.setSpeed(speed);
+    stepper2.setSpeed(speed * -1);
+    Serial.println(speed);
+  }
+  
+
+  stepper1.runSpeed();
+  stepper2.runSpeed();
+}
+

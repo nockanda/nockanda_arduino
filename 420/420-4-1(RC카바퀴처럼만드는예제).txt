@@ -1,0 +1,96 @@
+
+#include <SPI.h>
+#include "RF24.h"
+
+#define led1 2
+#define led2 3
+#define led3 4
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  pinMode(led3,OUTPUT);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.stopListening(); //기본 : 송신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int data = analogRead(A0);//x축
+  int data2 = analogRead(A1);//y축
+  if(data > 800){
+    //오른쪽으로 제꼈다
+    control(0);
+  }else if(data < 200){
+    //왼쪽으로 제겼다
+    control(1);
+  }else{
+    //아무것도 하지않음
+    control(2);
+  }
+  if(data2 > 800){
+    //아래로 제꼈다
+    control(3); //속도감소
+  }else if(data2 < 200){
+    //위로 제겼다
+    control(4); //속도증가
+  }
+
+  delay(100);
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}
+
+void control(byte input){
+  byte data = input;
+    sendmode();
+    radio.write(&data,sizeof(data));
+    receivemode();
+    //수신값 대기(양방향)
+    bool is_timeout = false;
+    unsigned long t = millis();
+    while(true){
+      if(radio.available()) break;
+      if(millis() - t > 3000){
+        is_timeout = true;
+        break;
+      }
+    }
+  
+    if(is_timeout){
+      Serial.println("슬레이브가 출타했다!");
+    }else{
+      byte recv;
+      radio.read(&recv,sizeof(recv));
+  
+      //Serial.print("수신한값=");
+      //Serial.println(recv);
+      if(recv == 0){
+        digitalWrite(led1,HIGH);
+        digitalWrite(led2,LOW);
+        digitalWrite(led3,LOW);
+      }else if(recv == 1){
+        digitalWrite(led1,LOW);
+        digitalWrite(led2,HIGH);
+        digitalWrite(led3,LOW);
+      }else if(recv == 2){
+        digitalWrite(led1,LOW);
+        digitalWrite(led2,LOW);
+        digitalWrite(led3,HIGH);
+      }
+    }
+}

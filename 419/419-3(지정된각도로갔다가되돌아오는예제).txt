@@ -1,0 +1,89 @@
+/*
+AccelStepper stepper = AccelStepper(연결방식, STEP핀, DIR핀);
+stepper.setMaxSpeed(1000); //최대속도
+stepper.setCurrentPosition(0); //현재 스탭을 설정
+stepper.currentPosition(); //현재 스탭을 반환
+stepper.setSpeed(200); //스탭모터의 방향과 속도를 설정
+stepper.runSpeed(); //스탭모터 작동(고정속도)
+stepper.setAcceleration(2000); //가속량을 설정함
+stepper.moveTo(1000); //목표스탭량을 설정함
+stepper.runToPosition(); //가속도를 붙혀서 스탭모터제어
+*/
+
+#include <AccelStepper.h>
+#include <SoftwareSerial.h>
+
+SoftwareSerial bluetooth(4, 5);
+
+#define DIR 2
+#define STEP 3
+
+AccelStepper stepper = AccelStepper(1, STEP, DIR);//드라이버를 쓸때는 1을쓴다!
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);//결과를 시리얼모니터에서 볼거야~
+  bluetooth.begin(9600); //아두이노하고 블루투스모듈간 통신~!
+  pinMode(DIR,OUTPUT);
+  pinMode(STEP,OUTPUT);
+  stepper.setMaxSpeed(1000); //초당 몇스탭이냐? 1000/s(초당5회전)
+  stepper.setCurrentPosition(0); //현재 스탭을 설정
+}
+
+//메인스레드
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(bluetooth.available()){
+    //블루투스로 수신한값이 있느냐~~
+    char c = bluetooth.read();
+    if(c == 'd'){
+      //오른쪽(90)
+      //0 -> 90 -> 0
+      stepper.setSpeed(200); //시계방향으로 돌리겠다
+      //0->90
+      while(stepper.currentPosition() != 50){
+        stepper.runSpeed(); //1.8도씩
+      }
+      delay(1000);
+      stepper.setSpeed(-200);
+      while(stepper.currentPosition() != 0){
+        stepper.runSpeed(); //1.8도씩
+      }
+    }else if(c == 'a'){
+      //왼쪽(180)
+      stepper.setSpeed(200); //시계방향으로 돌리겠다
+      //0->90
+      while(stepper.currentPosition() != 100){
+        stepper.runSpeed(); //1.8도씩
+      }
+      delay(1000);
+      stepper.setSpeed(-200);
+      while(stepper.currentPosition() != 0){
+        stepper.runSpeed(); //1.8도씩
+      }
+    }else if(c == 'w'){
+      //위쪽(270)
+      stepper.setSpeed(200); //시계방향으로 돌리겠다
+      //0->90
+      while(stepper.currentPosition() != 150){
+        stepper.runSpeed(); //1.8도씩
+      }
+      delay(1000);
+      stepper.setSpeed(-200);
+      while(stepper.currentPosition() != 0){
+        stepper.runSpeed(); //1.8도씩
+      }
+    }else if(c == 's'){
+      stepper.setSpeed(200); //시계방향으로 돌리겠다
+      //0->90
+      while(stepper.currentPosition() != 200){
+        stepper.runSpeed(); //1.8도씩
+      }
+      delay(1000);
+      stepper.setSpeed(-200);
+      while(stepper.currentPosition() != 0){
+        stepper.runSpeed(); //1.8도씩
+      }
+    }
+  }
+}
