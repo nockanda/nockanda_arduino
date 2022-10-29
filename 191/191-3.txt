@@ -1,0 +1,29 @@
+/*
+ * 예제 191-3 부저를 1개 추가를해서 D4에 연결했다!
+ * 수위센서에 의해서 감지가 되면 부저를 작동시키시오!
+ */
+
+#define wlsensor 2
+#define LED 3
+#define buzzer 4
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(LED,OUTPUT);
+  pinMode(wlsensor,INPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(wlsensor) == HIGH){
+    //감지
+    digitalWrite(LED,HIGH);
+    tone(buzzer, 1175);
+  }else{
+    digitalWrite(LED,LOW);
+    noTone(buzzer);
+    //감지안됨
+  }
+  delay(100);
+}

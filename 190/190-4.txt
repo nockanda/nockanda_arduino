@@ -1,0 +1,27 @@
+/*
+ * 예제190-4 적외선근접센서를 D3에 연결했다!
+ * 적외선근접센서에 의해서 근접한거리에 물체가 감지되면 감지된 동안 220V전구를 켜시오!
+ */
+
+#define relay 2
+#define irsensor 3
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 PC랑 시리얼통신 할거다!
+  pinMode(relay,OUTPUT);
+  pinMode(irsensor,INPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //적외선근접센서 : 감지가 되면 0, 감지가 안되면 1
+  if(digitalRead(irsensor) == LOW){
+    //감지
+    digitalWrite(relay,HIGH);
+  }else{
+    //감지안됨
+    digitalWrite(relay,LOW);
+  }
+  
+}

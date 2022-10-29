@@ -1,0 +1,34 @@
+/*
+ * 189-4 아두이노 광센서(CDS)를 A0에 연결했다!
+ * 아날로그 포트로 들어오는 값을 LCD화면에 띄우고 밤낮을 대략적으로 구분해보라!
+ */
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+
+void setup()
+{
+  lcd.init();                      // initialize the lcd 
+  lcd.backlight();
+  Serial.begin(9600);
+}
+
+void loop()
+{
+  lcd.clear();
+  lcd.print("RAW DATA=");
+  lcd.setCursor(9,0);
+  int value = analogRead(A0);
+  lcd.print(value);
+  lcd.setCursor(0,1); //개행
+  //녹칸다의 실험환경에서는 300이상이면 낮이고 이하면 밤이었다!
+  if(value > 300){
+    //낮
+    lcd.print("Result = DAY");
+  }else{
+    //밤
+    lcd.print("Result = NIGHT");
+  }
+  delay(1000);
+}

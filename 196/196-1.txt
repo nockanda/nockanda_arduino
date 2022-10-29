@@ -1,0 +1,121 @@
+/*
+ * 예제196-1 보건복지부 코로나 감염현황 openapi를 이용해서
+ * 필요한 정보를 모두 사물인터넷보드(wemos d1r1)의 시리얼모니터에 출력해보자!
+ */
+#include <ESP8266WiFi.h>
+
+#ifndef STASSID
+#define STASSID "~~~~~~" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "~~~~~~" //패스워드
+#endif
+
+String yourkey = "~~~~~"; //공공데이터포털 인증키
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+const char* host = "openapi.data.go.kr";
+const int httpsPort = 80;
+
+WiFiClient client;
+void setup() {
+  Serial.begin(115200);
+  Serial.println();
+  Serial.print("connecting to ");
+  Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  
+  Serial.print("connecting to ");
+  Serial.println(host);
+
+  //클라이언트와 서버와 커넥트
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("connection failed");
+    return;
+  }
+
+  String url = "/openapi/service/rest/Covid19/getCovid19InfStateJson?serviceKey="+yourkey;
+
+  //사물인터넷보드에서 RSS서버로 보내는 요청!
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long t = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - t > 10000) break;
+  }
+
+/*<accDefRate>1.4345560990</accDefRate>
+<accExamCnt>3882210</accExamCnt>
+<accExamCompCnt>3731677</accExamCompCnt>
+<careCnt>15352</careCnt>
+<clearCnt>37425</clearCnt>
+<createDt>2020-12-24 9:37:42.339</createDt>
+<deathCnt>756</deathCnt>
+<decideCnt>53533</decideCnt>
+<examCnt>150533</examCnt>
+<resutlNegCnt>3678144</resutlNegCnt>
+*/
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+  String p1 = "<accDefRate>";
+  String p2 = "<accExamCnt>";
+  String p3 = "<accExamCompCnt>";
+  String p4 = "<careCnt>";
+  String p5 = "<clearCnt>";
+  String p6 = "<createDt>";
+  String p7 = "<deathCnt>";
+  String p8 = "<decideCnt>"; 
+  String p9 = "<examCnt>"; 
+  String p10 = "<resutlNegCnt>";
+  while(client.available()){
+    String data = client.readStringUntil('\n'); //readline();
+    //우리가 원하는데이터가 아니면 아래로 내려갈수 없다!
+    if(data.indexOf("<?xml ") == -1) continue;
+    //data.indexOf(p1)+p1.length() : 시작위치
+    //data.indexOf("</accDefRate>") : 종료위치
+    //우리가 원하는 값 data.substring(data.indexOf(p1)+p1.length(),data.indexOf("</accDefRate>"));
+    String accDefRate = data.substring(data.indexOf(p1)+p1.length(),data.indexOf("</accDefRate>"));
+    String accExamCnt = data.substring(data.indexOf(p2)+p2.length(),data.indexOf("</accExamCnt>"));
+    String accExamCompCnt = data.substring(data.indexOf(p3)+p3.length(),data.indexOf("</accExamCompCnt>"));
+    String careCnt =data.substring(data.indexOf(p4)+p4.length(),data.indexOf("</careCnt>"));;
+    String clearCnt = data.substring(data.indexOf(p5)+p5.length(),data.indexOf("</clearCnt>"));;
+    String createDt = data.substring(data.indexOf(p6)+p6.length(),data.indexOf("</createDt>"));;
+    String deathCnt = data.substring(data.indexOf(p7)+p7.length(),data.indexOf("</deathCnt>"));;
+    String decideCnt = data.substring(data.indexOf(p8)+p8.length(),data.indexOf("</decideCnt>"));; 
+    String examCnt = data.substring(data.indexOf(p9)+p9.length(),data.indexOf("</examCnt>"));; 
+    String resutlNegCnt = data.substring(data.indexOf(p10)+p10.length(),data.indexOf("</resutlNegCnt>"));;
+    
+    Serial.println("누적 환진률:"+accDefRate);
+    Serial.println("누적 검사 수:"+accExamCnt);
+    Serial.println("누적 검사 완료 수:"+accExamCompCnt);
+    Serial.println("치료중 환자 수:"+careCnt);
+    Serial.println("격리해제 수:"+clearCnt);
+    Serial.println("등록일시분초:"+createDt);
+    Serial.println("사망자 수:"+deathCnt);
+    Serial.println("확진자 수:"+decideCnt);
+    Serial.println("검사진행 수:"+examCnt);
+    Serial.println("결과 음성 수:"+resutlNegCnt);
+    
+  }
+  Serial.println("DONE");
+}
+
+void loop() {
+}

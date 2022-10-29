@@ -1,0 +1,135 @@
+/*
+  예제 198-1 사물인터넷보드(wemos d1r1)에 한국환경공단의 공기질데이터를 받아와보자!
+  openapi를 이용해서 지역별로 존재하는 검사소들의 공기질측정값을 10개씩 가져와보자!
+  그이유는 메모리상의 이유로... (대부분 지역이 40여개의 검사소가 있음)
+  버튼을 D3에 연결해서 버튼을 눌렀을때 다음 10개의 검사소 리스트를 가져오도록하자!
+  버튼을 누를때마다 아래와 같은 구간이 반복된다!
+  1~10, 11~20, 21~30, 31~40
+ */
+#include <ESP8266WiFi.h>
+#include <ArduinoJson.h>
+
+#define button D3
+
+#ifndef STASSID
+#define STASSID "~~~" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "~~~" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+const char* host = "apis.data.go.kr";
+const int httpsPort = 80;
+String yourkey = "~~~";
+String SIDO = "서울";
+int pageNo = 4;
+
+WiFiClient client;
+void setup() {
+  Serial.begin(115200);
+  pinMode(button,INPUT_PULLUP);
+  Serial.println();
+  Serial.print("connecting to ");
+  Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  
+  Serial.print("connecting to ");
+  Serial.println(host);
+
+  get_data();
+}
+
+void loop() {
+  if(digitalRead(button) == LOW){
+    //버튼이 눌려졌을경우~
+    pageNo++;
+    if(pageNo > 4) pageNo = 1;
+    get_data();
+    
+  }
+}
+
+String utf8(String input){
+  String output;
+  for(int i = 0;i<input.length();i++){
+    output += "%" + String(input[i],HEX);
+    //Serial.println(text1[i],HEX);
+  }
+  return output;
+}
+
+void get_data(){
+  //클라이언트와 서버와 커넥트
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("connection failed");
+    return;
+  }
+
+  String url = "/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey="+yourkey+"&returnType=json&numOfRows=10&pageNo="+String(pageNo)+"&sidoName=" + utf8(SIDO);
+
+  //사물인터넷보드에서 RSS서버로 보내는 요청!
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long t = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - t > 10000) break;
+  }
+
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+
+  while(client.available()){
+    String data = client.readStringUntil('\n'); //readline();
+    if(data.indexOf("{\"response\":") != -1){
+      //만약에 현재 하나의 line을 서버로부터 수신했는데,
+      //그 line에 {"response": 문자열이 포함이 되어있다면~
+      DynamicJsonDocument doc(6144);
+      deserializeJson(doc, data);
+
+      JsonObject response_body = doc["response"]["body"];
+      int response_body_totalCount = response_body["totalCount"]; // 40
+
+      for (int i=0;i<10;i++) {
+        JsonObject jo = response_body["items"][i];
+        String khaiValue = jo["khaiValue"]; // "116"
+        String so2Value = jo["so2Value"]; // "0.004"
+        String coValue = jo["coValue"]; // "0.8"
+        String pm10Value = jo["pm10Value"]; // "55"
+        String dataTime = jo["dataTime"]; // "2020-12-28 20:00"
+        String no2Value = jo["no2Value"]; // "0.050"
+        String stationName = jo["stationName"]; // "광진구"
+        String o3Value = jo["o3Value"]; // "0.003"
+        Serial.println("측정소명="+stationName);
+        Serial.println("측정시간="+dataTime);
+        Serial.println("통합대기환경수치="+khaiValue);
+        Serial.println("아황산가스농도="+so2Value + "PPM");
+        Serial.println("일산화탄소농도="+coValue + "PPM");
+        Serial.println("미세먼지(PM10)농도="+pm10Value + "ug/m3");
+        Serial.println("이산화질소농도="+no2Value + "PPM");
+        Serial.println("오존농도="+o3Value + "PPM");
+        Serial.println("-----------");
+      }
+      
+    }
+    
+  }
+  Serial.println("DONE");
+}

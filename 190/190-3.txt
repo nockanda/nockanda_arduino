@@ -1,0 +1,24 @@
+/*
+ * 예제190-3 아두이노에 디지털충격센서를 D3에 연결한다음 충격이 감지되면 5초간 220V전구를 켰다가 끄시오!
+ */
+
+#define relay 2
+#define swsensor 3
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 PC랑 시리얼통신 할거다!
+  pinMode(relay,OUTPUT);
+  pinMode(swsensor,INPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //디지털충격센서는 충격이 감지되면 1(HIGH)가 출력된다!
+  if(digitalRead(swsensor) == HIGH){
+    //충격이 감지되었다!
+    digitalWrite(relay,HIGH);
+    delay(5000);
+    digitalWrite(relay,LOW);
+  }
+}

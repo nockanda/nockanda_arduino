@@ -1,0 +1,31 @@
+[아두이노#193] esp8266wifi LCD1602+I2C를 사용해보자!(튜토리얼)(wemos d1r1/사물인터넷(iot)시리즈#33/녹칸다/포로리야공대가자)
+
+esp8266wifi LCD1602+I2C를 사용해보자!(튜토리얼)(wemos d1r1/사물인터넷(iot)시리즈#33/녹칸다/포로리야공대가자)
+-사물인터넷보드(wemos d1r1)에 16x2 lCD를 사용해보자!
+-특징적인것은 16x2 lCD는 연결해야할 핀이 많은데 I2C로 사용가능하게 중간에 장치가 된 모듈이다!
+-사물인터넷보드는 포트수가 넉넉하지가 않기 때문에 I2C로 결과를 출력할 수 있다면 꽤나 매력적인게 된다!
+-특히 MQTT를 사용할때는 2.4인치 SPI LCD(ILI9341)를 사용할 수 없기에(아직은 못함) 구입을 하게 되었다!
+-사물인터넷보드에서 간단한 결과를 출력할때 종종 등장할 예정이나 잘 봐두도록 하자!
+
+ 
+
+
+
+예제 193-1 사물인터넷보드(wemos d1r1)에서 1602LCD(I2C ver) 사용하기 위한 기본예제
+
+193-1.txt
+0.00MB
+
+예제 193-2 사물인터넷보드에 연결된 1602LCD에 MQTT로 구독한 메시지를 띄워보자!
+ 사물인터넷보드가 MQTT Client로 동작하고 스마트폰에서 publish한 text를
+ LCD에 띄워보자!
+
+193-2.txt
+0.00MB
+관련라이브러리(LiquidCrystal_I2C)
+
+https://github.com/johnrickman/LiquidCrystal_I2C
+
+관련라이브러리(pubsubclient)
+
+https://pubsubclient.knolleary.net/

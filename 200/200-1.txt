@@ -1,0 +1,35 @@
+/*
+ * 예제 200-1 아두이노에 비접촉전류센서(SCT-013-030)을 장착했다!
+ * A0포트에 연결했고 입력전압은 5V에 연결했다!
+ * emonlib를 설치해서 기본적인 환경세팅을하고 결과값을 시리얼모니터에 출력해보라!
+ */
+
+#include "EmonLib.h"                   // Include Emon Library
+EnergyMonitor emon1;                   // Create an instance
+
+double IrmsNock = 0;
+void setup()
+{  
+  Serial.begin(9600);
+         //아날로그핀번호, 상수값
+         //SCT013-030 = 30
+  emon1.current(0, 30);             // Current: input pin, calibration.
+
+  //5개 샘플정도를 얻은다음에 그값을 아래쪽에서 빼버리자!
+  for(int i = 0;i<5;i++){
+    IrmsNock += emon1.calcIrms(1480);
+  }
+  IrmsNock = IrmsNock / 5; //IrmsNock /= 5
+
+  Serial.println(IrmsNock);
+}
+
+void loop()
+{
+  double Irms = emon1.calcIrms(1480)-IrmsNock;  // Calculate Irms only
+  if(Irms < 0) Irms = 0;
+  
+  Serial.print(Irms*220.0);         // Apparent power
+  Serial.print(" ");
+  Serial.println(Irms);          // Irms
+}

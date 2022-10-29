@@ -1,0 +1,16 @@
+/*
+ * 예제 194-1 사물인터넷보드(wemos d1r1)에 비접촉수위센서(XKC-Y25-V)의 디지털 신호를 확인해보는 간단한 예제!
+ */
+#define wl D5
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(wl,INPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  Serial.println(digitalRead(wl));
+  delay(100);
+}

@@ -1,0 +1,63 @@
+/*
+  예제 201-2 1602LCD를 사물인터넷보드에 연결해보자!
+  1602LCD는 i2c모듈이 장착되어있는 LCD를 사용해서 SDA를 A4에 연결하고 SCL을 A3에 연결하라!
+  비접촉전류센서로 측정되는 모든 값을 한번 LCD에 띄워보자!
+ */
+#include "EmonLib.h"                   // Include Emon Library
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2);
+EnergyMonitor emon1;                   // Create an instance
+
+double total_power = 0;
+unsigned long t1= 0;
+unsigned long previousMillis = 0;
+void setup()
+{  
+  Serial.begin(115200);
+  lcd.init();
+  lcd.backlight();
+  emon1.current(0, 18);             // Current: input pin, calibration.
+
+  t1 = millis();
+}
+
+void loop()
+{
+  double Irms = emon1.calcIrms(1480);  // Calculate Irms only
+  if(Irms < 0.02) Irms = 0;
+  
+  unsigned int t2 = millis();
+  int nocktime = t2 - t1;
+  t1 = t2;
+  double power = Irms*220.0;
+  //noctime = 1/1000 s
+  //total_power는 시간(h)가 곱해져야하는데
+  //현재 측정된 nocktime의 경우에는 ms단위이다.
+  //그러므로 ms를 s로 바꾸기위해서 1000을 나눠줘야하고,
+  //s를 m으로 바꾸기위해서 60을 나눠줘야하고, m을 h로 바꾸기위해서 60을 나눠줘야한다.
+  //그렇지만 전체 360만이라는 값을 한번에 나누면 double자료형의 소수점 유효숫자에 범위가 줄어들기 때문에
+  //우선적으로 3600을 나누고 최종결과에서 1000을 나누도록 한다!
+  total_power += power * nocktime/3600; 
+  Serial.print(nocktime); //샘플간격의 시간
+  Serial.print(" ");
+  Serial.print(total_power/1000,4); //누적전력량
+  Serial.print(" ");
+  Serial.print(power,4); //순간전력
+  Serial.print(" ");
+  Serial.println(Irms,4); //순간전류
+
+
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= 1000) {
+    previousMillis = currentMillis;
+    lcd.setCursor(0,0);
+    lcd.print("TPOWER=");
+    lcd.print(String(total_power/1000,4));
+    lcd.setCursor(0,1);
+    lcd.print("POWER=");
+    lcd.print(String(power,4));
+  }
+  
+}

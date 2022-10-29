@@ -1,0 +1,24 @@
+/*
+ * 예제 193-1 사물인터넷보드(wemos d1r1)에서
+ * 1602LCD(I2C ver) 사용하기 위한 기본예제
+ */
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2);  
+
+void setup()
+{
+  lcd.init();   
+  // Print a message to the LCD.
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("Hello, world!");
+  lcd.setCursor(0,1);
+  lcd.print("NOCKANDA!!");
+}
+
+
+void loop()
+{
+}

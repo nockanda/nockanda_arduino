@@ -1,0 +1,516 @@
+/*
+   예제205-2 사물인터넷보드(wemos d1r1)을 이용해서 한국천문연구원 openapi 서비스를 이용해보자!
+   특정한지역의 특정한날짜의 해와 달이 뜨거나 지는 시간을 알려주는 서비스이다!
+   요청하는 쿼리를 모두 변수화해서 요청한다음 출력결과를 LCD화면에 한글로 출력해보자!
+ */
+#include <ESP8266WiFi.h>
+#include "SPI.h"
+#include "Adafruit_GFX.h"
+#include "Adafruit_ILI9341.h"
+#include <SPI.h>
+#include <SD.h>
+
+// For the Adafruit shield, these are the default.
+#define TFT_DC D9
+#define TFT_CS D10
+
+#define FONT16 32
+#define FONT24 72
+#define FONT36 128
+#define FONT40 200
+
+// Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
+// If using the breakout, change pins as desired
+//Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+File myFile;
+
+#ifndef STASSID
+#define STASSID "~~~~~" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "~~~~~~~" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+const char* host = "apis.data.go.kr";
+const int httpsPort = 80;
+String yourkey = "~~~~~~~~~";
+String location = "독도";
+
+WiFiClient client;
+typedef struct{
+  int year;
+  int month;
+  int day;
+  int hour;
+  int minute;
+  int second;
+}Nocktime;
+
+void setup() {
+  Serial.begin(115200);
+  tft.begin();
+  Serial.print(F("Initializing SD card..."));
+
+  if (!SD.begin(D4)) {
+    Serial.println(F("initialization failed!"));
+    while (1);
+  }
+  Serial.println(F("initialization done."));
+  tft.setRotation(3);
+  tft.fillScreen(ILI9341_BLACK);
+  
+  Serial.println();
+  Serial.print("connecting to ");
+  Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  
+  Serial.print("connecting to ");
+  Serial.println(host);
+
+  //RTC없이 인터넷시간가져오기
+  Nocktime nt;
+  String date;
+  if(get_nocktime(nt)){
+    //정상적으로 값을 받은경우
+    date += String(nt.year);
+    if(nt.month < 10) date += "0" + String(nt.month);
+    else date += String(nt.month);
+    if(nt.day < 10) date += "0" + String(nt.day);
+    else date += String(nt.day);
+  }else{
+    //에러가난경우
+  }
+  //Serial.println(date);
+
+  //클라이언트와 서버와 커넥트
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("connection failed");
+    return;
+  }
+
+  String url = "/B090041/openapi/service/RiseSetInfoService/getAreaRiseSetInfo?serviceKey="+yourkey+"&locdate="+date+"&location=" +utf8(location);
+
+  //사물인터넷보드에서 RSS서버로 보내는 요청!
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long t = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - t > 10000) break;
+  }
+
+  //<?xml version="1.0" encoding="UTF-8" standalone="yes"?><response><header><resultCode>00</resultCode><resultMsg>NORMAL SERVICE.</resultMsg></header><body><items><item><aste>1858  </aste><astm>0613  </astm><civile>1754  </civile><civilm>0718  </civilm><latitude>3733</latitude><latitudeNum>37.5500000</latitudeNum><location>서울</location><locdate>20210101</locdate><longitude>12658</longitude><longitudeNum>126.9666660</longitudeNum><moonrise>1923  </moonrise><moonset>0929  </moonset><moontransit>0157  </moontransit><naute>1826  </naute><nautm>0645  </nautm><sunrise>0747  </sunrise><sunset>1724  </sunset><suntransit>123534</suntransit></item></items><numOfRows>10</numOfRows><pageNo>1</pageNo><totalCount>1</totalCount></body></response>
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+  /*
+지역  locatiaon 10  필수  서울  지역
+경도  longitude 5 필수  3700  경도
+위도  latitude  4 필수  12800 위도
+일출  sunrise 6 필수  0746  일출
+일중  suntransit  6 필수  1235  일중
+일몰  sunset  6 필수  1723  일몰
+월출  moonrise  6 필수  1428  월출
+월중  moontransit 6 필수  2132  월중
+월몰  moonset 6 필수  0340  월몰
+시민박명(아침)  civilm  6 필수  0717  시민박명(아침)
+시민박명(저녁)  civile  6 필수  1753  시민박명(저녁)
+항해박명(아침)  nautm 6 필수  0644  항해박명(아침)
+항해박명(저녁)  naute 6 필수  1825  항해박명(저녁)
+천문박명(아침)  astm  6 필수  0613  천문박명(아침)
+천문박명(저녁)  aste  6 필수  1857  천문박명(저녁)
+*/
+  String ele_n[]={"지역","위도","경도","일출","일중","일몰","월출","월중","월몰","시민박명","항해박명","천문박명"};
+  String ele_s[]={"<location>","<longitude>","<latitude>","<sunrise>","<suntransit>","<sunset>","<moonrise>","<moontransit>","<moonset>","<civilm>","<nautm>","<astm>"};
+  String ele_e[]={"</location>","</longitude>","</latitude>","</sunrise>","</suntransit>","</sunset>","</moonrise>","</moontransit>","</moonset>","</civilm>","</nautm>","</astm>"};
+
+  int f_y = 0;
+  hangul2utf8(0,f_y,F("한국천문연구원 OPENAPI SERVICE!"),ILI9341_YELLOW,16);
+  f_y+=16;
+  tft.drawLine(0,16,320,16,ILI9341_WHITE);
+  tft.drawLine(80,16,80,208,ILI9341_WHITE);
+  //지역(80)  서울(80~)
+  while(client.available()){
+    String data = client.readStringUntil('\n'); //readline();
+    if(data.indexOf("<?xml") == -1) continue;
+
+    for(int i = 0;i<12;i++){
+      int s = data.indexOf(ele_s[i]);
+      if(s != -1){
+        //첫번째 패턴을 검색했더니 결과가 존재하더라~
+        int e = data.indexOf(ele_e[i]);
+        Serial.println(ele_n[i] + ":" + data.substring(s+ele_s[i].length(),e));
+        hangul2utf8(0,f_y,ele_n[i],ILI9341_GREEN,16); //필드명
+        hangul2utf8(80,f_y,data.substring(s+ele_s[i].length(),e),ILI9341_WHITE,16); //값
+        tft.drawLine(0,f_y,320,f_y,ILI9341_WHITE);
+        f_y+=16;
+      }
+    }
+    
+  }
+  Serial.println("DONE");
+}
+
+void loop() {
+}
+
+String utf8(String input){
+  String output;
+  for(int i = 0;i<input.length();i++){
+    output += "%" + String(input[i],HEX);
+    //Serial.println(text1[i],HEX);
+  }
+  return output;
+}
+
+bool get_nocktime(Nocktime &t){
+  //--------------------------------------------
+  //클라이언트와 서버와 커넥트
+  if (!client.connect("google.com", 80)) {
+    Serial.println("connection failed");
+    return false;
+  }
+  client.print("HEAD / HTTP/1.1\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long timeout = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - timeout > 10000) break;
+  }
+
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+
+  bool iscollected = false;
+  while(client.available()){
+    String data = client.readStringUntil('\n'); //readline();
+    //Date: Thu, 17 Dec 2020 10:26:44 GMT
+    //01234567890123456789012345678901234
+    
+    if(data.indexOf("Date: ") != -1){
+      //검색결과 date:라는 패턴이 존재하더라~
+      //조건문안에 들어온 시점에 data안에는 우리가 원하는 값이 들어있다!
+      iscollected = true;
+      //Serial.println(data);
+      int day = data.substring(11,13).toInt(); //day
+      int month = 0;
+      //Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+      String mo = data.substring(14,17);
+      if(mo == "Jan"){
+        month = 1;
+      }else if(mo == "Feb"){
+        month = 2;
+      }else if(mo == "Mar"){
+        month = 3;
+      }else if(mo == "Apr"){
+        month = 4;
+      }else if(mo == "May"){
+        month = 5;
+      }else if(mo == "Jun"){
+        month = 6;
+      }else if(mo == "Jul"){
+        month = 7;
+      }else if(mo == "Aug"){
+        month = 8;
+      }else if(mo == "Sep"){
+        month = 9;
+      }else if(mo == "Oct"){
+        month = 10;
+      }else if(mo == "Nov"){
+        month = 11;
+      }else if(mo == "Dec"){
+        month = 12;
+      }
+      int year = data.substring(18,22).toInt(); //year
+      int hour = data.substring(23,25).toInt(); //hour
+      int minute = data.substring(26,28).toInt(); //minute
+      int second = data.substring(29,31).toInt(); //second
+
+      int dayofmonth[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+      //년도가 4의 배수일때마다 2월이 29일까지다!
+      //year % 4 == 0
+      hour += 9;
+      if(hour > 24){
+        //20 + 9 = 29 = 29-24 = 5
+        hour -= 24;
+        day++;
+        int yoondal = 0;
+        if(year % 4 == 0 && month == 2) yoondal = 1;
+        
+        if(day > dayofmonth[month-1]+yoondal){
+          day -= dayofmonth[month-1]+yoondal;
+          month++;
+          if(month > 12){
+            month -= 12;
+            year++;
+          }
+        }
+      }
+
+
+      //날짜를 하루더 더해보자!
+      day++;
+      int yoondal = 0;
+      if(year % 4 == 0 && month == 2) yoondal = 1;
+        
+      if(day > dayofmonth[month-1]+yoondal){
+        day -= dayofmonth[month-1]+yoondal;
+        month++;
+        if(month > 12){
+          month -= 12;
+          year++;
+        }
+      }
+      /*
+      Serial.println(year);
+      Serial.println(month);
+      Serial.println(day);
+      Serial.println(hour);
+      Serial.println(minute);
+      Serial.println(second);
+      */
+      t.year = year;
+      t.month = month;
+      t.day = day;
+      t.hour = hour;
+      t.minute = minute;
+      t.second = second;
+    }
+  }  
+
+  return iscollected;
+}
+void draw_hangul(int x,int y, String utf8code,uint16_t color,int font_size){
+  
+  int font_array_count = 0;
+  String direct;
+
+  if(font_size == 16) {font_array_count=2;direct=F("nock16/");}
+  else if(font_size == 24) {font_array_count=3;direct=F("nock24/");}
+  else if(font_size == 32) {font_array_count=4;direct=F("nock32/");}
+  else if(font_size == 40) {font_array_count=5;direct=F("nock40/");}
+
+  //파일불러오기
+  myFile = SD.open(direct+utf8code+F(".txt"));
+  String output;
+  if (myFile) {
+    while (myFile.available()) {
+      output += String((char)myFile.read());
+    }
+    //Serial.println(output);
+    myFile.close();
+  } else {
+    Serial.println("NO FILE");
+    return;
+  }
+
+  if(x+font_size > tft.width()){
+    x=0;
+    y+=font_size;
+  }
+  int count = 1;
+  //4개가 1line
+  for(int i =0;i<output.length();i+=2){
+    //Serial.println();
+    //Serial.println(i);
+    byte value = shex2hex(output[i], output[i+1]);
+
+    for(int j =0;j<8;j++){
+        byte temp = (128>>j);
+        if((value & temp) == temp){
+          //해당 bit가 1인것!
+              tft.drawPixel(x,y,color);
+              //Serial.print("1");
+          }else{
+              //Serial.print("0");
+          }
+          x++;
+    }
+
+   if(count % font_array_count ==0){
+    //한라인구분
+    //Serial.println();
+    if(i == output.length()-2){
+      y++;
+      y-=font_size;
+      
+    }else{
+      y++;
+      x-=font_size;
+    }
+    //Serial.print("(");
+    //Serial.print(i);
+    //Serial.print(",");
+    //Serial.print(x);
+    //Serial.print(",");
+    //Serial.print(y);
+    //Serial.println(")");
+   }
+    count++;
+  }//for
+  tft.setCursor(x, y);
+}
+
+void draw_hangul2(int x,int y, byte hexcode[],uint16_t color,int font_size){
+  int font_array_count;
+  int loop_size = font_size*font_size/8;
+  if(font_size == 16) {font_array_count=2;}
+  else if(font_size == 24) {font_array_count=3;}
+  else if(font_size == 32) {font_array_count=4;}
+  else if(font_size == 40) {font_array_count=5;}
+  int count = 1;
+  //4개가 1line
+  for(int i =0;i<loop_size;i++){
+    //Serial.println();
+    //Serial.println(i);
+    byte value = hexcode[i];
+
+    for(int j =0;j<8;j++){
+        byte temp = (128>>j);
+        if((value & temp) == temp){
+          //해당 bit가 1인것!
+              tft.drawPixel(x,y,color);
+              //Serial.print("1");
+          }else{
+              //Serial.print("0");
+          }
+          x++;
+    }
+
+   if(count % font_array_count ==0){
+    //한라인구분
+    //Serial.println();
+    if(i == loop_size-2){
+      y++;
+      y-=font_size;
+      
+    }else{
+      y++;
+      x-=font_size;
+    }
+    //Serial.print("(");
+    //Serial.print(i);
+    //Serial.print(",");
+    //Serial.print(x);
+    //Serial.print(",");
+    //Serial.print(y);
+    //Serial.println(")");
+   }
+    count++;
+  }//for
+}
+
+byte shex2hex(char data1, char data2){
+//3F
+//숫자는 -'0' 하면 숫자로된다
+//a~f 는 -'a'+10 하면 숫자로된다
+  byte output;
+
+  int a,b;
+  if(data1 >= '0' && data1 <= '9'){
+   a = data1-'0';
+  }else if(data1 >= 'a' && data1 <= 'f'){
+   a = data1-'a'+10;
+  }else if(data1 >= 'A' && data1 <= 'F'){
+   a = data1-'A'+10; 
+  }
+  if(data2 >= '0' && data2 <= '9'){
+   b = data2-'0';
+  }else if(data2 >= 'a' && data2 <= 'f'){
+   b = data2-'a'+10;
+  }else if(data2 >= 'A' && data2 <= 'F'){
+   b = data2-'A'+10; 
+  }
+
+  return a*16+b;
+
+}
+
+void hangul2utf8(int x,int y, String text,uint16_t color,int fontsize){
+  tft.setTextColor(color); 
+  if(fontsize == 16) tft.setTextSize(2);
+  if(fontsize == 24) tft.setTextSize(3);
+  
+  tft.setCursor(x, y);
+  for(int i = 0;i<text.length();){
+    if(text[i] >128){
+      //한글
+      //Serial.println("한글");
+      String output = String(text[i]&0xFF,HEX);
+      output += String(text[i+1]&0xFF,HEX);
+      output += String(text[i+2]&0xFF,HEX);
+      i+=3;
+      //Serial.println(output);
+      //이전 커서값을 가져와야한다..
+      
+      draw_hangul(tft.getCursorX(),tft.getCursorY(),output,color,fontsize);
+
+    }else{
+      //ascii
+      //Serial.println("아스키");
+      //Serial.println(text[i]);
+       tft.print(text[i]);
+      i++;
+    }
+
+  }
+}
+
+void set_hangul(String hangul,int font_size,byte data[]){
+  String output;
+  if(hangul[0] >128){
+    //한글
+    //Serial.println("한글");
+    output = String(hangul[0]&0xFF,HEX);
+    output += String(hangul[1]&0xFF,HEX);
+    output += String(hangul[2]&0xFF,HEX);
+  }else{
+    //한글이 아닙니다~!
+    return;
+  }
+  String direct;
+  if(font_size == 16) {direct=F("nock16/");}
+  else if(font_size == 24) {direct=F("nock24/");}
+  else if(font_size == 32) {direct=F("nock32/");}
+  else if(font_size == 40) {direct=F("nock40/");}
+  //Serial.println(hangul);
+  //Serial.println(direct+output+".txt");
+  myFile = SD.open(direct+output+F(".txt"));
+
+  int count = 0;
+  char temp[2];
+  if (myFile) {
+    while (myFile.available()) {
+      //data += String((char)myFile.read());
+      myFile.readBytes(temp,2);
+      data[count] = shex2hex(temp[0],temp[1]);
+      count++;
+    }
+    //Serial.println(output);
+    myFile.close();
+  } else {
+    Serial.println("NO FILE");
+    return;
+  }
+
+}

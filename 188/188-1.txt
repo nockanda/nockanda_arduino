@@ -1,0 +1,134 @@
+/*
+ 예제 188-1 사물인터넷보드(wemos d1r1)에 워터펌프를 연결했다.
+ 워터펌프는 보드가 직접 제어가 안되기에 릴레이(모스펫)를 이용해서 D3에 연결했다.
+ 플로우센서는 D4에 연결했다.
+ 사물인터넷보드가 MQTT Client로 동작하도록 구현하고 스마트폰에서 publish한 메시지를
+ 사물인터넷보드가 받아서 워터펌프를 작동시키고,
+ 사물인터넷보드가 토출량을 publish하면 스마트폰에서 정보를 받아서 디스플레이해보자!
+ 한마디로 말하면 스마트폰으로 워터펌프를 제어하고 유량을 한번 모니터링 해보자는 것이다!
+*/
+
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+
+#define pump D3 //릴레이(relay)
+#define flowsensor D4
+// Update these with values suitable for your network.
+
+const char* ssid = "~~~~";
+const char* password = "~~~~~~";
+const char* mqtt_server = "broker.mqtt-dashboard.com";
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+unsigned long lastMsg = 0;
+#define MSG_BUFFER_SIZE  (50)
+char msg[MSG_BUFFER_SIZE];
+int value = 0;
+volatile double water = 0;
+
+void setup_wifi() {
+
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  randomSeed(micros());
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+
+  //만약에 스마트폰에서 nokanda/pump라는 topic으로 0을 publish하면 워터펌프가 멈춘다
+  //nokanda/pump라는 topic으로 1을 publish하면 워터펌프가 작동한다!
+  if ((char)payload[0] == '1') {
+    //펌프가 작동=릴레이ON
+    digitalWrite(pump,HIGH);
+    char msg2[] = "작동중!";
+    client.publish("nockanda/pump2", msg2);
+  } else {
+    //펌프가 멈춤!=릴레이OFF
+    digitalWrite(pump,LOW);
+    char msg2[] = "멈춤!";
+    client.publish("nockanda/pump2", msg2);
+  }
+
+}
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      client.publish("outTopic", "hello world");
+      // ... and resubscribe
+      client.subscribe("nockanda/pump");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+
+void setup() {
+  pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
+  Serial.begin(115200);
+  pinMode(pump,OUTPUT); 
+  pinMode(flowsensor,INPUT); 
+  attachInterrupt(digitalPinToInterrupt(flowsensor), flow, FALLING);
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+}
+
+void loop() {
+
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+
+  unsigned long now = millis();
+  if (now - lastMsg > 1000) {
+    lastMsg = now;
+    ++value;
+    snprintf (msg, MSG_BUFFER_SIZE, "%.2fml", water);
+    Serial.print("Publish message: ");
+    Serial.println(msg);
+    client.publish("nockanda/flow", msg);
+  }
+}
+
+ICACHE_RAM_ATTR void flow(){
+  water += (1/5888.0)*1000; //단위mL
+}

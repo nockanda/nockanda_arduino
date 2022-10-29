@@ -1,0 +1,242 @@
+/*
+ * 예제195-1 한국환경공단의 대기질 예보 OPEN API를 이용해서
+ * 사물인터넷보드(wemos d1r1)에 시리얼모니터창에 띄워보시오!
+ */
+#include <ESP8266WiFi.h>
+
+#ifndef STASSID
+#define STASSID "~~~~~~" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "~~~~~~" //패스워드
+#endif
+
+String yourkey = "~~~~~"; //공공데이터포털 인증키
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+const char* host = "apis.data.go.kr";
+const int httpsPort = 80;
+
+typedef struct{
+  int year;
+  int month;
+  int day;
+  int hour;
+  int minute;
+  int second;
+}Nocktime;
+
+WiFiClient client;
+void setup() {
+  Serial.begin(115200);
+  Serial.println();
+  Serial.print("connecting to ");
+  Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  
+  Serial.print("connecting to ");
+  Serial.println(host);
+
+//2020-12-24 : YYYY-MM-DD
+  Nocktime nt;
+  String mydate;
+  if(get_nocktime(nt)){
+    //정상적으로 값을 받은경우
+    mydate += String(nt.year);
+    mydate += "-";
+    if(nt.month < 10) mydate += "0" + String(nt.month);
+    else mydate += String(nt.month);
+    mydate += "-";
+    if(nt.day < 10) mydate += "0" + String(nt.day);
+    else mydate += String(nt.day);
+  }else{
+    //에러가난경우
+    return;
+  }
+
+  //클라이언트와 서버와 커넥트
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("connection failed");
+    return;
+  }
+
+  
+
+
+  String url = "/B552584/ArpltnInforInqireSvc/getMinuDustFrcstDspth?serviceKey="+yourkey+"&returnType=xml&numOfRows=100&pageNo=1&searchDate="+mydate+"&InformCode=PM10";
+
+  //사물인터넷보드에서 RSS서버로 보내는 요청!
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long t = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - t > 10000) break;
+  }
+
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+
+  String p1s = "<informCause>"; //ic
+  String p1e = "</informCause>";
+  String p2s = "<informGrade>"; //ig
+  String p2e = "</informGrade>";
+  String p3s = "<dataTime>";   //dt
+  String p3e = "</dataTime>";
+  bool is_comp = false;
+  while(client.available()){
+    String data = client.readStringUntil('\n'); //readline();
+    if(is_comp) continue;
+    int s1 = data.indexOf(p1s);
+    if(s1 != -1){
+       //검색OK!
+       int e1 = data.indexOf(p1e);
+       String ic = data.substring(s1+p1s.length(),e1);
+       Serial.println(ic);
+    }
+
+    int s2 = data.indexOf(p2s);
+    if(s2 != -1){
+       //검색OK!
+       int e2 = data.indexOf(p2e);
+       String ig = data.substring(s2+p2s.length(),e2);
+       Serial.println(ig);
+    }
+
+    int s3 = data.indexOf(p3s);
+    if(s3 != -1){
+       //검색OK!
+       int e3 = data.indexOf(p3e);
+       String dt = data.substring(s3+p3s.length(),e3);
+       Serial.println(dt);
+       is_comp = true;
+    }
+  }
+  Serial.println("DONE");
+}
+
+void loop() {
+}
+
+bool get_nocktime(Nocktime &t){
+  //--------------------------------------------
+  //클라이언트와 서버와 커넥트
+  if (!client.connect("google.com", 80)) {
+    Serial.println("connection failed");
+    return false;
+  }
+  client.print("HEAD / HTTP/1.1\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long timeout = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - timeout > 10000) break;
+  }
+
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+
+  bool iscollected = false;
+  while(client.available()){
+    String data = client.readStringUntil('\n'); //readline();
+    //Date: Thu, 17 Dec 2020 10:26:44 GMT
+    //01234567890123456789012345678901234
+    
+    if(data.indexOf("Date: ") != -1){
+      //검색결과 date:라는 패턴이 존재하더라~
+      //조건문안에 들어온 시점에 data안에는 우리가 원하는 값이 들어있다!
+      iscollected = true;
+      //Serial.println(data);
+      int day = data.substring(11,13).toInt(); //day
+      int month = 0;
+      //Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+      String mo = data.substring(14,17);
+      if(mo == "Jan"){
+        month = 1;
+      }else if(mo == "Feb"){
+        month = 2;
+      }else if(mo == "Mar"){
+        month = 3;
+      }else if(mo == "Apr"){
+        month = 4;
+      }else if(mo == "May"){
+        month = 5;
+      }else if(mo == "Jun"){
+        month = 6;
+      }else if(mo == "Jul"){
+        month = 7;
+      }else if(mo == "Aug"){
+        month = 8;
+      }else if(mo == "Sep"){
+        month = 9;
+      }else if(mo == "Oct"){
+        month = 10;
+      }else if(mo == "Nov"){
+        month = 11;
+      }else if(mo == "Dec"){
+        month = 12;
+      }
+      int year = data.substring(18,22).toInt(); //year
+      int hour = data.substring(23,25).toInt(); //hour
+      int minute = data.substring(26,28).toInt(); //minute
+      int second = data.substring(29,31).toInt(); //second
+
+      int dayofmonth[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+      //년도가 4의 배수일때마다 2월이 29일까지다!
+      //year % 4 == 0
+      hour += 9;
+      if(hour > 24){
+        //20 + 9 = 29 = 29-24 = 5
+        hour -= 24;
+        day++;
+        int yoondal = 0;
+        if(year % 4 == 0 && month == 2) yoondal = 1;
+        
+        if(day > dayofmonth[month-1]+yoondal){
+          day -= dayofmonth[month-1]+yoondal;
+          month++;
+          if(month > 12){
+            month -= 12;
+            year++;
+          }
+        }
+      }
+      /*
+      Serial.println(year);
+      Serial.println(month);
+      Serial.println(day);
+      Serial.println(hour);
+      Serial.println(minute);
+      Serial.println(second);
+      */
+      t.year = year;
+      t.month = month;
+      t.day = day;
+      t.hour = hour;
+      t.minute = minute;
+      t.second = second;
+    }
+  }  
+
+  return iscollected;
+}

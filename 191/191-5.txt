@@ -1,0 +1,30 @@
+/*
+ * 191-5 아두이노에 워터펌프를 장착했다!
+ * 워터펌프를 직접 아두이노에 연결할 수 없기에 모스펫(mosfet)을 D3에 연결하고 모스펫에 워터펌프를 연결했다!
+ * 버튼을 누르면 워터펌프를 작동시켜보자!
+ * 그러나 수위센서에 의해서 최저수위가 감지되면 워터펌프의 작동을 멈추도록 하시오!
+ */
+
+#define button 4
+#define pump 3
+#define wlsensor 2
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(button,INPUT_PULLUP);
+  pinMode(pump,OUTPUT);
+  pinMode(wlsensor,INPUT);
+  digitalWrite(pump,LOW);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(wlsensor) == LOW){
+    //물이 있다가 없어진것!
+    digitalWrite(pump,LOW);
+  }
+  if(digitalRead(button) == LOW){
+    //버튼이 눌려진것! 왜냐! 풀업방식이라고 위에서 했기 때문!
+    digitalWrite(pump,HIGH);
+  }
+}

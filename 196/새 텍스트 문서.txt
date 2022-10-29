@@ -1,0 +1,45 @@
+[아두이노#196] esp8266wifi (OPENAPI)보건복지부 코로나 감염현황 LCD에 한글로 띄워보기!(wemos d1r1/사물인터넷(iot)시리즈#36/녹칸다/포로리야공)
+
+esp8266wifi (OPENAPI)보건복지부 코로나 감염현황 LCD에 한글로 띄워보기!(wemos d1r1/사물인터넷(iot)시리즈#36/녹칸다/포로리야공대가자)
+-녹칸다의 openapi 프로젝트이다!
+-국가공공포털에 등록된 보건복지부 코로나 감염현황 api를 이용해서 사물인터넷보드(wemos d1r1)로 가져와보자!
+-open api를 이용하기 위해서는 private key가 필요한데 어떻게 발급하는지 살펴보자!(api 케바케로 등록)
+-코로나 감염현황 api는 전반적인 현황과 지역별 현황, 성별현황 등등 다양한 카테고리가 있다!
+-이중에 의미가 있어보이는 정보를 선택해보자!
+
+-응답받는 데이터에는 아래와 같은 정보가 포함되어있다!
+-확진자 수,격리해제 수,검사진행 수,사망자 수,치료중 환자 수,결과 음성 수,누적 검사 수,누적 검사 완료 수,누적 환진률
+-일단 시리얼 모니터에 결과를 출력해보자!
+-2.4인치 LCD에 결과를 출력해보자!
+-2.4인치 LCD에 결과를 한글로 출력해보자!
+
+ 
+
+(쿼리샘플) http://openapi.data.go.kr/openapi/service/rest/Covid19/getCovid19InfStateJson?serviceKey=서비스키
+
+ 
+
+예제196-1 보건복지부 코로나 감염현황 openapi를 이용해서 필요한 정보를 모두 사물인터넷보드(wemos d1r1)의 시리얼모니터에 출력해보자!
+
+
+196-1.txt
+0.00MB
+
+예제196-2 보건복지부 코로나 감염현황 openapi를 이용해서 LCD(ILI9341)에 한글로 결과를 띄워보자!
+
+
+196-2.txt
+0.01MB
+ 
+
+관련라이브러리(Adafruit-GFX-Library)
+
+https://github.com/adafruit/Adafruit-GFX-Library
+
+관련라이브러리(Adafruit_ILI9341)
+
+https://github.com/adafruit/Adafruit_ILI9341
+
+레퍼런스코드(LCD에 한글띄우기/#170)
+
+https://bota.tistory.com/1408

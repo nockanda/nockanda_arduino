@@ -1,0 +1,36 @@
+/*
+ * 189-5 아두이노에 온습도센서(DHT-11)을 D2에 연결했다!
+ * 온도와 습도값을 LCD화면에 적절하게 띄워라!
+ */
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+#include "DHT.h"
+
+#define DHTPIN 2
+#define DHTTYPE DHT11
+
+LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup()
+{
+  lcd.init();                      // initialize the lcd 
+  lcd.backlight();
+  Serial.begin(9600);
+  dht.begin();
+}
+
+void loop()
+{
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  lcd.clear();
+  lcd.print("Temp. = ");
+  lcd.setCursor(8,0);
+  lcd.print(t);
+  lcd.setCursor(0,1);
+  lcd.print("Humi. = ");
+  lcd.setCursor(8,1);
+  lcd.print(h);
+  delay(1000);
+}

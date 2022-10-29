@@ -1,0 +1,26 @@
+/*
+ * 예제 191-2 아두이노에 LED를 D3에 연결한다음 수위센서가 감지되면 LED를 켜고
+ * 감지가 안되면 LED를 끄시오!
+ */
+
+#define wlsensor 2
+#define LED 3
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(LED,OUTPUT);
+  pinMode(wlsensor,INPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(wlsensor) == HIGH){
+    //감지
+    digitalWrite(LED,HIGH);
+  }else{
+    digitalWrite(LED,LOW);
+    //감지안됨
+  }
+  delay(100);
+}

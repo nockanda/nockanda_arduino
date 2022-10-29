@@ -1,0 +1,40 @@
+/*
+ * 189-2 유저가 임의의 text를 전송하게되면 1602lcd화면을 최대로 활용해서 디스플레이해보자!
+ * 예를들어 16개 문자가 넘어가게 되면 자동으로 개행을 시키도록 해라!
+ */
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+
+void setup()
+{
+  lcd.init();                      // initialize the lcd 
+  lcd.backlight();
+  Serial.begin(9600);
+
+  
+}
+
+void loop()
+{
+  // when characters arrive over the serial port...
+  if (Serial.available()) {
+    lcd.clear();
+
+    String text = Serial.readStringUntil(0x0d); //readline();
+    //0123456789012345//67890
+    //text.lenght() => 
+    //text.substring(0,16)
+    if(text.length() > 16){
+      //0,0부터 시작~~
+      lcd.print(text.substring(0,16));
+
+      //0,1부터 시작~~
+      lcd.setCursor(0,1);
+      lcd.print(text.substring(16,text.length()));
+    }else{
+      lcd.print(text);
+    }
+  }
+}

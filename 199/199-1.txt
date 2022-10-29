@@ -1,0 +1,120 @@
+/*
+  예제 199-1 사물인터넷보드(wemos d1r1)에 보건복지부에서 제공하는 openapi 서비스를 이용해서
+  시도별 코로나 확진자수 데이터중에 전체확진자수와 오늘확진자수만 추려내서
+  그 정보를 일단 시리얼 모니터에 출력해보자!
+ */
+#include <ESP8266WiFi.h>
+#include "nockanda_key.h" //nockanda_key
+
+#ifndef STASSID
+#define STASSID "~~~" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "~~~" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+const char* host = "openapi.data.go.kr";
+const int httpsPort = 80;
+String yourkey = "~~~";
+
+WiFiClient client;
+void setup() {
+  Serial.begin(115200);
+  Serial.println();
+  Serial.print("connecting to ");
+  Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  
+  Serial.print("connecting to ");
+  Serial.println(host);
+
+  //클라이언트와 서버와 커넥트
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("connection failed");
+    return;
+  }
+
+  String url = "/openapi/service/rest/Covid19/getCovid19SidoInfStateJson?serviceKey="+yourkey+"&pageNo=1&numOfRows=20";
+
+  //사물인터넷보드에서 RSS서버로 보내는 요청!
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long t = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - t > 10000) break;
+  }
+
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+
+//1<defCnt>~~~</defCnt> :전체확진자수
+//2<gubun>~~~</gubun>   :시도구분자
+//3<incDec>~~~~</incDec>:오늘 확진자수
+
+  String p1s = "<defCnt>";
+  String p1e = "</defCnt>";
+  String p2s = "<gubun>";
+  String p2e = "</gubun>";
+  String p3s = "<incDec>";
+  String p3e = "</incDec>";
+
+  int pos = 0;
+  while(client.available()){
+    String data = client.readStringUntil('\n'); //readline();
+    if(data.indexOf("<?xml") != -1){
+      //찾았더니 검색이 되더라~ = 우리가 찾는 데이터
+      for(int i = 0;i<19;i++){
+        String text; //지역명:전체확진자수(오늘확진자수)
+         int s = data.indexOf(p1s, pos);
+         if(s != -1){
+           int e = data.indexOf(p1e, pos);
+           //Serial.println(data.substring(s+p1s.length(),e));
+           pos = e+p1e.length();
+           text+=data.substring(s+p1s.length(),e);//전체확진자수 줍줍
+         }
+
+         s = data.indexOf(p2s, pos);
+         if(s != -1){
+           int e = data.indexOf(p2e, pos);
+           //Serial.println(data.substring(s+p2s.length(),e));
+           pos = e+p2e.length();
+           text = data.substring(s+p2s.length(),e) +":"+ text; //지역명
+         }
+
+         s = data.indexOf(p3s, pos);
+         if(s != -1){
+           int e = data.indexOf(p3e, pos);
+           //Serial.println(data.substring(s+p3s.length(),e));
+           pos = e+p3e.length();
+           text+="("+ data.substring(s+p3s.length(),e)+")";
+
+           Serial.println(text);
+         }
+      }
+      //Serial.println(data);
+    }
+    
+  }
+  Serial.println("DONE");
+}
+
+void loop() {
+}

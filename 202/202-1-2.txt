@@ -1,0 +1,139 @@
+/*
+ 예제 202-1-2 (보드2번용코드) 사물인터넷보드(wemos d1r1)에
+ 적색 LED 1개를 D3에 연결했고, 녹색 LED 1개를 D4에 연결했다!
+ MQTT를 이용해서 개별/일괄 제어 가능하도록 구현하라!
+*/
+
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+
+#define LED1 D3 //적색
+#define LED2 D4 //녹색
+// Update these with values suitable for your network.
+
+const char* ssid = "~~~~~~";
+const char* password = "~~~~~~~";
+const char* mqtt_server = "broker.mqtt-dashboard.com";
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+unsigned long lastMsg = 0;
+#define MSG_BUFFER_SIZE  (50)
+char msg[MSG_BUFFER_SIZE];
+int value = 0;
+
+void setup_wifi() {
+
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  randomSeed(micros());
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+  String mytopic = topic;
+
+  //nockanda/device1/led1
+  //nockanda/device1/led2
+  //nockanda/all/led1
+  //nockanda/all/led2
+  //payload로 0을 수신하면 LED OFF 1을 수신하면 LED ON
+  if(mytopic == "nockanda/device2/led1" || mytopic == "nockanda/all/led1"){
+    //적색 LED를 개별제어하기위한 topic
+    if((char)payload[0] == '0'){
+      //LED OFF
+      digitalWrite(LED1,LOW);
+    }else if((char)payload[0] == '1'){
+      //LED ON
+      digitalWrite(LED1,HIGH);
+    }
+  }else if(mytopic == "nockanda/device2/led2" || mytopic == "nockanda/all/led2"){
+    //녹색 LED를 개별제어하기위한 topic
+    if((char)payload[0] == '0'){
+      //LED OFF
+      digitalWrite(LED2,LOW);
+    }else if((char)payload[0] == '1'){
+      //LED ON
+      digitalWrite(LED2,HIGH);
+    }
+  }
+
+
+}
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      client.publish("nockanda/device3", "hello world");
+      // ... and resubscribe
+      client.subscribe("nockanda/device2/led1"); //적색LED 개별제어용
+      client.subscribe("nockanda/device2/led2"); //녹색LED 개별제어용
+      client.subscribe("nockanda/all/led1"); //적색LED 일괄제어용
+      client.subscribe("nockanda/all/led2"); //녹색LED 일괄제어용
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(LED1,OUTPUT);
+  pinMode(LED2,OUTPUT);
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+}
+
+void loop() {
+
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+
+  unsigned long now = millis();
+  if (now - lastMsg > 2000) {
+    lastMsg = now;
+    ++value;
+    snprintf (msg, MSG_BUFFER_SIZE, "DEVICE2 #%ld", value);
+    Serial.print("Publish message: ");
+    Serial.println(msg);
+    client.publish("nockanda/device2", msg);
+  }
+}

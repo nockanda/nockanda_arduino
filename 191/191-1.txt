@@ -1,0 +1,19 @@
+/*
+ * 예제 191-1 비접촉수위센서를 D2에 연결했다!
+ * 기본적인 수위센서의 디지털값을 읽어보는 간단한 코드이다!
+ * 녹칸다가 테스트해보니 물이 감지되면 HIGH, 감지가 안되면 LOW가 출력되었다!
+ */
+
+#define wlsensor 2
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(wlsensor,INPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  Serial.println(digitalRead(wlsensor));
+  delay(100);
+}

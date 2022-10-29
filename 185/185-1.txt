@@ -1,0 +1,35 @@
+/*
+ * 예제 185-1 사물인터넷보드(wemos d1r1)에 초음파센서(HC-SR04)를 연결했다!
+ * trig핀을 D3에 연결했고 Echo핀을 D4에 연결했다!
+ * 초음파센서를 이용해서 거리를 계산해보라!
+ * 초음파센서로 거리측정을 위한 함수 pulsein에서 timeout을 10ms로 지정하라!
+ */
+
+#define trig D3
+#define echo D4
+
+//초음파 : 29us에 1cm를 이동
+
+//delayMicroseconds(us)
+//duration = pulseIn(pin, HIGH);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(trig,OUTPUT); //trig 발사
+  pinMode(echo,INPUT); //echo 받기
+}
+float distance = 0;
+void loop() {
+  // put your main code here, to run repeatedly:
+  digitalWrite(trig,LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig,LOW);
+  distance = (pulseIn(echo, HIGH, 10000)/29.0)/2; //cm
+  if(distance <= 0.5) return;
+  Serial.print(distance);
+  Serial.println("CM");
+  delay(100);
+}

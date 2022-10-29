@@ -1,0 +1,38 @@
+/*
+ * 예제190-5 적외선리모컨수신기를 D3에 연결했다!
+ * 적외선 리모컨을 이용해서 220V 전구를 제어해보자!
+ * 녹칸다가 가진 리모컨의 +버튼을 누르면 전구가 켜지고, -버튼을 누르면 전구가 꺼지도록 한다!
+ * 그러나 리모컨이 서로달라서 key값이 서로 다를수 있기에 각자 확인후 진행!
+ * 녹칸다의 경우 아래와 같음
+ * FFA857(+):ON
+ * FFE01F(-):OFF
+ */
+#include <IRremote.h>
+
+#define relay 2
+int RECV_PIN = 3;
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 PC랑 시리얼통신 할거다!
+  pinMode(relay,OUTPUT);
+  Serial.println("Enabling IRin");
+  irrecv.enableIRIn(); // Start the receiver
+  Serial.println("Enabled IRin");
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (irrecv.decode(&results)) {
+    //FFA857(+):ON
+    //FFE01F(-):OFF
+    if(results.value == 0xFFA857){
+      digitalWrite(relay,HIGH);
+    }else if(results.value == 0xFFE01F){
+      digitalWrite(relay,LOW);
+    }
+    irrecv.resume(); // Receive the next value
+  }
+  delay(100);
+}

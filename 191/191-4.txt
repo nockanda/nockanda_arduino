@@ -1,0 +1,37 @@
+/*
+ * 예제 191-4 1602LCD를 I2C로 사용할 수 있는 모듈을 장착해서
+ * 수위센서의 작동상태를 text로 디스플레이 해보라!
+ */
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+#define wlsensor 2
+#define LED 3
+#define buzzer 4
+
+LiquidCrystal_I2C lcd(0x27,16,2); //16*2
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(LED,OUTPUT);
+  pinMode(wlsensor,INPUT);
+  lcd.init(); 
+  lcd.backlight();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  lcd.clear();
+  if(digitalRead(wlsensor) == HIGH){
+    //감지
+    digitalWrite(LED,HIGH);
+    tone(buzzer, 1175);
+    lcd.print("WATER DETECTED!!");
+  }else{
+    digitalWrite(LED,LOW);
+    noTone(buzzer);
+    //감지안됨
+  }
+  delay(100);
+}

@@ -1,0 +1,18 @@
+/*
+ * 예제190-1 5초간격으로 220V전구를 켜고 끄시오!
+ */
+
+#define relay 2
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(relay,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  digitalWrite(relay,HIGH);
+  delay(5000);
+  digitalWrite(relay,LOW);
+  delay(5000);
+}

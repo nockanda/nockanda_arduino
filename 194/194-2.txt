@@ -1,0 +1,160 @@
+/*
+ 예제 194-2 사물인터넷보드에 아래와 같은 것들이 연결되었다.
+ 워터펌프(릴레이) : D3
+ 플로우센서 : D4
+ 비접촉수위센서 : D5
+ 유저의 스마트폰어플리케이션에서 MQTT로 날린 메시지로 워터펌프를 작동시킨다!
+ 이때 토픽은 nockanda/pump이다!
+ 워터펌프가 작동되면 토출되는 물의양을 측정하는데 nockanda/flow로 publish한다!
+ 그러므로 스마트폰앱은 nocaknda/flow라는 topic을 subscribe하면 된다!
+ 그리고 워터펌프의 작동상태를 한글로 publish하는데 topic은 nockanda/pump2이다!
+ 이번예제에 추가될 내용은 워터펌프가 작동되더라도 용기의 최저수위에 도달하면
+ 워터펌프가 더이상 동작하지 않도록 하고 수위센서의 상태를 nockanda/wl로 publish하라!
+*/
+
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+
+#define pump D3 //릴레이(relay)
+#define flowsensor D4
+#define wl D5
+// Update these with values suitable for your network.
+
+const char* ssid = "~~~~";
+const char* password = "~~~~~";
+const char* mqtt_server = "broker.mqtt-dashboard.com";
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+unsigned long lastMsg = 0;
+#define MSG_BUFFER_SIZE  (50)
+char msg[MSG_BUFFER_SIZE];
+int value = 0;
+volatile double water = 0;
+
+void setup_wifi() {
+
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  randomSeed(micros());
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+
+  //만약에 스마트폰에서 nokanda/pump라는 topic으로 0을 publish하면 워터펌프가 멈춘다
+  //nokanda/pump라는 topic으로 1을 publish하면 워터펌프가 작동한다!
+  if ((char)payload[0] == '1') {
+    //펌프가 작동=릴레이ON
+    digitalWrite(pump,HIGH);
+    char msg2[] = "작동중!";
+    client.publish("nockanda/pump2", msg2);
+  } else {
+    //펌프가 멈춤!=릴레이OFF
+    digitalWrite(pump,LOW);
+    char msg2[] = "멈춤!";
+    client.publish("nockanda/pump2", msg2);
+  }
+
+}
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      client.publish("outTopic", "hello world");
+      // ... and resubscribe
+      client.subscribe("nockanda/pump");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+
+void setup() {
+  pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
+  Serial.begin(115200);
+  pinMode(pump,OUTPUT); 
+  pinMode(flowsensor,INPUT); 
+  pinMode(wl,INPUT);
+  attachInterrupt(digitalPinToInterrupt(flowsensor), flow, FALLING);
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+}
+
+void loop() {
+
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+
+  if(digitalRead(wl) == HIGH){
+    //물이 있는 상태 = 물이충분한상태
+    //아무일도 일어날필요가 없음!
+  }else{
+    //물이 없는상태 = 펌프가 멈춰야하는 상태
+    digitalWrite(pump,LOW);
+  }
+
+  unsigned long now = millis();
+  if (now - lastMsg > 1000) {
+    lastMsg = now;
+    ++value;
+    snprintf (msg, MSG_BUFFER_SIZE, "%.2fml", water);
+    Serial.print("Publish message: ");
+    Serial.println(msg);
+    client.publish("nockanda/flow", msg);
+    if(digitalRead(wl) == HIGH){
+      char wl_msg[] = "넉넉함!";
+      client.publish("nockanda/wl", wl_msg);
+    }else{
+      char wl_msg[] = "물부족!";
+      client.publish("nockanda/wl", wl_msg);
+      char msg2[] = "멈춤!";
+      client.publish("nockanda/pump2", msg2);
+      char msg3[] = "0";
+      client.publish("nockanda/pump", msg3);
+    }
+    
+  }
+}
+
+ICACHE_RAM_ATTR void flow(){
+  water += (1/5888.0)*1000; //단위mL
+}

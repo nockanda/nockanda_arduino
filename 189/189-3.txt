@@ -1,0 +1,31 @@
+/*
+ * 189-3 아두이노에 마그네틱스위치(도어센서)를 D2에 연결했다!
+ * 도어센서로 문이 열리고 닫히고를 판별해서 LCD 화면에 띄워라!
+ */
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+#define doorsensor 2
+//붙어있으면(=문이닫힌거) 0, 떨어져있으면(문이열린거) 1
+
+LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+
+void setup()
+{
+  lcd.init();                      // initialize the lcd 
+  lcd.backlight();
+  Serial.begin(9600);
+  pinMode(doorsensor,INPUT_PULLUP);
+}
+
+void loop()
+{
+  lcd.clear();
+  if(digitalRead(doorsensor) == 0){
+    //close
+    lcd.print("Door is closed!!");
+  }else{
+    //open
+    lcd.print("Door is opened!!");
+  }
+  delay(1000);
+}
