@@ -1,0 +1,27 @@
+/*
+  238-5-1 HC06(마스터코드)
+ */
+#include <SoftwareSerial.h>
+
+#define button 4
+
+SoftwareSerial HC06(2, 3); // RX, TX
+
+void setup() {
+  Serial.begin(9600); //PC-아두이노간
+  HC06.begin(9600); //아두이노-블루투스모듈
+  pinMode(button,INPUT_PULLUP);
+}
+
+void loop() { // run over and over
+  if(digitalRead(button) == LOW){
+    //버튼이 눌러졌다~
+    Serial.println("버튼이 눌러졌다!");
+    HC06.write('1');
+  }else{
+    //버튼이 안눌러졌다~
+    Serial.println("버튼이 안눌러졌다!");
+    HC06.write('0');
+  }
+  delay(200);
+}

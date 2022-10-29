@@ -1,0 +1,114 @@
+/*
+ 예제 236-2 아두이노에 심박수를 측정할 수 있는 맥파센서(MAX30102)를 달았다!
+ 맥파센서에서 측정되는 raw data를 2.4인치 lcd화면(SPFD5408)에 꺾은선 그래프로 그려보자!
+ */
+
+#include <SPFD5408_Adafruit_GFX.h>    
+#include <SPFD5408_Adafruit_TFTLCD.h> 
+#include <SPFD5408_TouchScreen.h>
+#include <Wire.h>
+#include "MAX30105.h"
+
+#define LCD_CS A3 
+#define LCD_CD A2
+#define LCD_WR A1
+#define LCD_RD A0 
+
+#define LCD_RESET 10 
+
+#define  BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+MAX30105 particleSensor;
+
+int x_pos = 0;
+int y_pos = 0;
+int pre_x_pos = 0;
+int pre_y_pos = 0;
+
+//사각형의 시작점(x,y) 너비(width,height)
+int graph_x = 30;
+int graph_y = 30;
+int graph_w = 290;
+int graph_h = 210;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  tft.reset();
+  tft.begin(0x9341); // SDFP5408
+  //0,1,2,3
+  tft.setRotation(3);
+  tft.fillScreen(BLACK);
+  
+  if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) //Use default I2C port, 400kHz speed
+  {
+    Serial.println("MAX30105 was not found. Please check wiring/power. ");
+    while (1);
+  }
+
+  //Setup to sense a nice looking saw tooth on the plotter
+  byte ledBrightness = 0x1F; //Options: 0=Off to 255=50mA
+  byte sampleAverage = 8; //Options: 1, 2, 4, 8, 16, 32
+  byte ledMode = 3; //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
+  int sampleRate = 100; //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
+  int pulseWidth = 411; //Options: 69, 118, 215, 411
+  int adcRange = 4096; //Options: 2048, 4096, 8192, 16384
+
+  particleSensor.setup(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange); //Configure sensor with these settings
+
+
+
+  x_pos = graph_x;
+
+  //가이드라인
+  tft.drawLine(0,graph_y-1,320,graph_y-1,GREEN);
+  tft.drawLine(graph_x-1,0,graph_x-1,240,GREEN);
+  tft.drawLine(graph_x+graph_w+3,0,graph_x+graph_w+3,240,GREEN);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+ 
+  //이전에 그려졌던 부분을 지우는 부분
+  tft.fillRect(x_pos,graph_y,2,graph_h,BLACK);
+  tft.drawRect(x_pos,graph_y,2,graph_h,BLACK);
+  tft.drawLine(x_pos+1,graph_y,x_pos+1,graph_y+graph_h-1,RED);
+
+  //우리가 필요한 데이터가 11만~12만 사이에 있다!
+  //10개정도의 값을 평균을 낸다음에 평균을 baseline으로 해서
+  //일정한 폭을 가지는 그래프를 그려보자!
+  //particleSensor.getIR()
+
+  unsigned long sensor = particleSensor.getIR();
+
+  if(sensor < 100000) sensor = 100000;
+  if(sensor > 110000) sensor = 110000;
+  //110000~120000
+  y_pos = map(sensor,100000,110000,0,graph_h);
+  //0~1024
+
+  //그래프 드로잉 하는 부분
+  if(x_pos>graph_x)
+  tft.drawLine(pre_x_pos, graph_h-pre_y_pos+graph_y, x_pos, graph_h-y_pos+graph_y, GREEN);
+  
+
+  //할게 다 끝난 부분
+  pre_x_pos = x_pos;
+  pre_y_pos = y_pos;
+  if(x_pos > (graph_x+graph_w)-1){
+    //LCD화면 좌표의 끝지점
+    tft.fillRect(x_pos,graph_y,2,graph_h,BLACK);
+    tft.drawRect(x_pos,graph_y,2,graph_h,BLACK);
+     x_pos = graph_x;
+  }else{
+     x_pos++;
+  }
+}

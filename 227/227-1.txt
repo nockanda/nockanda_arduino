@@ -1,0 +1,53 @@
+/*
+  예제 227-1 아두이노와 사물인터넷보드에서 한글,특수문자,아스키코드를 분리해내는 기본 원리를 담은 코드!
+ */
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+
+  String text = "＃＆＊＠§※☆★○●◎◇◆□■△▲▽▼→←↑↓↔〓◁◀▷▶♤♠♡♥♧♣⊙◈▣◐◑▒▤▥▨▧▦▩♨☏☎☜☞¶†‡↕↗↙↖↘♭♩♪♬㉿㈜№㏇™㏂㏘℡®ªº㉾";
+
+  for(int i = 0;i<text.length();){
+    if((text[i] &0xFF) >128){
+      //한글
+      if((text[i]&0xF0) == 0xC0){
+        //2바이트특수문자
+        Serial.write(text[i]);
+        Serial.write(text[i+1]);
+        Serial.print("=");
+        Serial.print(text[i],HEX);
+        Serial.println(text[i+1],HEX);
+        i+=2;
+      }else{
+        Serial.write(text[i]);
+        Serial.write(text[i+1]);
+        Serial.write(text[i+2]);
+        Serial.print("=");
+        Serial.print(text[i],HEX);
+        Serial.print(text[i+1],HEX);
+        Serial.println(text[i+2],HEX);
+        i+=3;
+      }
+    }else{
+      //아스키코드
+      Serial.print(text[i]);
+      Serial.print("=");
+      Serial.println(text[i],HEX);
+      i++;
+    }
+    
+  }
+
+
+  //⸮=FFFFFFEA
+  //⸮=FFFFFFB0
+  //⸮=FFFFFF80
+  
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}

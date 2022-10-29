@@ -1,0 +1,50 @@
+[아두이노#223] RS485/MAX485 통신모듈(10편) 1:N통신으로 RFID리더(RC522) 지문인식모듈(FPM10A) 제어해보기(녹칸다/포로리야공대가자)
+
+RS485/MAX485 통신모듈(10편) 1:N통신으로 RFID리더(RC522) 지문인식모듈(FPM10A) 제어해보기(녹칸다/포로리야공대가자)
+-아두이노 3대와 RS482통신모듈 3대를 준비해서 각각 연결을 하고, 통신선(A,B)를 병렬로 연결해보자!
+-녹칸다가 이전에 구현했던 RS485 기본송수신 코드를 활용해보자!
+-RS485모듈이 달린 아두이노 3대를 각각 A,B,C라고 해보자!
+
+-1편에서는 RFID리더(RC522)를 이용한 테마이다!
+-A에는 RFID리더(RC522)를 연결해보자!
+-B에는 1602LCD를 연결해서 A의 태깅 결과를 출력해보자!
+-C에는 녹색LED 1개와 적색LED 1개를 연결해보자!
+-(시나리오) A에서 RFID가 태깅되면 B에 태그의 ID가 출력된다! RFID태그의 권한정보가 C에게 있고 판정결과가 LED로 표현된다!(예를 들면 허가된 사용자면 녹색LED ON)
+
+
+223-1-1.txt
+0.00MB
+223-1-2.txt
+0.00MB
+223-1-3.txt
+0.00MB
+
+-2편에서는 지문인식모듈(FPM10A)을 이용한 테마이다!
+-A에는 지문인식모듈(FPM10A)을 연결해보자!
+-B에는 1602LCD를 연결해서 A의 지문ID 결과를 출력해보자!
+-C에는 녹색LED 1개와 적색LED 1개를 연결해보자!
+-(시나리오) A에서 지문이 인식되면 지문의 ID를 B의 LCD화면에 출력해보자! 지문의 권한정보는 C에 저장되어있고 판단결과를 LED로 표현해보자!
+-통신을 복잡하게 했을때 어떤 상황이 벌어질까 궁금하구나!
+
+
+223-2-1.txt
+0.00MB
+223-2-2.txt
+0.00MB
+223-2-3.txt
+0.00MB
+관련라이브러리(finger print)
+
+https://github.com/adafruit/Adafruit-Fingerprint-Sensor-Library
+
+필요라이브러리(RC522)
+
+https://github.com/miguelbalboa/rfid
+
+관련라이브러리(LiquidCrystal_I2C)
+
+https://github.com/johnrickman/LiquidCrystal_I2C
+
+레퍼런스강의(#124)
+
+https://bota.tistory.com/1355

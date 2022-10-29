@@ -1,0 +1,26 @@
+/*
+ 예제 228-1 사물인터넷보드(wemos d1r1)에 블루투스모듈(HC06)을 연결했다!
+ TXD핀을 D3에 연결하고 RXD핀을 D2에 연결해서 soft serial을 사용하라!
+ 이번예제는 녹칸다가 향후 필요해서 미리 구현해두는 기본예제 형태로 나중에 심심이하고 채팅할때 한번 활용해볼 계획이다!
+ 스마트폰으로 블루투스를 이용해서 전송한 한글과 특수문자를 LCD화면(ILI9341)에 출력하라!
+ */
+#include <SoftwareSerial.h>
+#define TXD D3 //블루투스모듈의 TXD핀임!
+#define RXD D2 //블루투스모듈의 RXD핀임!
+
+SoftwareSerial hc06(TXD,RXD);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC-wemos d1r1간 통신
+  hc06.begin(9600); //wemos d1r1-hc06간 통신
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(hc06.available()){
+    //블루투스모듈에서 뭔가 전송한값이 있다면~
+    String text = hc06.readStringUntil(0x0d); //CR
+    Serial.println(text);
+  }
+}

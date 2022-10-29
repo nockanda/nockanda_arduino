@@ -1,0 +1,255 @@
+/*
+ 예제 224-1 사물인터넷보드(wemos d1r1)을 이용한 openapi 예제를 만들어보자!
+ 한국수자원공사(k-water)에서 제공하는 실시간 정수장별 수질정보 조회 서비스를 이용해서,
+ 관심대상이 되는 정수장의 최근 1건의 수질정보를 시리얼모니터에 출력해보자!
+ */
+#include <ESP8266WiFi.h>
+
+#ifndef STASSID
+#define STASSID "~~~~~" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "~~~~~" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+
+const char* host = "apis.data.go.kr";
+const int httpsPort = 80;
+
+typedef struct{
+  int year;
+  int month;
+  int day;
+  int hour;
+  int minute;
+  int second;
+}Nocktime;
+
+String yourkey = "~~~~~";
+String sujCode = "335";
+
+WiFiClient client;
+void setup() {
+  Serial.begin(115200);
+  Serial.println();
+  Serial.print("connecting to ");
+  Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  
+  Serial.print("connecting to ");
+  Serial.println(host);
+
+  //시간을 출력해보자!
+  //2021-01-14
+  //YYYY-MM-DD
+  
+  String date;
+  Nocktime nt;
+  if(get_nocktime(nt)){
+    //정상적으로 값을 받은경우
+    date += String(nt.year) + "-";
+    if(nt.month < 10) date += "0" + String(nt.month)+ "-";
+    else date += String(nt.month) + "-";
+
+    if(nt.day < 10) date += "0" + String(nt.day);
+    else date += String(nt.day);
+  }else{
+    //에러가난경우
+  }
+  //Serial.println(date);
+  
+  //클라이언트와 서버와 커넥트
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("connection failed");
+    return;
+  }
+
+  String url = "/B500001/rwis/waterQuality/list?serviceKey="+yourkey+"&stDt="+date+"&stTm=00&edDt="+date+"&edTm=24&sujCode="+sujCode+"&liIndDiv=1&numOfRows=1&pageNo=1";
+
+  //사물인터넷보드에서 RSS서버로 보내는 요청!
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long t = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - t > 15000) break;
+  }
+
+//<clUnit>mg/L</clUnit>
+//<clVal>0.5474</clVal>
+//<fcltyAddr>경남 양산시 상북면</fcltyAddr>
+//<fcltyMngNm>양산정수장</fcltyMngNm>
+//<fcltyMngNo>4833012382</fcltyMngNo>
+//<liIndDivName>생활정수</liIndDivName>
+//<no>19</no>
+//<occrrncDt>2021011419</occrrncDt>
+//<phUnit>pH</phUnit>
+//<phVal>6.8125</phVal>
+//<tbUnit>NTU</tbUnit>
+//<tbVal>0.0519</tbVal>
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+
+  while(client.available()){
+    String data = client.readStringUntil('\n'); //readline();
+    if(data.indexOf("<?xml") == -1) continue;
+    
+    int s = data.indexOf("<fcltyMngNm>");
+    int e = data.indexOf("</fcltyMngNm>");
+    String fcltyMngNm = data.substring(s+12,e);
+
+    s = data.indexOf("<fcltyAddr>");
+    e = data.indexOf("</fcltyAddr>");
+    String fcltyAddr = data.substring(s+11,e);
+
+    s = data.indexOf("<occrrncDt>");
+    e = data.indexOf("</occrrncDt>");
+    String occrrncDt = data.substring(s+11,e);
+
+    s = data.indexOf("<clVal>");
+    e = data.indexOf("</clVal>");
+    String clVal = data.substring(s+7,e);
+
+    s = data.indexOf("<phVal>");
+    e = data.indexOf("</phVal>");
+    String phVal = data.substring(s+7,e);
+
+    s = data.indexOf("<tbVal>");
+    e = data.indexOf("</tbVal>");
+    String tbVal = data.substring(s+7,e);
+    Serial.println("정수장명:"+fcltyMngNm);
+    Serial.println("정수장주소:"+fcltyAddr);
+    Serial.println("측정시간:"+occrrncDt);
+    Serial.print("잔류염소량:"+clVal); Serial.println("mg/L");
+    Serial.print("pH농도:"+phVal); Serial.println("pH");
+    Serial.print("탁도:"+tbVal); Serial.println("NTU");
+  }
+  Serial.println("DONE");
+}
+
+void loop() {
+}
+
+bool get_nocktime(Nocktime &t){
+  //--------------------------------------------
+  //클라이언트와 서버와 커넥트
+  if (!client.connect("google.com", 80)) {
+    Serial.println("connection failed");
+    return false;
+  }
+  client.print("HEAD / HTTP/1.1\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long timeout = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - timeout > 10000) break;
+  }
+
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+
+  bool iscollected = false;
+  while(client.available()){
+    String data = client.readStringUntil('\n'); //readline();
+    //Date: Thu, 17 Dec 2020 10:26:44 GMT
+    //01234567890123456789012345678901234
+    
+    if(data.indexOf("Date: ") != -1){
+      //검색결과 date:라는 패턴이 존재하더라~
+      //조건문안에 들어온 시점에 data안에는 우리가 원하는 값이 들어있다!
+      iscollected = true;
+      //Serial.println(data);
+      int day = data.substring(11,13).toInt(); //day
+      int month = 0;
+      //Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+      String mo = data.substring(14,17);
+      if(mo == "Jan"){
+        month = 1;
+      }else if(mo == "Feb"){
+        month = 2;
+      }else if(mo == "Mar"){
+        month = 3;
+      }else if(mo == "Apr"){
+        month = 4;
+      }else if(mo == "May"){
+        month = 5;
+      }else if(mo == "Jun"){
+        month = 6;
+      }else if(mo == "Jul"){
+        month = 7;
+      }else if(mo == "Aug"){
+        month = 8;
+      }else if(mo == "Sep"){
+        month = 9;
+      }else if(mo == "Oct"){
+        month = 10;
+      }else if(mo == "Nov"){
+        month = 11;
+      }else if(mo == "Dec"){
+        month = 12;
+      }
+      int year = data.substring(18,22).toInt(); //year
+      int hour = data.substring(23,25).toInt(); //hour
+      int minute = data.substring(26,28).toInt(); //minute
+      int second = data.substring(29,31).toInt(); //second
+
+      int dayofmonth[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+      //년도가 4의 배수일때마다 2월이 29일까지다!
+      //year % 4 == 0
+      hour += 9;
+      if(hour > 24){
+        //20 + 9 = 29 = 29-24 = 5
+        hour -= 24;
+        day++;
+        int yoondal = 0;
+        if(year % 4 == 0 && month == 2) yoondal = 1;
+        
+        if(day > dayofmonth[month-1]+yoondal){
+          day -= dayofmonth[month-1]+yoondal;
+          month++;
+          if(month > 12){
+            month -= 12;
+            year++;
+          }
+        }
+      }
+      /*
+      Serial.println(year);
+      Serial.println(month);
+      Serial.println(day);
+      Serial.println(hour);
+      Serial.println(minute);
+      Serial.println(second);
+      */
+      t.year = year;
+      t.month = month;
+      t.day = day;
+      t.hour = hour;
+      t.minute = minute;
+      t.second = second;
+    }
+  }  
+
+  return iscollected;
+}

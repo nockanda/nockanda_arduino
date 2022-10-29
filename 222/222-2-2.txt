@@ -1,0 +1,67 @@
+/*
+ 예제 222-2-2 (B아두이노용코드/슬레이브1)
+ 비접촉 적외센 온도센서(MLX90614)가 i2c통신핀에 연결되었다!
+ SDA를 A4에 SCL을 A5에 연결했다!
+ A아두이노에서 요청이 들어오면 온도값을 반환하라!
+ */
+
+#include <SoftwareSerial.h>
+#include <Wire.h>
+#include <Adafruit_MLX90614.h>
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+SoftwareSerial rs485(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+  mlx.begin();
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(rs485.available()){
+    //485모듈로 들어오는 값이 존재한다면
+    byte recv[10];
+    rs485.readBytes(recv,10);
+    if(recv[0] != slave1) return; //쌩~
+
+    
+    for(int i =0;i<10;i++){
+      Serial.print(recv[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println(); 
+    
+    
+    
+    byte data[10] = {0};
+    data[0] = recv[0]; //슬레이브ID
+    data[1] = recv[1]; //커맨드ID
+
+    //float type
+    float sensor = mlx.readObjectTempC();
+    int sensor2 = (int)(sensor*100);
+    data[2] = sensor2/256;
+    data[3] = sensor2%256;
+    Serial.println(sensor);
+    Serial.println(sensor2);
+    
+    for(int i =0;i<10;i++){
+      Serial.print(data[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println(); 
+    
+    digitalWrite(modepin,sendmode);
+    rs485.write(data,10);
+    digitalWrite(modepin,readmode);
+  }
+}

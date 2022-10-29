@@ -1,0 +1,90 @@
+/*
+ 예제 223-2-3 (C용 아두이노코드/슬레이브2)
+ 아두이노에 적색LED가 D4에 연결되고 녹색LED가 D5에 연결되었다!
+ A아두이노에서 전송받은 지문의 ID값이 등록된 ID면 녹색LED, 그렇지 않으면 적색 LED를 켜시오!
+ 일단은 녹칸다의 오른쪽손지문이 1~5까지고 왼손지문이 6~10까지인데,
+ 오른손이 권한이 있는쪽 왼손이 없는쪽으로 활용해보기로함!
+ */
+
+#include <SoftwareSerial.h>
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+
+#define led1 4
+#define led2 5
+
+ 
+ 
+byte auth[5] = {1,2,3,4,5};
+
+SoftwareSerial rs485(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(rs485.available()){
+    //485모듈로 들어오는 값이 존재한다면
+    byte recv[10];
+    rs485.readBytes(recv,10);
+    if(recv[0] != slave2) return; //쌩~
+    
+    for(int i =0;i<10;i++){
+      Serial.print(recv[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println(); 
+
+    //수신값을 비교해보자!
+    //대상 데이터 recv[2]~recv[5]
+    //권한이 있는 카드가 3개니까 루프를 3회 돌려보자!
+    bool is_auth = false;
+    for(int i = 0;i<5;i++){
+      if(auth[i] == recv[2]){
+        is_auth = true;
+        break;
+      }
+    }
+
+    if(is_auth){
+      //권한이 있는 지문ID
+      digitalWrite(led1,LOW);
+      digitalWrite(led2,HIGH);
+    }else{
+      //권한이 없는 지문ID
+      digitalWrite(led1,HIGH);
+      digitalWrite(led2,LOW);
+    }
+
+    
+    byte data[10];
+    data[0] = recv[0];
+    data[1] = recv[1];
+    //응답데이터
+    data[2] = 'O';
+    data[3] = 'K';
+    for(int i =4;i<10;i++){
+      data[i] = 0x00;
+    }
+    for(int i =0;i<10;i++){
+      Serial.print(data[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println(); 
+    digitalWrite(modepin,sendmode);
+    rs485.write(data,10);
+    digitalWrite(modepin,readmode);
+  }
+}

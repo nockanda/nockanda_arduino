@@ -1,0 +1,60 @@
+[아두이노#224] esp8266wifi (OPENAPI)한국수자원공사 실시간 수질조회 LCD에 한글로 띄워보기!(wemos d1r1/사물인터넷(iot)시리즈#59/녹칸다/포로리야공대가자)
+
+esp8266wifi (OPENAPI)한국수자원공사 실시간 수질조회 LCD에 한글로 띄워보기!(wemos d1r1/사물인터넷(iot)시리즈#59/녹칸다/포로리야공대가자)
+-녹칸다의 openapi 프로젝트이다!
+-한국수자원공사(k-water)에서 실시간으로 제공하는 API 서비스이다!
+-전국에 있는 수질검사소에서 실시간으로 측정한 수질 정보를 제공하는 openapi서비스이다!(완전실시간은 아니고 1시간이내)
+-응답받는 데이터에는 아래와 같은 정보가 포함되어있다!
+-발생일시시설관리명,시설관리번호,시설주소,용수구분명,잔류염소,pH,탁도,pH단위,탁도단위,잔류단위
+-open api를 이용하기 위해서는 private key가 필요한데 어떻게 발급하는지 살펴보자!(api 케바케로 등록)
+-일단 시리얼 모니터에 결과를 출력해보자!
+-2.4인치 LCD에 결과를 출력해보자!
+-2.4인치 LCD에 결과를 한글로 출력해보자!
+
+ 
+
+(샘플query) http://apis.data.go.kr/B500001/rwis/waterQuality/list?serviceKey=서비스키&stDt=2021-01-14&stTm=00&edDt=2021-01-14&edTm=24&sujCode=382&liIndDiv=1&numOfRows=1&pageNo=1
+
+ 
+
+조회가능한 정수장 리스트(xml)
+
+정수장코드.xml
+0.00MB
+ 
+
+예제 224-1 사물인터넷보드(wemos d1r1)을 이용한 openapi 예제를 만들어보자!
+ 한국수자원공사(k-water)에서 제공하는 실시간 정수장별 수질정보 조회 서비스를 이용해서,
+ 관심대상이 되는 정수장의 최근 1건의 수질정보를 시리얼모니터에 출력해보자!
+
+
+224-1.txt
+0.01MB
+
+예제 224-2 직전예제의 결과를 2.8인치 LCD모듈(ILI9341)에 한글로 출력해보자!
+
+
+224-2.txt
+0.01MB
+
+예제 224-3 직전예제에 유저가 시리얼모니터로 날린 정수장코드값으로 결과를 출력하라!
+
+224-3.txt
+0.01MB
+ 
+
+관련라이브러리(Adafruit-GFX-Library)
+
+https://github.com/adafruit/Adafruit-GFX-Library
+
+관련라이브러리(Adafruit_ILI9341)
+
+https://github.com/adafruit/Adafruit_ILI9341
+
+레퍼런스코드(LCD에 한글띄우기/#170)
+
+https://bota.tistory.com/1408
+
+레퍼런스코드(RTC없이인터넷 시간가져오기#183)
+
+https://bota.tistory.com/1423

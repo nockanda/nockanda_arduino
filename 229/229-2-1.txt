@@ -1,0 +1,204 @@
+/*
+  예제 229-2-1(마스터아두이노용 코드)
+  사용자로부터 시리얼모니터를 이용해서 옮기고자 하는 물의양을 ml단위로 입력을 받는다!
+  입력을 받은 직후 워터펌프를 작동시켜서 물의양이 목표치에 도달하면 워터펌프를 자동으로 멈추시오!
+ */
+
+#include <SoftwareSerial.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27,16,2);
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define command1 0x01
+#define command2 0x02
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+
+#define relay 4 //water pump
+#define button1 5 //ON
+#define button2 6 //OFF
+
+SoftwareSerial rs485(2, 3); // RX, TX
+
+bool limit_mode = false;
+float limit_value = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+  pinMode(relay,OUTPUT);
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+  lcd.init();
+  lcd.backlight();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    //유저가 시리얼모니터로 뭔가 날린값이 존재한다면~
+    String userdata = Serial.readStringUntil(0x0d); //CR
+    Serial.println(userdata);
+    Serial.println("유저입력모드 시작");
+    limit_value = userdata.toFloat();
+    limit_mode = true;
+  }
+
+  if(digitalRead(button1) == LOW){
+    //버튼1이 눌려진것
+    //펌프 ON
+    digitalWrite(relay,HIGH);
+    delay(100);
+  }
+  if(digitalRead(button2) == LOW){
+    //버튼2이 눌려진것
+    //펌프 OFF
+    digitalWrite(relay,LOW);
+    delay(100);
+  }
+
+  //슬레이브1에게 보내는 부분(request)
+  byte message[8]={0};
+  rs485_send(slave1,command1,message);
+
+  byte recv[10];
+  if(rs485_receive(recv) == -1){
+    Serial.println("슬레이브1 오프라인");
+  }else{
+
+    //슬레이브1의 데이터를 수신하는 부분
+    //recv[2]~recv[5]
+    //1012345.12;
+    //unsigned long value = (recv[2] << 24) | (recv[3] << 16) | (recv[4] << 8) | recv[5];
+    //Serial.println(value);
+    //6,8,B7,50,0,0,0,0,
+    //110,
+    unsigned long data1 = recv[2];
+    data1 = data1*256*256*256;
+    unsigned long data2 = recv[3];
+    data2 = data2*256*256;
+    unsigned long data3 = recv[4];
+    data3 = data3*256;
+    unsigned long data4 = recv[5];
+
+    //플로우센서의 결과
+    float water = (data1+data2+data3+data4)/100.0;
+    String line1 = String(water) + "mL";
+    while(line1.length() < 16){
+      line1 += " ";
+    }
+    lcd.setCursor(0,0);
+    lcd.print(line1);
+    Serial.println(line1);
+    //Serial.print((data1+data2+data3+data4)/100.0);
+    //Serial.println("mL");
+
+    if(limit_mode){
+      //유저 입력모드 시작
+      digitalWrite(relay,HIGH); //워터펌프 켜기
+      if(water > limit_value){
+        //유저입력모드 해제
+        digitalWrite(relay,LOW);
+        limit_mode = false;
+      }
+    }
+    
+    /*
+    for(int i = 0;i<10;i++){
+      Serial.print(recv[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println();
+    */
+  }
+  
+
+  message[8]={0};
+  rs485_send(slave2,command1,message);
+
+  recv[10];
+  if(rs485_receive(recv) == -1){
+    Serial.println("슬레이브2 오프라인");
+  }else{
+    //워터레벨센서의 결과
+    //recv[2] 0이면 물이없음, 1이면 물이있음
+    if(recv[2] == 0){
+      //수위센서에 의해서 최저수위가 감지된경우
+      Serial.println("Water PUMP STOP!");
+      digitalWrite(relay,LOW);
+      limit_mode = false;
+    }
+    
+    String line2 = "WATER LEVEL = " + String(recv[2]);
+    while(line2.length() < 16){
+      line2 += " ";
+    }
+    lcd.setCursor(0,1);
+    lcd.print(line2);
+    Serial.println(line2);
+    /*
+    for(int i = 0;i<10;i++){
+      Serial.print(recv[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println();
+    */
+  }
+  
+}
+
+void rs485_send(byte id, byte command, byte message[]){
+  byte data[10];
+  data[0] = id;
+  data[1] = command;
+  for(int i =2;i<10;i++){
+    data[i] = message[i-2];
+  }
+  /*
+  //단순 결과확인 출력문
+  Serial.print("(마스터)송신데이터=");
+  for(int i = 0;i<10;i++){
+    Serial.print(data[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+*/
+  //송신부분
+  digitalWrite(modepin,sendmode);
+  rs485.write(data,10);
+  digitalWrite(modepin,readmode);
+}
+
+int rs485_receive(byte recv[]){
+  //슬레이브1에서 날린 데이터가 존재할때까지 무한루프
+  unsigned long t = millis(); //루프진입직전의 시간
+  while(1){
+    if(millis() - t > 2000){
+      //루프안에서 누른 스톱워치하고 t하고의 시간차이가 2000ms 이상이면~
+      //Serial.println("오프라인");
+      return -1;
+      break;
+    }
+    if(rs485.available()){
+      //485모듈에서 아두이노쪽으로 수신한값이 존재한다면~
+      //데이터 읽기
+      rs485.readBytes(recv,10);
+      /*
+      Serial.print("(마스터)수신데이터=");
+      for(int i =0;i<10;i++){
+        Serial.print(recv[i],HEX);
+        Serial.print(",");
+      }
+      Serial.println();
+      */
+      return 0;
+      break;
+    }
+  }
+}

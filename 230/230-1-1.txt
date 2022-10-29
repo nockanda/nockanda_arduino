@@ -1,0 +1,147 @@
+/*
+ 예제 230-1-1(마스터용 코드)
+ 마스터에는 가변저항(포텐셔미터) A0에 연결했다!
+ 1602LCD모듈을 SDA를 A4, SCL을 A5에 연결했다!(I2C전용핀)
+ 가변저항을 돌리면 슬레이브1에 연결된 DC모터제어를 위한 패킷을 전송한다!
+ 슬레이브2에 현재 측정한 RPM값을 요청하는 패킷을 주기적으로 전송한다!
+ */
+
+#include <SoftwareSerial.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27,16,2); 
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define command1 0x01
+#define command2 0x02
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+
+#define power A0
+
+SoftwareSerial rs485(3, 4); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+  lcd.init();
+  lcd.backlight();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  //슬레이브1에게 보내는 부분(request)
+  byte message[8]={0};
+  //슬레이브1에게 보낼 메시지를 준비해보자!
+  //analogRead의 결과는 10bit다! = 0~1023 (1024)
+  //모터제어를 위한 PWM값은 1byte = 0~255
+  byte pwm = map(analogRead(power),0,1023,0,255);
+  message[0] = pwm;
+  
+  rs485_send(slave1,command1,message);
+
+  String line1 = "PWM = " + String(pwm);
+  while(line1.length() < 16){
+    line1 += " ";
+  }
+  lcd.setCursor(0,0);
+  lcd.print(line1);
+  Serial.print(line1);
+  Serial.print("\t");
+
+  byte recv[10];
+  if(rs485_receive(recv) == -1){
+    Serial.println("슬레이브1 오프라인");
+  }else{
+    /*
+    for(int i = 0;i<10;i++){
+      Serial.print(recv[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println();
+    */
+  }
+  
+  message[8]={0};
+  rs485_send(slave2,command1,message);
+
+  recv[10];
+  if(rs485_receive(recv) == -1){
+    Serial.println("슬레이브2 오프라인");
+  }else{
+    //받은 메시지
+    //2,3
+    int rpm = recv[2]*256 + recv[3];
+    String line2 = "RPM = " + String(rpm);
+    while(line2.length() < 16){
+      line2 += " ";
+    }
+    lcd.setCursor(0,1);
+    lcd.print(line2);
+    Serial.println(line2);
+    /*
+    for(int i = 0;i<10;i++){
+      Serial.print(recv[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println();
+    */
+  }
+  
+}
+
+void rs485_send(byte id, byte command, byte message[]){
+  byte data[10];
+  data[0] = id;
+  data[1] = command;
+  for(int i =2;i<10;i++){
+    data[i] = message[i-2];
+  }
+  //단순 결과확인 출력문
+  /*
+  Serial.print("(마스터)송신데이터=");
+  for(int i = 0;i<10;i++){
+    Serial.print(data[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+*/
+  //송신부분
+  digitalWrite(modepin,sendmode);
+  rs485.write(data,10);
+  digitalWrite(modepin,readmode);
+}
+
+int rs485_receive(byte recv[]){
+  //슬레이브1에서 날린 데이터가 존재할때까지 무한루프
+  unsigned long t = millis(); //루프진입직전의 시간
+  while(1){
+    if(millis() - t > 2000){
+      //루프안에서 누른 스톱워치하고 t하고의 시간차이가 2000ms 이상이면~
+      //Serial.println("오프라인");
+      return -1;
+      break;
+    }
+    if(rs485.available()){
+      //485모듈에서 아두이노쪽으로 수신한값이 존재한다면~
+      //데이터 읽기
+      rs485.readBytes(recv,10);
+      /*
+      Serial.print("(마스터)수신데이터=");
+      for(int i =0;i<10;i++){
+        Serial.print(recv[i],HEX);
+        Serial.print(",");
+      }
+      Serial.println();
+      */
+      return 0;
+      break;
+    }
+  }
+}

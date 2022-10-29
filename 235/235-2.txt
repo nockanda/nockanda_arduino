@@ -1,0 +1,100 @@
+/*
+ 예제 235-2 아두이노에 2축조이스틱을 x축을 A4에 y축을 A5에 연결했다!
+ 2개의 축에서 출력되는 아날로그값(0~1023)을 2.4인치 LCD(SPFD5408)에 꺾은선 그래프로 드로잉하라!
+ */
+
+#include <SPFD5408_Adafruit_GFX.h>    
+#include <SPFD5408_Adafruit_TFTLCD.h> 
+#include <SPFD5408_TouchScreen.h>
+
+#define LCD_CS A3 
+#define LCD_CD A2
+#define LCD_WR A1
+#define LCD_RD A0 
+
+#define LCD_RESET 10 //원래 A4에 있던 녀석을 D10에 옮기고 수정!
+
+#define joy_x A4
+#define joy_y A5
+
+#define  BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+
+int x_pos = 0;
+int y_pos1 = 0;
+int y_pos2 = 0;
+int pre_x_pos = 0;
+int pre_y_pos1 = 0;
+int pre_y_pos2 = 0;
+
+//사각형의 시작점(x,y) 너비(width,height)
+int graph_x = 30;
+int graph_y = 30;
+int graph_w = 290;
+int graph_h = 210;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  tft.reset();
+  tft.begin(0x9341); // SDFP5408
+  //0,1,2,3
+  tft.setRotation(3);
+  tft.fillScreen(BLACK);
+  //글자 컬러와 사이즈를 지정
+  tft.setTextColor(WHITE,BLACK); 
+  tft.setTextSize(2);
+
+  x_pos = graph_x;
+
+  //가이드라인
+  tft.drawLine(0,graph_y-1,320,graph_y-1,GREEN);
+  tft.drawLine(graph_x-1,0,graph_x-1,240,GREEN);
+  tft.drawLine(graph_x+graph_w+3,0,graph_x+graph_w+3,240,GREEN);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+ 
+  //이전에 그려졌던 부분을 지우는 부분
+  tft.fillRect(x_pos,graph_y,2,graph_h,BLACK);
+  tft.drawRect(x_pos,graph_y,2,graph_h,BLACK);
+  tft.drawLine(x_pos+1,graph_y,x_pos+1,graph_y+graph_h-1,RED);
+
+  int sensor_x = analogRead(joy_x);
+  int sensor_y = analogRead(joy_y);
+
+  tft.setCursor(31, 5);
+  tft.println("X="+String(sensor_x) + ", Y=" + String(sensor_y) + "      ");
+
+  y_pos1 = map(sensor_x,0,1023,0,graph_h/2)+graph_h/2;
+  y_pos2 = map(sensor_y,0,1023,0,graph_h/2);
+  //0~1024
+
+  //그래프 드로잉 하는 부분
+  if(x_pos>graph_x){
+    tft.drawLine(pre_x_pos, graph_h-pre_y_pos1+graph_y, x_pos, graph_h-y_pos1+graph_y, GREEN);
+    tft.drawLine(pre_x_pos, graph_h-pre_y_pos2+graph_y, x_pos, graph_h-y_pos2+graph_y, YELLOW);
+  }
+
+  //할게 다 끝난 부분
+  pre_x_pos = x_pos;
+  pre_y_pos1 = y_pos1;
+  pre_y_pos2 = y_pos2;
+  if(x_pos > (graph_x+graph_w)-1){
+    //LCD화면 좌표의 끝지점
+    tft.fillRect(x_pos,graph_y,2,graph_h,BLACK);
+    tft.drawRect(x_pos,graph_y,2,graph_h,BLACK);
+     x_pos = graph_x;
+  }else{
+     x_pos++;
+  }
+}

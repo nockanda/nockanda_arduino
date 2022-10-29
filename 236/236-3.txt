@@ -1,0 +1,136 @@
+/*
+ 예제 236-3 아두이노에 6축자이로센서(MPU-6050)을 연결했다!
+ I2C센서이기 때문에 SDA를 A4에, SCL을 A5에 연결했다!
+ 자이로센서의 3개의 축에 대한 rotation 각도를 가져와서
+ 2.4인치 LCD(SPFD5408)화면에 꺾은선그래프로 그려보자!
+ */
+
+#include <SPFD5408_Adafruit_GFX.h>    
+#include <SPFD5408_Adafruit_TFTLCD.h> 
+#include <SPFD5408_TouchScreen.h>
+#include "Wire.h"
+#include <MPU6050_light.h>
+
+#define LCD_CS A3 
+#define LCD_CD A2
+#define LCD_WR A1
+#define LCD_RD A0 
+
+#define LCD_RESET 10
+
+#define  BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+MPU6050 mpu(Wire);
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+
+int x_pos = 0;
+int y_pos1 = 0;
+int y_pos2 = 0;
+int y_pos3 = 0;
+int pre_x_pos = 0;
+int pre_y_pos1 = 0;
+int pre_y_pos2 = 0;
+int pre_y_pos3 = 0;
+
+//사각형의 시작점(x,y) 너비(width,height)
+int graph_x = 30;
+int graph_y = 30;
+int graph_w = 290;
+int graph_h = 210;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  tft.reset();
+  tft.begin(0x9341); // SDFP5408
+  //0,1,2,3
+  tft.setRotation(3);
+  tft.fillScreen(BLACK);
+  //글자의 색과 크기를 결정
+  tft.setTextColor(WHITE,BLACK);
+  tft.setTextSize(3); //10*14
+
+  Wire.begin();
+  mpu.begin();
+  Serial.println(F("Calculating gyro offset, do not move MPU6050"));
+  delay(1000);
+  mpu.calcGyroOffsets();
+  Serial.println("Done!\n");
+
+  x_pos = graph_x;
+
+  //가이드라인
+  tft.drawLine(0,graph_y-1,320,graph_y-1,GREEN);
+  tft.drawLine(graph_x-1,0,graph_x-1,240,GREEN);
+  tft.drawLine(graph_x+graph_w+3,0,graph_x+graph_w+3,240,GREEN);
+
+  //각축의 label을 드로잉해보자!
+  //0~30, 30~100, 100~170, 170~240
+  tft.setCursor(0, (30+100)/2 - 10);
+  tft.print("X");
+  tft.setCursor(0, (100+170)/2 - 10);
+  tft.print("Y");
+  tft.setCursor(0, (170+240)/2 - 10);
+  tft.print("Z");
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+ 
+  //이전에 그려졌던 부분을 지우는 부분
+  tft.fillRect(x_pos,graph_y,2,graph_h,BLACK);
+  tft.drawRect(x_pos,graph_y,2,graph_h,BLACK);
+  tft.drawLine(x_pos+1,graph_y,x_pos+1,graph_y+graph_h-1,RED);
+
+
+  mpu.update();
+  float mpu_x = mpu.getAngleX();
+  float mpu_y = mpu.getAngleY();
+  float mpu_z = mpu.getAngleZ();
+
+  //raw data를 LCD화면에 출력해야겠다!
+  //tft.setCursor(32, 5);
+  //tft.print("X="+String(mpu_x)+",Y="+String(mpu_y)+",Z="+String(mpu_z)+"      ");
+
+  if(mpu_x < -180) mpu_x = -180;
+  if(mpu_x > 180) mpu_x = 180;
+  if(mpu_y < -180) mpu_y = -180;
+  if(mpu_y > 180) mpu_y = 180;
+  if(mpu_z < -180) mpu_z = -180;
+  if(mpu_z > 180) mpu_z = 180;
+
+  
+  y_pos1 = map(mpu_x,-180,180,0,graph_h/3)+(2*graph_h/3);
+  y_pos2 = map(mpu_y,-180,180,0,graph_h/3)+graph_h/3;
+  y_pos3 = map(mpu_z,-180,180,0,graph_h/3);
+  //0~1024
+
+  //그래프 드로잉 하는 부분(데이터가 3세트)
+  if(x_pos>graph_x){
+                   //x1         y1                      x2       y2                  color          
+    tft.drawLine(pre_x_pos, graph_h-pre_y_pos1+graph_y, x_pos, graph_h-y_pos1+graph_y, RED);
+    tft.drawLine(pre_x_pos, graph_h-pre_y_pos2+graph_y, x_pos, graph_h-y_pos2+graph_y, YELLOW);
+    tft.drawLine(pre_x_pos, graph_h-pre_y_pos3+graph_y, x_pos, graph_h-y_pos3+graph_y, GREEN);
+  }
+
+  //할게 다 끝난 부분
+  pre_x_pos = x_pos;
+  pre_y_pos1 = y_pos1;
+  pre_y_pos2 = y_pos2;
+  pre_y_pos3 = y_pos3;
+  if(x_pos > (graph_x+graph_w)-1){
+    //LCD화면 좌표의 끝지점
+    tft.fillRect(x_pos,graph_y,2,graph_h,BLACK);
+    tft.drawRect(x_pos,graph_y,2,graph_h,BLACK);
+     x_pos = graph_x;
+  }else{
+     x_pos++;
+  }
+}

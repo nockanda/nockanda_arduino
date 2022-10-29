@@ -1,0 +1,189 @@
+/*
+  예제 226-1 아두이노에 초음파센서(HC-SR04)와 서보모터(SG90) 2.4인치 LCD(SPFD5408)을 이용해서 초음파 레이더를 만들어보자!
+  LCD모듈은 회로도를 기준으로 1:1로 연결하고 서보모터는 D10에 연결했다!
+  초음파센서의 trig핀은 D11에 연결하고 echo핀은 D12에 연결했다!
+  초음파센서의 레이더 그래프는 n-1번째 값과 n번째측정한 값을 꺽은선 그래프로 그렸다!
+ */
+
+#include <Servo.h>
+#include <SPFD5408_Adafruit_GFX.h>    // Core graphics library
+#include <SPFD5408_Adafruit_TFTLCD.h> // Hardware-specific library
+#include <SPFD5408_TouchScreen.h>
+
+#define LCD_CS A3
+#define LCD_CD A2 
+#define LCD_WR A1 
+#define LCD_RD A0 
+
+#define LCD_RESET A4 
+
+#define BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+#define trig 11
+#define echo 12
+
+int degree = 0;
+bool direct = true; //true일때 시계방향, false일때 반시계방향
+float dist = 0; //초음파센서값(cm)
+int center_x = 160;
+int center_y = 240;
+float now_x = 0;
+float now_y = 0;
+float pre_x = 0;
+float pre_y = 0;
+int r = 160;
+
+Servo myservo;
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  randomSeed(analogRead(0));
+  pinMode(trig,OUTPUT); //trig 발사
+  pinMode(echo,INPUT); //echo 받기
+  myservo.attach(10);
+  myservo.write(0);
+  tft.reset();
+  tft.begin(0x9341);
+  //0 1 2 3
+  tft.setRotation(3);
+  tft.fillScreen(BLACK);//화면을 검은색으로 일단 칠해놓고 보자!
+  tft.setTextSize(3);
+
+  //눈금을 그려보자!
+  //눈금은 160~170 사이로 그려보자
+  for(int i = 0;i<=180;i+=5){
+    float out_x = center_x + 170*cos((PI/180)*(180-i));
+    float out_y = center_y - 170*sin((PI/180)*(180-i));
+    float in_x = center_x + 160*cos((PI/180)*(180-i));
+    float in_y = center_y - 160*sin((PI/180)*(180-i));
+
+    tft.drawLine(out_x,out_y,in_x,in_y,GREEN);
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //이전에 그려졌던것을 지워야 할 필요가 생겼다!
+  //N번째 각도와 N+1번째 각도사이의 그래프를 clear
+  //diret(true) degree (N) , degree+1 (N+1)
+  //diret(false) degree (N) , degree-1 (N+1)
+  //글자도 클리어하자!
+  tft.setCursor(0, 0);
+  tft.setTextColor(BLACK);
+  tft.println("Degree="+String(degree));
+  tft.println("dist.="+String(dist));
+  if(direct){
+    //시계방향
+    //line : N
+    //알고있는점 3개(센터,라인1,라인2)
+    float line1_x = center_x + r*cos((PI/180)*(180-degree));
+    float line1_y = center_y - r*sin((PI/180)*(180-degree));
+
+    float line2_x = center_x + r*cos((PI/180)*(180-(degree+1)));
+    float line2_y = center_y - r*sin((PI/180)*(180-(degree+1)));
+    
+    tft.fillTriangle(
+      center_x    , center_y, // peak
+      line1_x, line1_y, // bottom left
+      line2_x, line2_y, // bottom right
+      BLACK);
+    tft.drawTriangle(
+      center_x    , center_y, // peak
+      line1_x, line1_y, // bottom left
+      line2_x, line2_y, // bottom right
+      BLACK);
+    tft.drawLine(center_x,center_y,line2_x,line2_y,GREEN);
+  }else{
+    //반시계방향
+    //line : N
+    //알고있는점 3개(센터,라인1,라인2)
+    float line1_x = center_x + r*cos((PI/180)*(180-degree));
+    float line1_y = center_y - r*sin((PI/180)*(180-degree));
+
+    float line2_x = center_x + r*cos((PI/180)*(180-(degree-1)));
+    float line2_y = center_y - r*sin((PI/180)*(180-(degree-1)));
+    
+    tft.fillTriangle(
+      center_x    , center_y, // peak
+      line1_x, line1_y, // bottom left
+      line2_x, line2_y, // bottom right
+      BLACK);
+    tft.drawTriangle(
+      center_x    , center_y, // peak
+      line1_x, line1_y, // bottom left
+      line2_x, line2_y, // bottom right
+      BLACK);
+    tft.drawLine(center_x,center_y,line2_x,line2_y,GREEN);
+  }
+
+  //1번 해야할것! : 0~180도까지 이동했다가 180~0도까지 이동했다가 무한반복..
+  //서보모터 작동지점!
+  myservo.write(degree);
+  Serial.println(degree);
+  //2번 해야할것! 초음파센서값을 측정!
+  //dist = random(100, 160);
+  dist = get_hcsr04(); //cm
+
+  //그래프의 최대사이즈가 160px(100%)
+  //30cm범위내에서만 측정을 하겠다!
+  if(dist > 30) dist = 30;
+  
+  dist = (dist/30)*160;
+
+  //먼저 중점을 기준으로한 반원을 그려보자!
+  //tft.drawCircle(center_x, center_y, r, GREEN);
+
+  //30도지점에 선을 하나 그려보자(반지름은 160)
+  now_x = center_x + dist*cos((PI/180)*(180-degree)); //라디안각도!
+  now_y = center_y - dist*sin((PI/180)*(180-degree)); //라디안각도!
+
+  //할거다하고~~~
+  if(degree > 0)
+  tft.drawLine(pre_x, pre_y, now_x, now_y, RED);
+
+  pre_x = now_x;
+  pre_y = now_y;
+  
+  if(direct){
+    //시계방향
+    if(degree == 180){
+      direct = false;
+      degree--;
+    }else{
+      degree++;
+    }
+  }else{
+    //반시계방향
+    if(degree == 0){
+      direct = true;
+      degree++;
+    }else{
+      degree--;
+    }  
+  }
+  //text draw
+  tft.setCursor(0, 0);
+  tft.setTextColor(GREEN);
+  tft.println("Degree="+String(degree));
+  tft.println("dist.="+String(dist));
+}
+
+float get_hcsr04(){
+  digitalWrite(trig,LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig,LOW);
+  float output = (pulseIn(echo, HIGH)/29.0)/2; //cm
+
+  return output;
+}

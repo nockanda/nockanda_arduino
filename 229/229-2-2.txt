@@ -1,0 +1,79 @@
+/*
+ 예제 229-2-2 (플로우센서가 있는 슬레이브용 코드)
+ 아두이노에 워터플로우센서를 D2에 연결해서 인터럽트 기능을 사용했다!
+ 물의 토출양을 ml단위로 측정해서 마스터쪽으로 전송해보자!
+ 플로우센서가 인터럽트기능을 사용하기 위해서 D2핀을 반드시 사용해야하기 때문에
+ RS428핀의 위치를 약간 조정했다!
+ RO = D3, DI = D4
+ */
+
+#include <SoftwareSerial.h>
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+
+const byte interruptPin = 2;
+volatile float water = 0;
+
+SoftwareSerial rs485(3, 4); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+  pinMode(interruptPin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), flow, RISING);
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(rs485.available()){
+    //485모듈로 들어오는 값이 존재한다면
+    byte recv[10];
+    rs485.readBytes(recv,10);
+    if(recv[0] != slave1) return; //쌩~
+    
+    for(int i =0;i<10;i++){
+      Serial.print(recv[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println(); 
+
+    unsigned long water2 = water*100;
+
+    //32개의 비트
+    byte data1 = water2>>24; //상위비트
+    byte data2 = (water2>>16)&0xFF; 
+    byte data3 = (water2>>8)&0xFF;
+    byte data4 = water2&0xFF; //하위비트
+     //4bytes long에 담긴 값을 4byte array로 바꿔서 전송
+    
+    byte data[10];
+    data[0] = recv[0];
+    data[1] = recv[1];
+    //응답데이터
+    data[2] = data1;
+    data[3] = data2;
+    data[4] = data3;
+    data[5] = data4;
+    for(int i =6;i<10;i++){
+      data[i] = 0x00;
+    }
+    for(int i =0;i<10;i++){
+      Serial.print(data[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println(); 
+    digitalWrite(modepin,sendmode);
+    rs485.write(data,10);
+    digitalWrite(modepin,readmode);
+  }
+}
+
+void flow() {
+  water += (1/5888.0)*1000; //mL
+}

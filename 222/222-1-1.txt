@@ -1,0 +1,128 @@
+/*
+ 예제 222-1-1 (A아두이노용 코드/마스터)
+ 아두이노에 1602LCD의 SDA를 A4에 연결하고 SCL을 A5에 연결했다!
+ B아두이노에 이산화탄소센서가 있는데 그값을 받아서 LCD화면에 출력해보자!
+ C아두이노에게 값을 그대로 전달해서 C아두이노에 있는 FND모듈에 값을 띄워보자!
+ */
+
+#include <SoftwareSerial.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27,16,2);
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define command1 0x01 //이산화탄소값 요청
+#define command2 0x02
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+SoftwareSerial rs485(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("Co2 Value = ");
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  //슬레이브1에게 보내는 부분(request)
+  byte message[8]={0};
+  rs485_send(slave1,command1,message);
+
+  byte recv[10];
+  if(rs485_receive(recv) == -1){
+    Serial.println("슬레이브1 오프라인");
+  }else{
+    //recv[2] recv[3]
+    int sensor = recv[2]*256 + recv[3];
+    //LCD화면에 결과값을 출력해보자!
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Co2 Value = ");
+    lcd.setCursor(0,1);
+    lcd.print(sensor);
+    Serial.print(sensor); Serial.println("PPM");
+    Serial.print("슬레이브1 수신데이터:");
+    for(int i = 0;i<10;i++){
+      Serial.print(recv[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println();
+  }
+
+  //슬레이브2에게 보내는 부분(request)
+  for(int i = 0;i<8;i++){
+    message[i] = recv[2+i];
+  }
+  rs485_send(slave2,command1,message);
+  if(rs485_receive(recv) == -1){
+    Serial.println("슬레이브2 오프라인");
+  }else{
+    Serial.print("슬레이브2 수신데이터:");
+    for(int i = 0;i<10;i++){
+      Serial.print(recv[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println();
+  }
+  delay(1000);
+
+}
+
+void rs485_send(byte id, byte command, byte message[]){
+  byte data[10];
+  data[0] = id;
+  data[1] = command;
+  for(int i =2;i<10;i++){
+    data[i] = message[i-2];
+  }
+  //단순 결과확인 출력문
+  Serial.print("(마스터)송신데이터=");
+  for(int i = 0;i<10;i++){
+    Serial.print(data[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+
+  //송신부분
+  digitalWrite(modepin,sendmode);
+  rs485.write(data,10);
+  digitalWrite(modepin,readmode);
+}
+
+int rs485_receive(byte recv[]){
+  //슬레이브1에서 날린 데이터가 존재할때까지 무한루프
+  unsigned long t = millis(); //루프진입직전의 시간
+  while(1){
+    if(millis() - t > 2000){
+      //루프안에서 누른 스톱워치하고 t하고의 시간차이가 2000ms 이상이면~
+      //Serial.println("오프라인");
+      return -1;
+      break;
+    }
+    if(rs485.available()){
+      //485모듈에서 아두이노쪽으로 수신한값이 존재한다면~
+      //데이터 읽기
+      rs485.readBytes(recv,10);
+      /*
+      Serial.print("(마스터)수신데이터=");
+      for(int i =0;i<10;i++){
+        Serial.print(recv[i],HEX);
+        Serial.print(",");
+      }
+      Serial.println();
+      */
+      return 0;
+      break;
+    }
+  }
+}

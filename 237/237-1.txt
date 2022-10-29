@@ -1,0 +1,154 @@
+/*
+ 예제 237-1 사물인터넷보드(wemos d1r1)을 이용한 openapi 예제!
+ 영화진흥위원회 영화목록조회 서비스를 이용해서 국문명으로 검색한 영화의 영화코드를 제공받고,
+ 다시 영화상세정보 조회서비스를 이용해서 영화코드로 상세정보를 얻은다음 시리얼모니터에 출력해보자!
+ */
+#include <ESP8266WiFi.h>
+#include <ArduinoJson.h>
+
+#ifndef STASSID
+#define STASSID "~~~~~" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "~~~~~" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+
+const char* host = "www.kobis.or.kr";
+const int httpsPort = 80;
+
+String yourkey = "~~~~~";
+String movie_name = "세자매"; //utf-8
+
+WiFiClient client;
+void setup() {
+  Serial.begin(115200);
+  Serial.println();
+  Serial.print("connecting to ");
+  Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  
+  Serial.print("connecting to ");
+  Serial.println(host);
+
+  String movie_code = get_movie_code();
+  Serial.println(movie_code);
+
+  //클라이언트와 서버와 커넥트
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("connection failed");
+    return;
+  }
+
+  String url = "/kobisopenapi/webservice/rest/movie/searchMovieInfo.json?key="+yourkey+"&movieCd=" + movie_code;
+
+  //사물인터넷보드에서 RSS서버로 보내는 요청!
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long t = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - t > 10000) break;
+  }
+
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+
+  String data;
+  while(client.available()){
+    data = client.readStringUntil('\n'); //readline();
+    if(data.indexOf("{\"movie") == -1) continue;
+    //Serial.println(data);  
+  }
+  //data
+  DynamicJsonDocument doc(1536);
+  deserializeJson(doc, data);
+  JsonObject movieInfoResult_movieInfo = doc["movieInfoResult"]["movieInfo"];
+  String movieNm = movieInfoResult_movieInfo["movieNm"]; // "명탐정 코난: 진홍의 ...
+  String movieNmEn = movieInfoResult_movieInfo["movieNmEn"];
+  String openDt = movieInfoResult_movieInfo["openDt"]; // "20210127"
+  String genreNm = movieInfoResult_movieInfo["genres"][0]["genreNm"];
+  String peopleNm = movieInfoResult_movieInfo["directors"][0]["peopleNm"];
+  String watchGradeNm = movieInfoResult_movieInfo["audits"][0]["watchGradeNm"];
+  
+  Serial.println("영화명(국문)="+movieNm);
+  Serial.println("영화명(영문)="+movieNmEn);
+  Serial.println("개봉일="+openDt);
+  Serial.println("장르명="+genreNm);
+  Serial.println("감독명="+peopleNm);
+  Serial.println("영화등급="+watchGradeNm);
+  Serial.println("DONE");
+}
+
+void loop() {
+}
+                  
+String utf8(String input){
+  String output;
+  for(int i = 0;i<input.length();i++){
+    output += "%" + String(input[i],HEX);
+  }
+  return output;
+}
+
+String get_movie_code(){
+  //클라이언트와 서버와 커넥트
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("connection failed");
+    return "";
+  }
+
+  String url = "/kobisopenapi/webservice/rest/movie/searchMovieList.json?key="+yourkey+"&openStartDt=2021&movieNm="+utf8(movie_name);
+
+  //사물인터넷보드에서 RSS서버로 보내는 요청!
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long t = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - t > 10000) break;
+  }
+
+
+  //응답이 날라오는 부분!
+  //Serial.println("request sent");
+
+  String data;
+  while(client.available()){
+    data = client.readStringUntil('\n'); //readline();
+    if(data.indexOf("{\"movie") == -1) continue;
+    //Serial.println(data);
+  }
+  StaticJsonDocument<768> doc;
+  deserializeJson(doc, data);
+
+  JsonObject movieListResult = doc["movieListResult"];
+  const char* movieListResult_source = movieListResult["source"]; // "영화진흥위원회"
+  JsonObject movieListResult_movieList_0 = movieListResult["movieList"][0];
+  String movieCd = movieListResult_movieList_0["movieCd"]; // "20201649"
+  //Serial.println("DONE");
+
+  return movieCd;
+}

@@ -1,0 +1,70 @@
+/*
+ 예제 221-1-2 (B아두이노용 코드/슬레이브1)
+ A아두이노가 날린 릴레이 제어명령을 이용해서 릴레이를 작동시켜라!
+ A아두이노가 날린 8바이트 메시지중에 첫번째 바이트가 0이면 OFF 1이면 ON이다!
+ */
+
+#include <SoftwareSerial.h>
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+
+#define relay 4
+SoftwareSerial rs485(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+
+  pinMode(relay,OUTPUT);
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(rs485.available()){
+    //485모듈로 들어오는 값이 존재한다면
+    byte recv[10];
+    rs485.readBytes(recv,10);
+    if(recv[0] != slave1) return; //쌩~
+    
+    for(int i =0;i<10;i++){
+      Serial.print(recv[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println(); 
+
+    //릴레이를 켜거나 끄면 되겠다!
+    if(recv[2] == 0){
+      //OFF메시지
+      Serial.println("릴레이OFF");
+      digitalWrite(relay,LOW);
+    }else if(recv[2] == 1) {
+      //ON메시지
+      Serial.println("릴레이ON");
+      digitalWrite(relay,HIGH);
+    }
+    
+    byte data[10];
+    data[0] = recv[0];
+    data[1] = recv[1];
+    //응답데이터
+    data[2] = 'O';
+    data[3] = 'K';
+    for(int i =4;i<10;i++){
+      data[i] = 0x00;
+    }
+    for(int i =0;i<10;i++){
+      Serial.print(data[i],HEX);
+      Serial.print(",");
+    }
+    Serial.println(); 
+    digitalWrite(modepin,sendmode);
+    rs485.write(data,10);
+    digitalWrite(modepin,readmode);
+  }
+}

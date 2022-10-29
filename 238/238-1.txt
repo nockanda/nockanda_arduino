@@ -1,0 +1,21 @@
+/*
+  238-1 HC06을 AT커맨드를 이용해서 설정을 바꿀 수 있는 코드!
+ */
+#include <SoftwareSerial.h>
+
+SoftwareSerial HC06(2, 3); // RX, TX
+
+void setup() {
+  Serial.begin(9600); //PC-아두이노간
+  HC06.begin(9600); //아두이노-블루투스모듈
+}
+
+void loop() { // run over and over
+  if (HC06.available()) {
+    //아두이노에서 블루투스 모듈쪽으로 전송한 값이 존재한다면~
+    Serial.write(HC06.read());
+  }
+  if (Serial.available()) {
+    HC06.write(Serial.read());
+  }
+}

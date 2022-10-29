@@ -1,0 +1,128 @@
+/*
+ 예제 223-2-1 (A아두이노용코드/마스터)
+ 아두이노에 지문인식모듈(FPM10A)를 연결했다!
+ TX핀을 D0에 연결하고 RX핀을 D1에 연결했다!
+ 지문인식모듈의 결과를 B와 C아두이노에 전송하라!
+ */
+
+#include <Adafruit_Fingerprint.h>
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&Serial);
+#include <SoftwareSerial.h>
+
+#define master 0x99 //153
+#define slave1 0x00 //0
+#define slave2 0x01 //1
+#define command1 0x01
+#define command2 0x02
+#define modepin 13
+#define readmode LOW
+#define sendmode HIGH
+SoftwareSerial rs485(2, 3); // RX, TX
+
+void setup() {
+  // put your setup code here, to run once:
+  //Serial.begin(9600); //지문센서-아두이노간 TTL통신
+  rs485.begin(9600); //아두이노-rs485간 TTL통신
+  pinMode(modepin,OUTPUT); //송수신제어핀
+  digitalWrite(modepin,readmode); //수신모드
+  finger.begin(57600);
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+    //슬레이브1에게 전송(B아두이노)
+    //슬레이브1에게 보내는 부분(request)
+    uint8_t p = finger.getImage();
+    if (p != FINGERPRINT_OK)  return;
+
+    p = finger.image2Tz();
+    if (p != FINGERPRINT_OK)  return;
+
+    p = finger.fingerFastSearch();
+    if (p != FINGERPRINT_OK)  return;
+
+    //0~128
+  //finger.fingerID
+  
+    byte message[8]={0};  
+    message[0] = finger.fingerID;
+    rs485_send(slave1,command1,message);
+
+    byte recv[10];
+    if(rs485_receive(recv) == -1){
+      //Serial.println("슬레이브1 오프라인");
+    }else{
+      for(int i = 0;i<10;i++){
+        //Serial.print(recv[i],HEX);
+        //Serial.print(",");
+      }
+      //Serial.println();
+    }
+    
+    //슬레이브2에게 전송(C아두이노)
+    rs485_send(slave2,command1,message);
+
+    if(rs485_receive(recv) == -1){
+      //Serial.println("슬레이브2 오프라인");
+    }else{
+      for(int i = 0;i<10;i++){
+        //Serial.print(recv[i],HEX);
+        //Serial.print(",");
+      }
+      //Serial.println();
+    }
+
+  
+}
+
+
+void rs485_send(byte id, byte command, byte message[]){
+  byte data[10];
+  data[0] = id;
+  data[1] = command;
+  for(int i =2;i<10;i++){
+    data[i] = message[i-2];
+  }
+  //단순 결과확인 출력문
+  //Serial.print("(마스터)송신데이터=");
+  for(int i = 0;i<10;i++){
+    //Serial.print(data[i]);
+    //Serial.print(",");
+  }
+  //Serial.println();
+
+  //송신부분
+  digitalWrite(modepin,sendmode);
+  rs485.write(data,10);
+  digitalWrite(modepin,readmode);
+}
+
+int rs485_receive(byte recv[]){
+  //슬레이브1에서 날린 데이터가 존재할때까지 무한루프
+  unsigned long t = millis(); //루프진입직전의 시간
+  while(1){
+    if(millis() - t > 2000){
+      //루프안에서 누른 스톱워치하고 t하고의 시간차이가 2000ms 이상이면~
+      //Serial.println("오프라인");
+      return -1;
+      break;
+    }
+    if(rs485.available()){
+      //485모듈에서 아두이노쪽으로 수신한값이 존재한다면~
+      //데이터 읽기
+      rs485.readBytes(recv,10);
+      /*
+      Serial.print("(마스터)수신데이터=");
+      for(int i =0;i<10;i++){
+        Serial.print(recv[i],HEX);
+        Serial.print(",");
+      }
+      Serial.println();
+      */
+      return 0;
+      break;
+    }
+  }
+}

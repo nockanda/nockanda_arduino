@@ -1,0 +1,17 @@
+/*
+  238-3-1 HC06(마스터코드)
+ */
+#include <SoftwareSerial.h>
+
+SoftwareSerial HC06(2, 3); // RX, TX
+
+void setup() {
+  Serial.begin(9600); //PC-아두이노간
+  HC06.begin(9600); //아두이노-블루투스모듈
+}
+
+void loop() { // run over and over
+  char data[] = {'O','K'};
+  HC06.write(data,2);
+  delay(1000);
+}
