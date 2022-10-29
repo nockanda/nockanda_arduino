@@ -1,0 +1,78 @@
+
+#include <Keypad.h>
+
+const byte ROWS = 4; //four rows
+const byte COLS = 4; //four columns
+//define the cymbols on the buttons of the keypads
+char hexaKeys[ROWS][COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+                  //10,9,8,7
+byte rowPins[ROWS] = {10, 9, 8, 7}; 
+                  //6,5,4,3
+byte colPins[COLS] = {6, 5, 4, 3}; 
+
+#define relay 2
+#define buzzer 11
+
+//initialize an instance of class NewKeypad
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+
+String set_pw = "1234";
+String input_pw = "";
+
+void setup(){
+  Serial.begin(9600);
+  pinMode(relay,OUTPUT);
+}
+  
+void loop(){
+  char customKey = customKeypad.getKey();
+
+  if (customKey == '#'){
+    //종료커맨드
+    Serial.print("입력한 비밀번호 = ");
+    Serial.println(input_pw);
+
+    if(input_pw == set_pw){
+      Serial.println("비밀번호가 일치합니다!");
+      digitalWrite(relay,HIGH);
+      delay(100);
+      digitalWrite(relay,LOW);
+      //도미솔도~
+      tone(buzzer, 2093);
+      delay(200);
+      noTone(buzzer);
+      tone(buzzer, 1319);
+      delay(200);
+      noTone(buzzer);
+      tone(buzzer, 1568);
+      delay(200);
+      noTone(buzzer);
+      tone(buzzer, 2093);
+      delay(200);
+      noTone(buzzer);
+    }else{
+      Serial.println("땡~~~~~~~~~!");
+      //솔~솔~
+      tone(buzzer, 2093);
+      delay(200);
+      noTone(buzzer);
+      delay(200);
+      tone(buzzer, 2093);
+      delay(200);
+      noTone(buzzer);
+    }
+    
+    input_pw = "";
+  }else if(customKey>='0' && customKey <= '9'){
+    input_pw += customKey;
+    Serial.println(input_pw);
+    tone(buzzer, 2093);
+    delay(200);
+    noTone(buzzer);
+  }
+}

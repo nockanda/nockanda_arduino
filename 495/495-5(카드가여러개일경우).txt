@@ -1,0 +1,77 @@
+#include <SPI.h>
+#include <MFRC522.h>
+
+#define SS_PIN 10
+#define RST_PIN 9
+#define relay 2
+
+MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
+
+byte my_cards_count =3;
+
+byte my_cards[][4] = {
+  {0xD4,0x6D,0xA2,0x2A},
+  {0x4D,0x94,0xA0,0x3D},
+  {0x1C,0x75,0x84,0x3D}
+};
+
+void setup() { 
+  Serial.begin(9600);
+  pinMode(relay,OUTPUT);
+  SPI.begin(); 
+  rfid.PCD_Init();
+}
+ 
+void loop() {
+  //RFID리더에 내가 원하는 카드가 인식이 되었냐?
+  if ( ! rfid.PICC_IsNewCardPresent())
+    return;
+
+  // Verify if the NUID has been readed
+  if ( ! rfid.PICC_ReadCardSerial())
+    return;
+
+   Serial.println("인식되었습니다!");
+   for(int i = 0;i<my_cards_count;i++){
+      bool is_match = true;
+      for(int j = 0;j<4;j++){
+       if(my_cards[i][j] != rfid.uid.uidByte[j]){
+         is_match = false;
+       }
+     }
+     if(is_match){
+       Serial.print(i+1);
+       Serial.println("번째 카드가 일치합니다!");
+       Serial.println("잠금해제!");
+       digitalWrite(relay,HIGH);
+       delay(100);
+       digitalWrite(relay,LOW);
+       break;
+     }else{
+      Serial.print(i+1);
+       Serial.println("번째 카드가 불일치합니다!");
+     }
+   }
+
+   ///
+   
+/*
+   if(is_match){
+     Serial.println("일치합니다");
+      digitalWrite(relay,HIGH);
+      delay(100);
+      digitalWrite(relay,LOW);
+   }else{
+     Serial.println("땡~~~~~!");
+   }
+   */
+   //
+
+
+  // Halt PICC
+  rfid.PICC_HaltA();
+
+  // Stop encryption on PCD
+  rfid.PCD_StopCrypto1();
+}
+

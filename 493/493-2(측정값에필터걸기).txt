@@ -1,0 +1,38 @@
+#define trig 3
+#define echo 4
+
+float lpf = 0; //n-1
+float weight = 0.95;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(trig,OUTPUT); //trig 발사
+  pinMode(echo,INPUT); //echo 받기
+
+  lpf = get_dist();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  float dist = get_dist();
+
+  //필터값을 계산
+  lpf = lpf*weight + dist*(1-weight);
+  Serial.println(lpf);
+  delay(100);
+}
+
+float get_dist(){
+  digitalWrite(trig,LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig,LOW);
+  //여기까지
+  
+  float dist = (pulseIn(echo, HIGH)/29.0)/2; //cm
+
+  return dist;
+}

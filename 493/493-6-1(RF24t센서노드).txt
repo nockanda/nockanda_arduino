@@ -1,0 +1,108 @@
+/*
+  예제 254-1-1 RF통신 마스터코드!
+  마스터에서 슬레이브쪽으로 NOCKANDA!! 요청!
+  슬레이브에서 마스터쪽으로 SUBSCRIBE!! 응답!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+
+#define trig 3
+#define echo 4
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+float len = 20;//물탱크의 최대 높이(cm)
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC와 아두이노간 통신라인
+  pinMode(trig,OUTPUT); //trig 발사
+  pinMode(echo,INPUT); //echo 받기
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.stopListening(); //기본 : 송신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  //송신모드
+  sendmode();
+  float dist = 0;
+  for(int i = 0;i<40;i++){
+    dist += get_dist();
+    delay(10);
+  }
+  dist = dist/40;
+  
+
+  //필터값을 계산
+  //lpf = lpf*weight + dist*(1-weight);
+  
+  float water_level = len - dist; //cm
+  float per = (water_level/len) *100;
+
+  Serial.print(water_level);
+  Serial.print(",");
+  Serial.println(per);
+
+  //float 2 byte array
+  float mydata[2];
+
+  mydata[0] = water_level;
+  mydata[1] = per;
+  
+  radio.write(mydata,sizeof(mydata));
+
+  Serial.print("Request!!");
+  
+
+
+  //수신모드
+  receivemode();
+
+  bool is_timeout = false;
+  unsigned long t = millis();
+  while(true){
+    if(radio.available()) break;
+    if(millis() - t > 3000){
+      is_timeout = true;
+      break;
+    }
+  }
+
+  if(is_timeout){
+    Serial.println("슬레이브가 출타했다!");
+  }else{
+    char text2[30];
+    radio.read(text2,sizeof(text2));
+
+    Serial.print("Response = ");
+    Serial.println(text2);
+  }
+  delay(1000);
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}
+float get_dist(){
+  digitalWrite(trig,LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig,LOW);
+  //여기까지
+  
+  float dist = (pulseIn(echo, HIGH)/29.0)/2; //cm 
+  return dist;
+}

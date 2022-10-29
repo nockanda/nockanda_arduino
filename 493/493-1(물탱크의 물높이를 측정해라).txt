@@ -1,0 +1,27 @@
+#define trig 3
+#define echo 4
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(trig,OUTPUT); //trig 발사
+  pinMode(echo,INPUT); //echo 받기
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  //여기서부터(trig핀에 사각펄스를 만든다)
+  digitalWrite(trig,LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig,LOW);
+  //여기까지
+  
+  float dist = (pulseIn(echo, HIGH)/29.0)/2; //cm
+  Serial.print(dist);
+  Serial.println("CM");
+  delay(100);
+}

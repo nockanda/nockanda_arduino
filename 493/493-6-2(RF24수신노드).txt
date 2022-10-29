@@ -1,0 +1,65 @@
+/*
+  예제 254-1-2 RF통신 슬레이브코드!
+ */
+#include <SPI.h>
+#include "RF24.h"
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+union{
+  float f;
+  float b[4];
+}mydata;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.openReadingPipe(0, address);
+  radio.startListening(); //기본 : 수신모드
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+
+    //만약 수신할 데이터의 길이가 8이 아니라면 무시한다
+    
+    //char text[30];
+    float recv[2];
+    
+    radio.read(recv,sizeof(recv));
+
+    float water_level = recv[0];
+    float per = recv[1];
+
+    Serial.print("현재 수위 = ");
+    Serial.print(water_level);
+    Serial.print("cm, 퍼센트=");
+    Serial.print(per);
+    Serial.println("%");
+
+    //Serial.println(text);
+
+    //마스터에게 응답할 준비
+    //송신모드
+    sendmode();
+    char text2[] = "OK";
+    radio.write(text2,sizeof(text2));
+
+    //보낼거 다보내고..수신모드
+    receivemode();
+  }
+}
+
+void sendmode(){
+  radio.stopListening();
+}
+void receivemode(){
+  radio.startListening();
+}

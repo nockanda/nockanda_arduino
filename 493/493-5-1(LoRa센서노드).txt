@@ -1,0 +1,134 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+
+//920.9Mhz
+const long frequency = 9209E5;
+
+#define trig 3
+#define echo 4
+
+float len = 20;//물탱크의 최대 높이(cm)
+
+union{
+  float f; //4bytes
+  byte b[4];
+}mydata;
+
+void setup() {
+  Serial.begin(9600);                   // initialize serial
+  pinMode(trig,OUTPUT); //trig 발사
+  pinMode(echo,INPUT); //echo 받기
+  
+  if (!LoRa.begin(frequency)) {
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+  Serial.println();
+  Serial.println("LoRa Simple Node");
+  Serial.println("Only receive messages from gateways");
+  Serial.println("Tx: invertIQ disable");
+  Serial.println("Rx: invertIQ enable");
+  Serial.println();
+
+  LoRa.onReceive(onReceive);
+  LoRa.onTxDone(onTxDone);
+  LoRa_rxMode();
+}
+
+void loop() {
+
+  //node쪽은 1초에 한번 뭔가 전송하려고 한다~
+  if (runEvery(3000)) { // repeat every 1000 millis
+
+    float dist = 0;
+    for(int i = 0;i<40;i++){
+      dist += get_dist();
+      delay(10);
+    }
+    dist = dist/40;
+    
+  
+    //필터값을 계산
+    //lpf = lpf*weight + dist*(1-weight);
+    
+    float water_level = len - dist; //cm
+    float per = (water_level/len) *100;
+  
+    Serial.print(water_level);
+    Serial.print(",");
+    Serial.println(per);
+
+    LoRa_sendMessage(water_level,per); // send a message
+
+    Serial.println("Send Message!");
+  }
+}
+
+void LoRa_rxMode(){
+  LoRa.enableInvertIQ();                // active invert I and Q signals
+  LoRa.receive();                       // set receive mode
+}
+
+void LoRa_txMode(){
+  LoRa.idle();                          // set standby mode
+  LoRa.disableInvertIQ();               // normal mode
+}
+
+void LoRa_sendMessage(float water_level, float per) {
+  LoRa_txMode();                        // set tx mode
+  LoRa.beginPacket();                   // start packet
+  //float 2 byte array
+  mydata.f = water_level;
+  LoRa.write(mydata.b[0]);
+  LoRa.write(mydata.b[1]);
+  LoRa.write(mydata.b[2]);
+  LoRa.write(mydata.b[3]);
+  mydata.f = per;
+  LoRa.write(mydata.b[0]);
+  LoRa.write(mydata.b[1]);
+  LoRa.write(mydata.b[2]);
+  LoRa.write(mydata.b[3]);
+  //LoRa.print(message);                  // add payload
+  LoRa.endPacket(true);                 // finish packet and send it
+}
+
+void onReceive(int packetSize) {
+  String message = "";
+
+  while (LoRa.available()) {
+    message += (char)LoRa.read();
+  }
+
+  Serial.print("Node Receive: ");
+  Serial.println(message);
+}
+
+void onTxDone() {
+  Serial.println("TxDone");
+  LoRa_rxMode();
+}
+
+boolean runEvery(unsigned long interval)
+{
+  static unsigned long previousMillis = 0;
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval)
+  {
+    previousMillis = currentMillis;
+    return true;
+  }
+  return false;
+}
+float get_dist(){
+  digitalWrite(trig,LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig,LOW);
+  //여기까지
+  
+  float dist = (pulseIn(echo, HIGH)/29.0)/2; //cm 
+  return dist;
+}
