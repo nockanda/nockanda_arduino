@@ -1,0 +1,30 @@
+#include <SoftwareSerial.h>
+#define button1 4
+#define button2 5
+SoftwareSerial HC06(2, 3);
+
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신(앱인벤터와 상관없음)
+  HC06.begin(9600);//스마트폰-아두이노간 통신
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(button1) == LOW){
+    //버튼이 눌려진것!
+    //HC06.println("1");
+    HC06.write('1');
+    delay(200);
+  }
+  if(digitalRead(button2) == LOW){
+    //버튼이 눌려진것!
+    //HC06.println("2");
+    HC06.write('2');
+    delay(200);
+  }
+}

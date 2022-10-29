@@ -1,0 +1,56 @@
+[아두이노#289] (NODERED#25) OPENAPI/코로나 통계자료, 미세먼지 데이터 활용해보기! (사물인터넷IoT와 MQTT를 이용한 시리즈/녹칸다/포로리야공대가자)
+
+(NODERED#25) OPENAPI/코로나 통계자료, 미세먼지 데이터 활용해보기! (사물인터넷IoT와 MQTT를 이용한 시리즈)
+-녹칸다의 윈도우버전 NODERED를 사물인터넷보드(Wemos d1r1/esp8266)와 MQTT로 연결해서 활용해보는 시리즈이다!
+-이번 시리즈는 향후 라즈베리파이에서 NODERED를 활용할때 참조자료로 활용한다!
+-참고로 녹칸다는 NODERED를 잘하지는 못하고 흥미유발을 위한 기본적인 기능만 사용할 예정이다!
+-NODERED를 활용하면 웹서버가 생성되고 스마트폰을 이용해서 아두이노와 소통할 수 있는 예제를 간단히 구현할 수 있다!(웹UI를 제공한다)
+-더 수준높은 기능을 구현하려면 직접 찾아보고 응용해보면 될 것같다!(진입장벽을 낮춰주고자 하는 것이다!)
+-이번편에서는 node-red로 아~~~ 이런것도 할 수 있겠구나라는 것을 보여주기 위한 추가본이다!
+-녹칸다의 node-red시리즈는 23편이 끝이라고 볼 수 있다!
+-공공데이터포털에서 인증키를 받아서 OPENAPI를 node-red에서 활용해보자!
+-보건복지부 코로나 확진자수에 대한 OPENAPI를 최대한 node-red에서 활용해보자!
+-한국환경공단(에어코리아)의 측정소별 공기질정보 OPENAPI를 이용해서 node-red에서 활용해보자!
+-(구현범위는 상황에 따라 녹칸다가 가감한다!)
+
+*node-red 현재 년월일가져오는 코드
+var date = new Date();
+var year = date.getFullYear().toString();
+var month = (date.getMonth()+1).toString();
+var day = (date.getDate()).toString();
+
+if(month.length == 1) month = "0" + month;
+if(day.length == 1) day = "0" + day1;
+
+*node-red url인코딩하는 함수
+var 바껴진거 = encodeURI(바꾸고싶은거);
+
+ 
+
+(보건복지부 코로나19 API)
+
+289-1-flow.txt
+0.01MB
+(한국환경공단 측정소별 실시간 대기현황 API)
+
+289-2-flow.txt
+0.01MB
+ 
+
+ 
+
+*공공데이터포털
+
+https://www.data.go.kr/
+
+*보건복지부 코로나19 감염 현황
+
+https://www.data.go.kr/tcs/dss/selectApiDataDetailView.do?publicDataPk=15043376
+
+*한국환경공단 에어코리아 대기오염정보
+
+https://www.data.go.kr/tcs/dss/selectApiDataDetailView.do?publicDataPk=15073861
+
+한국환경공단측정소조회
+
+https://www.airkorea.or.kr/web/stationInfo?pMENU_NO=93

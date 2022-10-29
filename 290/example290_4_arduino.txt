@@ -1,0 +1,27 @@
+#include <SoftwareSerial.h>
+SoftwareSerial HC06(2, 3);
+
+#define LED 4
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신(앱인벤터와 상관없음)
+  HC06.begin(9600);//스마트폰-아두이노간 통신
+  pinMode(LED,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(HC06.available()){
+    //블루투스모듈을 통해서 뭔가? 데이터가 수신이된다면~
+    //nockanda! forever!
+    char c = HC06.read();
+    if(c == '0'){
+      //LED를 끈다!
+      digitalWrite(LED,LOW);
+    }else if(c == '1'){
+      //LED를 켠다!
+      digitalWrite(LED,HIGH);
+    }
+  }
+}

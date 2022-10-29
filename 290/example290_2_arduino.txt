@@ -1,0 +1,30 @@
+#include <SoftwareSerial.h>
+SoftwareSerial HC06(2, 3);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신(앱인벤터와 상관없음)
+  HC06.begin(9600);//스마트폰-아두이노간 통신
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(HC06.available()){
+    //블루투스모듈을 통해서 뭔가? 데이터가 수신이된다면~
+    //nockanda! forever!
+    String text = HC06.readStringUntil(0x0A); //0x0a == \n
+    if(text == "nockanda!"){
+      Serial.println("첫번째 버튼을 눌렀구나!");
+    }else if(text == "forever!"){
+      Serial.println("두번째 버튼을 눌렀구나!");
+    }
+    Serial.println(text);
+  }
+
+  //유저가 시리얼모니터에서 입력한 값을 블루투스로 날린다!
+  if(Serial.available()){
+    String text = Serial.readStringUntil(0x0A); //\n
+    //Serial.println(text);
+    HC06.println(text);
+  }
+}

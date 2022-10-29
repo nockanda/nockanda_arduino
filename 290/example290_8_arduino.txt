@@ -1,0 +1,17 @@
+#include <SoftwareSerial.h>
+SoftwareSerial HC06(2, 3);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신(앱인벤터와 상관없음)
+  HC06.begin(9600);//스마트폰-아두이노간 통신
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int num1 = random(1023);
+  int num2 = random(1023);
+  int num3 = random(1023);
+  HC06.println(String(num1)+","+String(num2)+","+String(num3));
+  delay(10);
+}

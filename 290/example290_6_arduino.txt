@@ -1,0 +1,47 @@
+#include <SoftwareSerial.h>
+#include <ArduinoJson.h>
+SoftwareSerial HC06(2, 3);
+
+
+
+byte led_pins[] = {4,5,6,7};
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간 통신(앱인벤터와 상관없음)
+  HC06.begin(9600);//스마트폰-아두이노간 통신
+  for(int i = 0;i<4;i++){
+    pinMode(led_pins[i],OUTPUT);
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(HC06.available()){
+    //블루투스모듈을 통해서 뭔가? 데이터가 수신이된다면~
+    //0000\n 모든 LED OFF
+    //1111\n 모든 LED ON
+    //1010\n (1,3) LED ON
+    //0101\n (2,4) LED ON
+    String text = HC06.readStringUntil(0x0a);
+
+    
+    StaticJsonDocument<64> doc;
+    deserializeJson(doc, text);
+
+    int led_state[4];
+    led_state[0] = doc["LED1"]; // 0
+    led_state[1] = doc["LED2"]; // 0
+    led_state[2] = doc["LED3"]; // 0
+    led_state[3] = doc["LED4"]; // 0
+ 
+    for(int i = 0;i<4;i++){
+      if(led_state[i] == 0){
+        digitalWrite(led_pins[i],LOW);
+      }else{
+        digitalWrite(led_pins[i],HIGH);
+      }
+    }
+    
+  }
+}
