@@ -1,0 +1,31 @@
+/*
+ * 사물인터넷보드 1번에 딸린 자식(아두이노 우노용 코드)
+ */
+
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+#define ONE_WIRE_BUS 2
+#define TEMPERATURE_PRECISION 12
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+DeviceAddress tempDeviceAddress;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  sensors.begin();
+  sensors.getAddress(tempDeviceAddress, 0);
+  sensors.setResolution(tempDeviceAddress, TEMPERATURE_PRECISION);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int cds = analogRead(A0);
+  int soil = analogRead(A1);
+  sensors.requestTemperatures(); 
+  float tempC = sensors.getTempCByIndex(0);
+  Serial.println(String(cds) + "," + String(soil) + "," + String(tempC));
+  delay(1000);
+}

@@ -1,0 +1,119 @@
+
+#include <ESP8266WiFi.h>
+#include "PMS.h"
+#include <SoftwareSerial.h>
+
+//Serial USB로 통신, (0,1)
+//Serial Serial1 Seria2 Seria3
+//아두이노 우노에 2,3핀에 미세먼지센서(PMS7003)의 Tx,Rx핀이 순서대로 연결되어있다!
+
+SoftwareSerial nockanda(D3,D4); //tx=3, rx=4
+
+PMS pms(nockanda);
+PMS::DATA data;
+
+#ifndef STASSID
+#define STASSID "popcorn"
+#define STAPSK  "11213144"
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+
+void setup() {
+  Serial.begin(115200);
+  Serial.begin(115200); //PC-아두이노간 통신(결과를 출력하기 위한)
+  nockanda.begin(9600);  //아두이노-미세먼지센서간 통신
+  pms.passiveMode(); 
+  
+  // prepare LED
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, 0);
+
+  // Connect to WiFi network
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  // Read the first line of the request
+  //클라이언트에서 날라온 request를 처리하는 부분
+  //현재 request에서 날라온 파라미터는 관심대상이 아님!
+  String req = client.readStringUntil('\r');
+  Serial.println(F("request: "));
+  Serial.println(req);
+
+  // read/ignore the rest of the request
+  // do not client.flush(): it is for output only, see below
+  while (client.available()) {
+    // byte by byte is not very efficient
+    client.read();
+  }
+
+  //센서값을 측정
+  String response;
+  Serial.println("Send read request...");
+  pms.requestRead();
+
+  Serial.println("Wait max. 1 second for read...");
+  if (pms.readUntil(data))
+  {
+    Serial.print("PM 1.0 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_1_0);
+
+    Serial.print("PM 2.5 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_2_5);
+
+    Serial.print("PM 10.0 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_10_0);
+    response = "PM 1.0 (ug/m3): " + String(data.PM_AE_UG_1_0) +
+    "PM 2.5 (ug/m3): " + String(data.PM_AE_UG_2_5) +
+    "PM 10.0 (ug/m3): " + String(data.PM_AE_UG_10_0);
+  }
+  else
+  {
+    Serial.println("No data.");
+    response = "측정에 실패했습니다..ㅠㅠ";
+  }
+  
+  //서버에서 클라이언트로 보내는 response
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"));
+  client.print(response);
+
+  // The client will actually be *flushed* then disconnected
+  // when the function returns and 'client' object is destroyed (out-of-scope)
+  // flush = ensure written data are received by the other side
+  Serial.println(F("Disconnecting from client"));
+}

@@ -1,0 +1,84 @@
+//2.4인치 LCD에 미세먼지 센서의 측정값을 출력하라!
+#include <SPFD5408_Adafruit_GFX.h>    // Core graphics library
+#include <SPFD5408_Adafruit_TFTLCD.h> // Hardware-specific library
+#include <SPFD5408_TouchScreen.h>
+#include "PMS.h"
+#include <SoftwareSerial.h>
+
+#define LCD_CS A3 // Chip Select goes to Analog 3
+#define LCD_CD A2 // Command/Data goes to Analog 2
+#define LCD_WR A1 // LCD Write goes to Analog 1
+#define LCD_RD A0 // LCD Read goes to Analog 0
+#define LCD_RESET A4
+#define BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+SoftwareSerial nockanda(10,11); //tx=10, rx=11
+
+PMS pms(nockanda);
+PMS::DATA data;
+
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+void setup()
+{
+  Serial.begin(9600); //PC-아두이노간 통신(결과를 출력하기 위한)
+  nockanda.begin(9600);  //아두이노-미세먼지센서간 통신
+  //pms.activeMode();
+  tft.reset();
+  tft.begin(0x9341); // SDFP5408
+  tft.setRotation(3);
+  tft.fillScreen(BLACK); //부팅되면서 검정칠을 해라!
+}
+
+void loop()
+{
+  //미세먼지센서에서 데이터가 수신이된다면~~ 출력하겠다!
+  if (pms.read(data))
+  {
+    Serial.print("PM 1.0 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_1_0);
+
+    Serial.print("PM 2.5 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_2_5);
+
+    Serial.print("PM 10.0 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_10_0);
+
+    Serial.println();
+    //tft.fillScreen(BLACK);//화면을 검정색으로 가득 채워라    
+    tft.setTextColor(YELLOW);  tft.setTextSize(2);
+      
+    tft.setCursor(0, 0);
+    tft.print("PM 1.0 (ug/m3): "); //자리가 고정
+    //tft.setCursor(250, 0);
+    //tft.print("___");
+    tft.fillRect(250, 0, 69, 15, BLACK);
+    tft.setCursor(250, 0);
+    tft.println(data.PM_AE_UG_1_0); //0~999
+
+    tft.setCursor(0, 20);
+    tft.print("PM 2.5 (ug/m3): "); //자리가 고정
+    //tft.setCursor(250, 20);
+    //tft.print("___");
+    tft.fillRect(250, 20, 69, 15, BLACK);
+    tft.setCursor(250, 20);
+    tft.println(data.PM_AE_UG_2_5);
+
+    tft.setCursor(0, 40);
+    tft.print("PM 10.0 (ug/m3): "); //자리가 고정
+    //tft.setCursor(250, 40);
+    //tft.print("___");
+    tft.fillRect(250, 40, 69, 15, BLACK);
+    tft.setCursor(250, 40);
+    tft.println(data.PM_AE_UG_10_0);
+  }else{
+    
+  }
+
+}

@@ -1,0 +1,64 @@
+//1602LCD에 미세먼지 센서값을 출력하시오!
+#include "PMS.h"
+#include <SoftwareSerial.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+
+//Serial USB로 통신, (0,1)
+//Serial Serial1 Seria2 Seria3
+//아두이노 우노에 2,3핀에 미세먼지센서(PMS7003)의 Tx,Rx핀이 순서대로 연결되어있다!
+
+LiquidCrystal_I2C lcd(0x27,16,2);
+
+SoftwareSerial nockanda(2,3); //tx=2, rx=3
+
+PMS pms(nockanda);
+PMS::DATA data;
+
+void setup()
+{
+  Serial.begin(9600); //PC-아두이노간 통신(결과를 출력하기 위한)
+  nockanda.begin(9600);  //아두이노-미세먼지센서간 통신
+  //pms.activeMode();
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("NOCKANDA PMS7003");
+}
+
+void loop()
+{
+  //미세먼지센서에서 데이터가 수신이된다면~~ 출력하겠다!
+  if (pms.read(data))
+  {
+    //컬럼헤더를 출력한다
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("PM10");
+    lcd.setCursor(5,0);
+    lcd.print("PM25");
+    lcd.setCursor(10,0);
+    lcd.print("PM100");
+    lcd.setCursor(0,1);
+    lcd.print(data.PM_AE_UG_1_0);
+    lcd.setCursor(5,1);
+    lcd.print(data.PM_AE_UG_2_5);
+    lcd.setCursor(10,1);
+    lcd.print(data.PM_AE_UG_10_0);
+    
+    Serial.print("PM 1.0 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_1_0);
+
+    Serial.print("PM 2.5 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_2_5);
+
+    Serial.print("PM 10.0 (ug/m3): ");
+    Serial.println(data.PM_AE_UG_10_0);
+
+    Serial.println();
+  }else{
+    
+  }
+
+}
