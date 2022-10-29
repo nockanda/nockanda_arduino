@@ -1,0 +1,43 @@
+
+#include <SPI.h>
+#include "RF24.h"
+
+#define btn1 2
+#define btn2 3
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.stopListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  /*
+  if(Serial.available()){
+    char c = Serial.read();
+    radio.write(&c,sizeof(c));
+  }
+  */
+  if(digitalRead(btn1) == LOW){
+    char c = '1';
+    radio.write(&c,sizeof(c));
+    Serial.println("버튼1 눌려짐");
+    delay(200);
+  }
+  if(digitalRead(btn2) == LOW){
+    char c = '0';
+    radio.write(&c,sizeof(c));
+    Serial.println("버튼2 눌려짐");
+    delay(200);
+  }
+}

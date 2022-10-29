@@ -1,0 +1,49 @@
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2); //1602
+
+#define R1 1000.0
+#define R2 1000.0
+
+#define GREEN 2
+#define RED 3
+
+//  R1+R2/R2
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(GREEN,OUTPUT);
+  pinMode(RED,OUTPUT);
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("NOCKANDA 517");
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int data = analogRead(A0); //10bit 아날로그 값을 읽는다!
+  float volt = (5*data/1024.0) / (R2/(R1+R2));
+
+  //최소 1v이상이 측정되면 녹칸다가 측정중인 상태인것이다!
+  if(volt > 8){
+    Serial.println("사용가능한상태 상태");
+    digitalWrite(GREEN,HIGH);
+    digitalWrite(RED,LOW);
+  }else if(volt > 1.0){
+    Serial.println("이 건전지는 버려야 합니다!");
+    digitalWrite(GREEN,LOW);
+    digitalWrite(RED,HIGH);
+  }else{
+    digitalWrite(GREEN,LOW);
+    digitalWrite(RED,LOW);
+  }
+  Serial.println(volt,6);
+  lcd.setCursor(0,1);
+  lcd.print("VOLT=");
+  lcd.print(volt);
+  lcd.print("V   ");
+  delay(100);
+}

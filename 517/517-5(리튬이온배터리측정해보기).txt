@@ -1,0 +1,75 @@
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2); //1602
+
+#define R1 330.0
+#define R2 4700.0
+
+#define GREEN 2
+#define RED 3
+
+//  R1+R2/R2
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(GREEN,OUTPUT);
+  pinMode(RED,OUTPUT);
+  lcd.init();
+  lcd.backlight();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int data = analogRead(A0); //10bit 아날로그 값을 읽는다!
+  float volt = (5*data/1024.0) / (R2/(R1+R2));
+
+  //3.8보다 작으면 60
+  //4.2보다 크면 100
+  //3.8~4.2구간에서 60~100
+  float percentage = 0;
+
+  if(volt >= 4.2){
+    percentage = 100;
+  }else if(volt < 4.2 && volt >= 3.8){
+    //계산을 해야하는 구간(volt 3.8~4.2)
+    // y = 100x-320
+    percentage = (100*volt) - 320;
+  }else{
+    //3.8미만일떄
+    percentage = 60;
+  }
+
+  
+  if(volt > 3.8){
+    Serial.println("사용가능한상태 상태");
+    digitalWrite(GREEN,HIGH);
+    digitalWrite(RED,LOW);
+  }else if(volt > 1.0){
+    Serial.println("충전이 필요한 상태");
+    digitalWrite(GREEN,LOW);
+    digitalWrite(RED,HIGH);
+  }else{
+    digitalWrite(GREEN,LOW);
+    digitalWrite(RED,LOW);
+  }
+  
+  Serial.print(volt);
+  Serial.print("\t");
+  Serial.println(percentage);
+  //첫번째줄에는 전압
+  //두번쨰줄에는 용량
+  lcd.setCursor(0,0);
+  lcd.print("VOLT=");
+  lcd.print(volt);
+  lcd.print("V   ");
+  
+  if(volt > 1.0){
+    lcd.setCursor(0,1);
+    lcd.print("PERC=");
+    lcd.print(percentage);
+    lcd.print("%   ");
+  }
+  delay(100);
+}

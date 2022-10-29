@@ -1,0 +1,50 @@
+#include <Servo.h>
+
+Servo ESC;
+
+int power = 0;
+bool is_run = false;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  //9번핀에 ESC가 연결되어있다!
+  ESC.attach(9,1000,2000);
+  ESC.write(0); //0~180
+  delay(2000); //ESC가 켜질때까지 약간 기다려주기!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    char c = Serial.read();
+    if(c == 's' && is_run == false){
+      //시동을 걸어라!
+      Serial.println("시동을 켜시오!");
+      power = 10;
+      ESC.write(10);
+      is_run = true;
+    }else if(c == 'e' && is_run == true){
+      Serial.println("시동을 끄시오!");
+      power = 0;
+      ESC.write(0);
+      is_run = false;
+    }else if(c == '+' && is_run == true){
+      Serial.println("속도가 올라갑니다!");
+      power++;
+      if(power > 60) power = 60;
+      ESC.write(power);
+
+      Serial.print("현재속도 = ");
+      Serial.println(power);
+    }else if(c == '-' && is_run == true){
+      Serial.println("속도가 내려갑니다!");
+      power--;
+      if(power < 10) power = 10;
+      ESC.write(power);
+
+      Serial.print("현재속도 = ");
+      Serial.println(power);
+    }
+  }
+}

@@ -1,0 +1,63 @@
+#include "max6675.h"
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK 2
+#define DIO 3
+
+#define btn 13
+#define led 12
+
+TM1637Display display(CLK, DIO);
+
+int thermoDO = 4;
+int thermoCS = 5;
+int thermoCLK = 6;
+
+unsigned long t = 0;
+bool bisang = false;
+
+MAX6675 thermocouple(thermoCLK, thermoCS, thermoDO);
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(btn,INPUT_PULLUP);
+  pinMode(led,OUTPUT);
+  display.setBrightness(0x0f);
+  display.showNumberDec(0, false);
+  
+  Serial.println("MAX6675 test");
+  delay(500);
+}
+
+void loop() {
+  //버튼이 눌려지면 뭐할래?
+  if(digitalRead(btn) == LOW){
+    //버튼이 눌러졌다!
+    Serial.println("버튼이 눌러졌다!");
+    bisang = !bisang;
+
+    if(bisang){
+      digitalWrite(led,HIGH);
+    }else{
+      digitalWrite(led,LOW);
+    }
+    delay(200);
+  }
+  //온도값을 읽어와서 어떡할래?
+  if(millis() - t > 1000){
+    t = millis();
+     float temp = thermocouple.readCelsius();
+     Serial.print("C = "); 
+     Serial.println(temp);
+     display.showNumberDec(temp*10, false);
+
+     if(temp >= 40 && bisang){
+       Serial.println("비상상황입니다!");
+       tone(7,2349);
+     }else{
+       noTone(7); 
+       bisang = false;
+     }
+  }
+}

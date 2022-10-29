@@ -1,0 +1,313 @@
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include <SoftwareSerial.h>
+
+const char* ssid = "nockanda";
+const char* password = "11213144";
+const char* mqtt_server = "broker.mqtt-dashboard.com";
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+SoftwareSerial lora(D5,D6);
+
+#define lora_mode D7
+
+#define SET_ADDH 0x00
+#define SET_ADDL 0x01
+#define SET_CH 0x47
+#define SET_MODE 0b01000011//(fixed transmission) //0b00000011(tranparent transmission)
+#define SET_Txpower 0b00000011 //21dBm 0b00000000(30dbm)
+
+byte now_addh = 0;
+byte now_addl = 0;
+byte now_ch = 0;
+byte now_mode = 0;
+byte now_txpower = 0;
+
+byte send_buff[4];
+
+struct{
+  byte id;
+  float temp;
+  float humi;
+  int retry_count;
+}mysensor;
+
+void setup_wifi() {
+
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  randomSeed(micros());
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  String mysjon = "";
+  for (int i = 0; i < length; i++) {
+    mysjon += (char)payload[i];
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+}
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      //client.publish("outTopic", "hello world");
+      // ... and resubscribe
+      //client.subscribe("nockanda/control");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC하고 아두이노하고의 통신라인!
+  lora.begin(9600); //아두이노하고 로라모듈하고의 통신라인!
+  pinMode(lora_mode,OUTPUT);
+
+  //일단 인터넷 공유기와 MQTT부터 연결한다!
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+
+  digitalWrite(lora_mode,HIGH); //설정모드!
+  delay(100);
+
+  Serial.println("E220-900T30D의 설정값입니다");
+
+  bool is_lora_boot = true; //일단 부팅에 성공한걸로 가정함
+
+  Serial.print("ADDH=");
+  send_buff[0] = 0xC1;
+  send_buff[1] = 0x00;
+  send_buff[2] = 0x01;
+  now_addh = get_config(send_buff);
+  Serial.println(now_addh,HEX);
+  if(now_addh == 0xFF) is_lora_boot = false;
+
+  delay(100);
+  Serial.print("ADDL=");
+  send_buff[0] = 0xC1;
+  send_buff[1] = 0x01;
+  send_buff[2] = 0x01;
+  now_addl = get_config(send_buff);
+  Serial.println(now_addl,HEX);
+  if(now_addl == 0xFF) is_lora_boot = false;
+
+  delay(100);
+  Serial.print("CH=");
+  send_buff[0] = 0xC1;
+  send_buff[1] = 0x04;
+  send_buff[2] = 0x01;
+  now_ch = get_config(send_buff);
+  Serial.print(850.125+ now_ch);
+  Serial.println("Mhz");
+  if(now_ch == 0xFF) is_lora_boot = false;
+
+  delay(100);
+  Serial.print("mode=");
+  send_buff[0] = 0xC1;
+  send_buff[1] = 0x05;
+  send_buff[2] = 0x01;
+  now_mode = get_config(send_buff);
+  Serial.println(bitRead(now_mode, 6)?"Fixed Transmission":"Transparent Transmission");
+  if(now_mode == 0xFF) is_lora_boot = false;
+
+  delay(100);
+  Serial.print("TXpower=");
+  send_buff[0] = 0xC1;
+  send_buff[1] = 0x03;
+  send_buff[2] = 0x01;
+  now_txpower = get_config(send_buff);
+  if(now_txpower == 0xFF) is_lora_boot = false;
+
+ 
+  if(bitRead(now_txpower,1) == 0 && bitRead(now_txpower,0) == 0){
+    Serial.println("30dBm");
+  }else if(bitRead(now_txpower,1) == 0 && bitRead(now_txpower,0) == 1){
+    Serial.println("27dBm");
+  }else if(bitRead(now_txpower,1) == 1 && bitRead(now_txpower,0) == 0){
+    Serial.println("24dBm");
+  }else if(bitRead(now_txpower,1) == 1 && bitRead(now_txpower,0) == 1){
+    Serial.println("21dBm");
+  }
+
+  //유저가 희망하는(아두이노에 코드로 지정된) 설정값으로 update!
+  if(SET_ADDH != now_addh){
+    //주소값을 업데이트한다!
+    delay(100);
+    send_buff[0] = 0xC0;
+    send_buff[1] = 0x00;
+    send_buff[2] = 0x01;
+    send_buff[3] = SET_ADDH; //내가 설정할 값
+    Serial.print("ADDH값 수정=");
+    byte temp = set_config(send_buff);
+    if(temp == 0xFF) is_lora_boot = false;
+    Serial.println(temp,HEX);
+  }
+
+  if(SET_ADDL != now_addl){
+    delay(100);
+    send_buff[0] = 0xC0;
+    send_buff[1] = 0x01;
+    send_buff[2] = 0x01;
+    send_buff[3] = SET_ADDL; //내가 설정할 값
+    Serial.print("ADDL값 수정=");
+    byte temp =set_config(send_buff);
+    if(temp == 0xFF) is_lora_boot = false;
+    Serial.println(temp,HEX);
+  }
+
+  if(SET_CH != now_ch){
+    delay(100);
+    send_buff[0] = 0xC0;
+    send_buff[1] = 0x04;
+    send_buff[2] = 0x01;
+    send_buff[3] = SET_CH; //내가 설정할 값
+    Serial.print("CH값 수정=");
+    byte temp =set_config(send_buff);
+    Serial.print(850.125+ temp);
+    Serial.println("Mhz");
+    if(temp == 0xFF) is_lora_boot = false;
+  }
+
+  if(SET_MODE != now_mode){
+    delay(100);
+    send_buff[0] = 0xC0;
+    send_buff[1] = 0x05;
+    send_buff[2] = 0x01;
+    send_buff[3] = SET_MODE; //내가 설정할 값
+    Serial.print("MODE값 수정=");
+    byte temp =set_config(send_buff);
+    Serial.println(bitRead(temp, 6)?"Fixed Transmission":"Transparent Transmission");
+    if(temp == 0xFF) is_lora_boot = false;
+  }
+
+  if(SET_Txpower != now_txpower){
+    delay(100);
+    send_buff[0] = 0xC0;
+    send_buff[1] = 0x03;
+    send_buff[2] = 0x01;
+    send_buff[3] = SET_Txpower; //내가 설정할 값
+    Serial.print("TXPOWER값 수정=");
+    now_txpower = set_config(send_buff);
+    if(now_txpower == 0xFF) is_lora_boot = false;
+    if(bitRead(now_txpower,1) == 0 && bitRead(now_txpower,0) == 0){
+      Serial.println("30dBm");
+    }else if(bitRead(now_txpower,1) == 0 && bitRead(now_txpower,0) == 1){
+      Serial.println("27dBm");
+    }else if(bitRead(now_txpower,1) == 1 && bitRead(now_txpower,0) == 0){
+      Serial.println("24dBm");
+    }else if(bitRead(now_txpower,1) == 1 && bitRead(now_txpower,0) == 1){
+      Serial.println("21dBm");
+    }
+  }
+  
+  delay(1000);
+  if(is_lora_boot){
+    Serial.println("LoRa모듈이 성공적으로 연결되었습니다!");
+  }else{
+    Serial.println("LoRa모듈에 문제가 있습니다!");
+  }
+  Serial.println("송수신모드로 전환합니다");
+  digitalWrite(lora_mode,LOW); //송수신모드!
+  delay(100);
+
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+  
+  if(lora.available()){
+    byte recv[sizeof(mysensor)];
+    lora.readBytes(recv,sizeof(recv));
+
+    memcpy(&mysensor,recv,sizeof(mysensor));
+/*
+    Serial.print(mysensor.id);
+    Serial.print("\t");
+    Serial.print(mysensor.temp);
+    Serial.print("\t");
+    Serial.print(mysensor.humi);
+    Serial.print("\t");
+    Serial.println(mysensor.retry_count);
+*/
+    //로라데이터를 수신한다음 OK를 응답한다!
+    lora.write((byte)0x00);
+    lora.write(mysensor.id);
+    lora.write(now_ch);
+    lora.write('O');
+    lora.write('K');
+    String myjson = "{\"id\":"+String(mysensor.id)+",\"temp\":"+String(mysensor.temp)+",\"humi\":"+String(mysensor.humi)+",\"rcount\":"+String(mysensor.retry_count)+"}";
+    Serial.println(myjson);
+    client.publish("nockanda/gateway", myjson.c_str());
+  }
+}
+
+byte get_config(byte input[]){
+  byte recv_buff[4];
+  lora.write(input,3);
+  lora.readBytes(recv_buff,4);
+
+  if(recv_buff[0] == input[0] && recv_buff[1] == input[1] && recv_buff[2] == input[2]){
+    //Serial.print("ADDH=");
+    //Serial.println(recv_buff[3],HEX);
+    return recv_buff[3];
+  }else{
+    return 0xFF;
+  }
+}
+
+byte set_config(byte input[]){
+  byte recv_buff[4];
+  lora.write(input,4);
+  lora.readBytes(recv_buff,4);
+
+  if(recv_buff[0] == 0xC1 && recv_buff[1] == input[1] && recv_buff[2] == input[2] && recv_buff[3] == input[3]){
+    //응답이 정상적으로온 경우
+    return recv_buff[3];
+  }else{
+    //실패!
+    return 0xFF;
+  }
+}

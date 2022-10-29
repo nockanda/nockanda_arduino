@@ -1,0 +1,52 @@
+
+#include <SPI.h>
+#include "RF24.h"
+#include <Servo.h>
+
+Servo ESC;
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+bool engine_started = false;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address);
+  radio.startListening();
+
+  //9번핀에 ESC가 연결되어있다!
+  ESC.attach(8,1000,2000);
+  ESC.write(0); //0~180
+  delay(2000); //ESC가 켜질때까지 약간 기다려주기!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    byte recv;
+    radio.read(&recv,sizeof(recv));
+
+    //10~180 : 속도제어
+    //200 : 시동 OFF
+    //240 : 시동 ON
+    //드론모터의 입력값이 10이상부터 회전을 시작한다!
+    if(recv == 200){
+      //시동 OFF
+      ESC.write(0);
+      engine_started = false;
+    }else if(recv == 240){
+      //시동 ON
+      ESC.write(10);
+      engine_started = true;
+    }else if(engine_started == true && recv >= 10 && recv <= 180){
+      //속도제어
+      ESC.write(recv);
+    }
+  }
+}

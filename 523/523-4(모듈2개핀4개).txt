@@ -1,0 +1,23 @@
+// this example is public domain. enjoy!
+// https://learn.adafruit.com/thermocouple/
+
+#include "max6675.h"
+
+MAX6675 thermocouple1(4,5,3); //SCK CS SO
+MAX6675 thermocouple2(4,6,3);
+
+void setup() {
+  Serial.begin(9600);
+
+  Serial.println("MAX6675 test");
+  // wait for MAX chip to stabilize
+  delay(500);
+}
+
+void loop() {
+  // basic readout test, just print the current temp
+   Serial.print(thermocouple1.readCelsius());
+   Serial.print("\t");
+   Serial.println(thermocouple2.readCelsius());
+   delay(1000);
+}

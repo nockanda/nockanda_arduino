@@ -1,0 +1,31 @@
+#include <Servo.h>
+
+Servo ESC;
+
+int power = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  //9번핀에 ESC가 연결되어있다!
+  ESC.attach(9,1000,2000);
+  ESC.write(0); //0~180
+  delay(2000); //ESC가 켜질때까지 약간 기다려주기!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(Serial.available()){
+    char c = Serial.read();
+    if(c == '+'){
+      power++;
+      if(power > 60) power = 60;
+    }else if(c == '-'){
+      power--;
+      if(power < 0) power = 0;
+    }
+    Serial.print("현재 설정된 파워=");
+    Serial.println(power);
+    ESC.write(power);
+  }
+}

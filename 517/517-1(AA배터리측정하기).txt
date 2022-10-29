@@ -1,0 +1,17 @@
+#define R1 330.0
+#define R2 4700.0
+
+//  R1+R2/R2
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int data = analogRead(A0); //10bit 아날로그 값을 읽는다!
+  float volt = (5*data/1024.0) / (R2/(R1+R2));
+  Serial.println(volt,6);
+  delay(100);
+}

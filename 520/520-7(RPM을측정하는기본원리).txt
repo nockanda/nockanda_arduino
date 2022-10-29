@@ -1,0 +1,30 @@
+volatile int count = 0;
+unsigned long t = 0;
+unsigned long main_t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(2,INPUT); //적외선 근접센서
+  attachInterrupt(digitalPinToInterrupt(2), rpm, FALLING);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(millis() - main_t > 1000){
+    main_t = millis();
+    float rpm = (count/4.0)*60; //RPM
+    Serial.println(rpm);
+
+
+    count = 0;
+  }
+}
+
+void rpm() {
+  //1ms=1000us이내의 호출은 무시한다!
+  if(micros() - t > 1000){
+    t = micros();
+    count++;
+  }
+}

@@ -1,0 +1,84 @@
+#include "max6675.h"
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK 2
+#define DIO 3
+
+#define btn 13
+#define up_btn 10
+#define dw_btn 11
+#define led 12
+
+TM1637Display display(CLK, DIO);
+
+int thermoDO = 4;
+int thermoCS = 5;
+int thermoCLK = 6;
+
+unsigned long t = 0;
+bool bisang = false; //부저가 작동 안된다!
+float set_temp = 40;
+
+MAX6675 thermocouple(thermoCLK, thermoCS, thermoDO);
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(btn,INPUT_PULLUP);
+  pinMode(up_btn,INPUT_PULLUP);
+  pinMode(dw_btn,INPUT_PULLUP);
+  pinMode(led,OUTPUT);
+  display.setBrightness(0x0f);
+  display.showNumberDec(0, false);
+  
+  Serial.println("MAX6675 test");
+  delay(500);
+}
+
+void loop() {
+  //버튼이 눌려지면 뭐할래?
+  if(digitalRead(up_btn) == LOW){
+    Serial.println("업버튼 눌려짐");
+    set_temp += 0.5;
+    display.showNumberDec(set_temp*10, false);
+    delay(500);
+    t = millis();
+  }
+  if(digitalRead(dw_btn) == LOW){
+    Serial.println("다운버튼 눌려짐");
+    set_temp -= 0.5;
+    display.showNumberDec(set_temp*10, false);
+    delay(500);
+    t = millis();
+  }
+  if(digitalRead(btn) == LOW){
+    //버튼이 눌러졌다!
+    Serial.println("버튼이 눌러졌다!");
+    
+    if(bisang){
+      bisang = false;
+      digitalWrite(led,LOW);
+      Serial.println("경고모드 해제");
+    }else{
+      bisang = true;
+      digitalWrite(led,HIGH);
+      Serial.println("경고모드 설정");
+    }
+    delay(200);
+  }
+  //온도값을 읽어와서 어떡할래?
+  if(millis() - t > 1000){
+    t = millis();
+     float temp = thermocouple.readCelsius();
+     Serial.print("C = "); 
+     Serial.println(temp);
+     display.showNumberDec(temp*10, false);
+
+     if(temp >= set_temp && bisang){
+       Serial.println("비상상황입니다!");
+       tone(7,2349);
+     }else{
+       noTone(7); 
+     }
+  }
+}

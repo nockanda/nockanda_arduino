@@ -1,0 +1,21 @@
+#include <MAX6675.h>
+
+MAX6675 tcouple1(10);
+MAX6675 tcouple2(9);
+
+void setup()
+{
+  Serial.begin(9600);
+  Serial.println("****MAX6675 thermocouple library by E. Kremer****");
+  Serial.println();
+}
+
+void loop()
+{
+  float celsius1 = tcouple1.readTempC();
+  float celsius2 = tcouple2.readTempC();
+  Serial.print(celsius1);
+  Serial.print("\t");
+  Serial.println(celsius2);
+  delay(1000);
+}
