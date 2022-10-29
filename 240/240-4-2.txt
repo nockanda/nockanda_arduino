@@ -1,0 +1,43 @@
+/*
+  예제 240-4-2 리시버에 LED가 D2,D3,D4,D5에 연결되어있다!
+  트랜시버에서 날라오는 4바이트 값에 맞춰서 LED를 ON/OFF하라!
+ */
+#include <SPI.h>
+#include "RF24.h"
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+byte leds[] = {2,3,4,5};
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address);
+  radio.startListening();
+  for(int i = 0;i<4;i++){
+    pinMode(leds[i],OUTPUT);
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    char recv[4];
+    radio.read(recv,sizeof(recv));
+    
+    for(int i = 0;i<4;i++){
+      if(recv[i] == '0'){
+        digitalWrite(leds[i],LOW);
+      }else{
+        digitalWrite(leds[i],HIGH);
+      }
+    }
+    
+  }
+}

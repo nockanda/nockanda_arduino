@@ -1,0 +1,33 @@
+/*
+  예제 240-5-2 리시버에 LED가 D3에 연결되어있다!
+  트랜시버에서 날라오는 1바이트 아날로그값을 이용해서 LED의 밝기를 제어하라!
+ */
+#include <SPI.h>
+#include "RF24.h"
+
+#define led 3
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address);
+  radio.startListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    int power = 0;
+    radio.read(&power,sizeof(power));
+
+    analogWrite(led,power);
+  }
+}

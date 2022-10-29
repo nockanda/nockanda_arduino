@@ -1,0 +1,59 @@
+/*
+  예제 248-2-1 2.4G RF모듈(nRF24L01)을 이용한 리시버예제!
+ */
+#include <SPI.h>
+#include "RF24.h"
+
+#define led1 2 //적색LED
+#define led2 3 //녹색LED
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address1[6] = "00001";
+uint8_t address2[6] = "10002";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address1);
+  radio.openReadingPipe(1, address2);
+  radio.startListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  byte pipe;
+  if (radio.available(&pipe)){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    char recv;
+    radio.read(&recv,sizeof(recv));
+    //Serial.print(pipe);
+    //Serial.print(",");
+    //Serial.println(text);
+
+    if(pipe == 0){
+      //송신기 1번에서 날라온 데이터
+      if(recv == '0'){
+        //LED를 끈다
+        digitalWrite(led1,LOW);
+      }else if(recv == '1'){
+        //LED를 켠다
+        digitalWrite(led1,HIGH);
+      }
+    }else if(pipe == 1){
+      //송신기 2번에서 날라온 데이터
+      if(recv == '0'){
+        //LED를 끈다
+        digitalWrite(led2,LOW);
+      }else if(recv == '1'){
+        //LED를 켠다
+        digitalWrite(led2,HIGH);
+      }
+    }
+  }
+}

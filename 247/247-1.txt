@@ -1,0 +1,43 @@
+/*
+  예제247-1 아두이노에 피토관과 차압센서를 이용해서 풍속을 구해보자!
+ */
+int offset = 0;
+double pre_v = 0;
+float alpha = 0.1;
+double air = 1.2690; //kg/m3
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+
+  for(int i = 0;i<10;i++){
+    offset += analogRead(A0) - 512;
+  }
+  offset = offset / 10;
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  float adc = 0;
+
+  for(int i = 0;i<100;i++){
+    adc += analogRead(A0) - offset;
+  }
+  adc = adc/100;
+
+  double v = 0;
+  //  512
+  if(adc > 514){
+    v = sqrt((2000*(5*adc/1023.0 - 2.5))/air); 
+  }else if(adc < 510){
+    v = -sqrt((-2000*(5*adc/1023.0 - 2.5))/air); 
+  }
+
+  double filltered_v = pre_v*(1-alpha) + v*alpha;
+  pre_v = filltered_v;
+  //Serial.print(v);
+  //Serial.print(",");
+  Serial.println(filltered_v);
+  //Serial.println("m/s");
+  
+}

@@ -1,0 +1,41 @@
+/*
+  예제 243-3-1 트랜시버용코드
+  아두이노에 A0핀에 2축조이스틱의 X축을 연결했다!
+  조이스틱의 아날로그값을 읽어서 700보다 크면 스탭모터를 양의방향으로 제어할 수 있는 명령을 전송하고
+  300보다 작으면 음의방향으로 제어할 수 있는 명령을 무선으로 보내보자!
+  양의방향으로 제어하려면 '0'을 전송하고, 음의방향으로 제어하려면 '1'을 전송해보자!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.stopListening();
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int r = analogRead(A0); //0~1023
+
+  if(r > 700){
+    //Serial.println("오른쪽");
+    char c = '0';
+    radio.write(&c,sizeof(c));
+  }else if(r < 300){
+    //Serial.println("왼쪽");
+    char c = '1';
+    radio.write(&c,sizeof(c));
+  }
+  
+  delay(100);
+}

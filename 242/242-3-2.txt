@@ -1,0 +1,44 @@
+/*
+  예제 242-3-2 리시버코드
+  아두이노 D3에 서보모터를 연결했다!
+  트랜시버에서 각도값이 날라오면 그 각도대로 서보모터를 회전시켜라!
+ */
+#include <SPI.h>
+#include "RF24.h"
+#include <Servo.h>
+
+#define servo_pin 3
+
+Servo myservo;
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+int degree = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address);
+  radio.startListening();
+
+  myservo.attach(servo_pin);
+  myservo.write(degree);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    byte recv;
+    radio.read(&recv,sizeof(recv));
+
+    Serial.println(recv);
+    if(recv >=0 && recv <= 180){
+      myservo.write(recv);
+    }
+  }
+}

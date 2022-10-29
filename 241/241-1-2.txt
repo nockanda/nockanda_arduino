@@ -1,0 +1,46 @@
+/*
+  예제 240-1-2 2.4G RF모듈(nRF24L01)을 이용해서 기본 text를 수신하는 예제!
+ */
+#include <SPI.h>
+#include "RF24.h"
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27,16,2);
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address);
+  radio.startListening();
+  lcd.init();
+  lcd.backlight();
+
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    int cds = 0;
+    radio.read(&cds,sizeof(cds));
+    lcd.clear();
+    lcd.setCursor(0,0); 
+    lcd.print(cds);
+
+    String output;
+    if(cds > 300){
+      output = "DAY!";
+    }else{
+      output = "NIGHT!";
+    }
+    lcd.setCursor(0,1); 
+    lcd.print(output);
+  }
+}

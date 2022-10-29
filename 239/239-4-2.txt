@@ -1,0 +1,28 @@
+/*
+  239-4-2 블루투스 슬레이브모드(HC06)
+ */
+
+#include <SoftwareSerial.h>
+
+#define led 4
+
+SoftwareSerial HC06(2, 3); // RX, TX
+
+void setup() {
+  Serial.begin(9600); //PC-아두이노간
+  HC06.begin(9600); //아두이노-블루투스모듈간
+  pinMode(led,OUTPUT);
+}
+
+void loop() { // run over and over
+  if (HC06.available()) {
+    char c = HC06.read();
+    if(c == '0'){
+      //LED OFF
+      digitalWrite(led,LOW);
+    }else if(c == '1'){
+      //LED ON
+      digitalWrite(led,HIGH);
+    }
+  }
+}

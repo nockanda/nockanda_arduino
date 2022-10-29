@@ -1,0 +1,38 @@
+/*
+  예제 241-5-1 트랜시버에 비접촉적외선온도센서(MLX90614)를 연결했다!
+  온도값을 리시버로 전송해서 1602LCD에 출력하라!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+#include <Wire.h>
+#include <Adafruit_MLX90614.h>
+
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+
+RF24 radio(9, 10); //CE, SS
+uint8_t address[6] = "00001";
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.stopListening();
+  mlx.begin();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  float data[2];
+  
+  data[0] = mlx.readAmbientTempC();
+  data[1] = mlx.readObjectTempC();
+
+  radio.write(data,sizeof(data));
+  
+  delay(100);
+}
+

@@ -1,0 +1,28 @@
+/*
+  예제 241-1-1 트랜시버에 광센서(CDS)를 A0에 연결했다!
+  광센서의 값을 측정해서 리시버로 넘겨라!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.stopListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int cds = analogRead(A0); //0~1023
+  radio.write(&cds,sizeof(cds));
+  //Serial.println(cds);
+  delay(100);
+}

@@ -1,0 +1,44 @@
+/*
+  예제 240-4-1 트랜시버에 버튼을 D2,D3,D4,D5에 연결했다!
+  각각의 버튼이 눌려질때 리시버에 '0'또는 '1'의 값을 보내보자!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+byte buttons[] = {2,3,4,5};
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.stopListening();
+  for(int i = 0;i<4;i++){
+    pinMode(buttons[i],INPUT_PULLUP);
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  byte button_state[4];
+  
+  for(int i = 0;i<4;i++){
+    if(digitalRead(buttons[i]) == LOW){
+      //i번째 버튼이 눌려진경우~
+      button_state[i] = '1';
+    }else{
+      //i번쨰 버튼이 안눌러진경우~
+      button_state[i] = '0';
+    }
+  }
+
+  radio.write(button_state,sizeof(button_state));
+  
+  delay(100);
+}

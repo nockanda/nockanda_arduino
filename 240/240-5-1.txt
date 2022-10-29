@@ -1,0 +1,31 @@
+/*
+  예제 240-5-1 트랜시버에 가변저항을 A0에 연결했다!
+  가변저항을 돌린값을 이용해서 리시버에 달려있는 LED의 밝기를 제어하라!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.stopListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int power = analogRead(A0); //0~1023 -> 0~255
+  power = map(power,0,1023,0,255);
+  Serial.println(power);
+
+  radio.write(&power,sizeof(power));
+  delay(100);
+}

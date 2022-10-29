@@ -1,0 +1,40 @@
+/*
+  예제 250-1-3 2.4G RF모듈(nRF24L01)을 이용한 트랜스미터 예제!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+#include <SoftwareSerial.h>
+#include <MHZ19.h>
+
+SoftwareSerial ss(2,3); 
+MHZ19 mhz(&ss);
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address1[6] = "00001";
+uint8_t address2[6] = "10002";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  ss.begin(9600);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address2);
+  radio.stopListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  MHZ19_RESULT response = mhz.retrieveData();
+  if (response == MHZ19_RESULT_OK)
+  {
+    int data = mhz.getCO2();
+    
+    radio.write(&data,sizeof(data));
+  }
+  
+  
+  delay(1000);
+}

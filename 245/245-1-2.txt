@@ -1,0 +1,47 @@
+/*
+  예제 245-1-2 리시버용 아두이노 코드
+  아두이노에 서보모터 2개를 D2,D3에 연결했다!
+  트랜스미터에서 날라오는 2개의 각도값을 이용해서 서보모터를 제어하라!
+ */
+#include <SPI.h>
+#include "RF24.h"
+#include <Servo.h>
+
+#define servox_pin 2
+#define servoz_pin 3
+
+RF24 radio(9, 10); //CE, SS
+
+Servo servox;
+Servo servoz;
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address);
+  radio.startListening();
+
+  servox.attach(servox_pin);
+  servoz.attach(servoz_pin);
+
+  servox.write(90); 
+  servoz.write(90); 
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    byte recv[2];
+    radio.read(recv,sizeof(recv));
+
+    Serial.println("nockanda");
+    //recv[0]:x recv[1]:z
+    servox.write(recv[0]); 
+    servoz.write(recv[1]); 
+  }
+}

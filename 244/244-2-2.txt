@@ -1,0 +1,35 @@
+/*
+  예제 244-2-2 리시버용 아두이노 코드!
+  아두이노에 D3에 모스펫(IRF52)을 연결했다!
+  그리고 모스펫에는 DC모터를 연결했다!
+  트랜스미터에서 날라오는 1바이트값을 이용해서 모스펫을 PWM제어하라!
+ */
+#include <SPI.h>
+#include "RF24.h"
+
+#define mosfet 3
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address);
+  radio.startListening();
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    byte recv;
+    radio.read(&recv,sizeof(recv));
+    Serial.println(recv);
+    analogWrite(mosfet,recv);
+  }
+}

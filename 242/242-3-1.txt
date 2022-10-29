@@ -1,0 +1,33 @@
+/*
+  예제 242-3-1 트랜시버코드
+  조이스틱의 x축을 A0에 연결했다!
+  아날로그 10비트값을 서보모터 각도값으로 환산해서
+  리시버에 전송한다음 서보모터를 제어할 수 있도록 하라!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.stopListening();
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int r = analogRead(A0);
+  byte degree = map(r,0,1023,0,180);
+
+  radio.write(&degree,sizeof(degree));
+  
+  delay(10);
+}

@@ -1,0 +1,55 @@
+/*
+  예제 243-2-2 리시버용코드
+  트랜시버에서 0~64사이의 값이 날라오면 32를 곱해서 스탭수로 환산한다!
+  리시버가 기억하고있는 위치에서 트랜시버가 요청한 스탭수만큼의 차를 계산한다!
+ */
+#include <SPI.h>
+#include "RF24.h"
+#include <Stepper.h>
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+const int stepsPerRevolution = 2048;
+//IN1(7), IN2(6), IN3(5), IN4(4)
+                                   //IN4 IN2 IN3 IN1
+Stepper myStepper(stepsPerRevolution, 4, 6, 5, 7);
+
+int step1 = 0; //스탭모터가 기억하는 자신의 스탭
+int step2 = 0; //트랜시버에 의해서 목표로 지정된 스탭
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address);
+  radio.startListening();
+
+  myStepper.setSpeed(10);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    byte recv; 
+    radio.read(&recv,sizeof(recv)); //0~64
+
+    Serial.println(recv);
+    step2 = recv;
+  }
+
+     //0       64
+  if(step1 < step2){
+    myStepper.step(32);
+    step1++;
+            //64     0
+  }else if(step1 > step2){
+    myStepper.step(-32);
+    step1--;
+  }else{
+    //match
+  }
+}

@@ -1,0 +1,44 @@
+/*
+  예제 242-1-1 트랜시버코드
+  아두이노에 D2와 D3에 버튼을 연결했다!
+  D2를 누르면 서보모터의 각도가 증가될 수 있는 명령('1')을 보낸다!
+  D3을 누르면 서보모터의 각도가 감소할 수 있는 명령('0')을 보낸다!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+
+#define button1 2
+#define button2 3
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.stopListening();
+
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(button1) == LOW){
+    //증가버튼
+    char c = '1';
+    radio.write(&c,sizeof(c));
+    Serial.println("증가");
+  }else if(digitalRead(button2) == LOW){
+    //감소버튼
+    char c = '0';
+    radio.write(&c,sizeof(c));
+    Serial.println("감소");
+  }
+  delay(10);
+}

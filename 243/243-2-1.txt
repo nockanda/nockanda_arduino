@@ -1,0 +1,32 @@
+/*
+  예제 243-2-1 트랜시버용코드
+  아두이노에 A0핀에 가변저항을 연결했다!
+  가변저항의 절대적인 위치를 각도로 환산해서 그 각도대로 스탭모터를 회전시키시오!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.stopListening();
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int r = analogRead(A0); //0~1023
+  byte degree = map(r,0,1023,0,64);
+
+  radio.write(&degree,sizeof(degree));
+  
+  delay(100);
+}

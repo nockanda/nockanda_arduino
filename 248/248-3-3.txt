@@ -1,0 +1,39 @@
+/*
+  예제 248-3-3 2.4G RF모듈(nRF24L01)을 이용한 트랜스미터 예제!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+
+#define button 2
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address1[6] = "00001";
+uint8_t address2[6] = "10002";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  pinMode(button,INPUT_PULLUP);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address2);
+  radio.stopListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(button) == LOW){
+    //버튼이 눌려진것!
+    //=LED를 ON시키는 신호를 전송
+    char data = '1';
+    radio.write(&data,sizeof(data));
+  }else{
+    //버튼이 안눌려진것!
+    //=LED를 OFF시키는 신호를 전송
+    char data = '0';
+    radio.write(&data,sizeof(data));
+  }
+  delay(100);
+}

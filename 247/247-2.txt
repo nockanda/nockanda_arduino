@@ -1,0 +1,53 @@
+/*
+  예제247-2 직전예제에서 구했던 풍속을 FND모듈(TM1637)에 출력하라!
+ */
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK 2
+#define DIO 3
+
+TM1637Display display(CLK, DIO);
+ 
+int offset = 0;
+double pre_v = 0;
+float alpha = 0.1;
+double air = 1.2690; //kg/m3
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  display.setBrightness(0x0f);
+  
+  for(int i = 0;i<10;i++){
+    offset += analogRead(A0) - 512;
+  }
+  offset = offset / 10;
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  float adc = 0;
+
+  for(int i = 0;i<100;i++){
+    adc += analogRead(A0) - offset;
+  }
+  adc = adc/100;
+
+  double v = 0;
+  //  512
+  if(adc > 514){
+    v = sqrt((2000*(5*adc/1023.0 - 2.5))/air); 
+  }else if(adc < 510){
+    v = -sqrt((-2000*(5*adc/1023.0 - 2.5))/air); 
+  }
+
+  double filltered_v = pre_v*(1-alpha) + v*alpha;
+  pre_v = filltered_v;
+  //Serial.print(v);
+  //Serial.print(",");
+  //Serial.println(filltered_v);
+  //Serial.println("m/s");
+  //2020
+  display.showNumberDecEx(filltered_v*100, 0x40, true);
+}

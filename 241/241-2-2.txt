@@ -1,0 +1,39 @@
+/*
+  예제 240-2-2 트랜시버에서 날라오는 온습도값을 1602LCD에 출력하는 예제!
+ */
+#include <SPI.h>
+#include "RF24.h"
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27,16,2);
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address);
+  radio.startListening();
+  lcd.init();
+  lcd.backlight();
+
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    float recv[2];
+    radio.read(recv,sizeof(recv));
+    lcd.clear();
+    lcd.setCursor(0,0); //첫번째줄에 뭔가 작성해보자
+    lcd.print(String(recv[0]) + "%"); //습도
+    lcd.setCursor(0,1); 
+    lcd.print(String(recv[1]) + "'C"); //온도
+  }
+}

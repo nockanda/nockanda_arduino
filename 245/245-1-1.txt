@@ -1,0 +1,51 @@
+/*
+  예제 245-1-1 트랜스미터용 코드
+  아두이노에 6축자이로센서(MPU-6050)를 연결했다!
+  자이로센서의 x축과 z축의 값을 리시버로 전송하라!
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+#include "Wire.h"
+#include <MPU6050_light.h>
+
+MPU6050 mpu(Wire);
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.stopListening();
+
+  Wire.begin();
+  mpu.begin();
+  Serial.println(F("Calculating gyro offset, do not move MPU6050"));
+  delay(1000);
+  mpu.calcGyroOffsets();
+  Serial.println("Done!\n");
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  mpu.update();
+  int x = 90 - mpu.getAngleX();
+  int z = mpu.getAngleZ()+90;
+  if(x <0 ) x = 0; //MIN
+  if(x >180) x = 180; //MAX
+  if(z < 0) z = 0; // MIN
+  if(z > 180) z = 180; //MAX
+  //0~180
+  byte angle[2];
+  angle[0] = x;
+  angle[1] = z;
+
+  radio.write(angle,sizeof(angle));
+  
+  delay(10);
+}

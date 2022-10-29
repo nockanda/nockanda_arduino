@@ -1,0 +1,49 @@
+/*
+  예제 243-3-2 리시버용코드
+  트랜시버에서 '0'이 날라오면 양의방향으로 32스탭만큼 회전하고
+  '1'이 날라오면 음의방향으로 -32스탭만큼 회전시켜라!
+ */
+#include <SPI.h>
+#include "RF24.h"
+#include <Stepper.h>
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+const int stepsPerRevolution = 2048;
+//IN1(7), IN2(6), IN3(5), IN4(4)
+                                   //IN4 IN2 IN3 IN1
+Stepper myStepper(stepsPerRevolution, 4, 6, 5, 7);
+
+int step1 = 0; //스탭모터가 기억하는 자신의 스탭
+int step2 = 0; //트랜시버에 의해서 목표로 지정된 스탭
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address);
+  radio.startListening();
+
+  myStepper.setSpeed(10);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    char recv; 
+    radio.read(&recv,sizeof(recv)); //0~64
+    Serial.println(recv);
+    if(recv == '0'){
+      //양의방향
+      myStepper.step(32);
+    }else if(recv == '1'){
+      //음의방향
+      myStepper.step(-32);
+    }
+  }
+
+}

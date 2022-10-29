@@ -1,0 +1,42 @@
+/*
+  예제 243-1-1 트랜시버용코드
+  아두이노에 D2,D3에 버튼을 연결했다!
+  D2를 누르면 '0'을 리시버로 전송한다!(리시버는 +32스탭 회전한다)
+  D3을 누르면 '1'을 리시버로 전송한다!(리시버는 -32스탭 회전한다)
+ */
+
+#include <SPI.h>
+#include "RF24.h"
+
+#define button1 2
+#define button2 3
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.stopListening();
+
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(button1) == LOW){
+    //풀업방식에서 버튼1이 눌려진것!
+    char c = '0';
+    radio.write(&c,sizeof(c));
+  }else if(digitalRead(button2) == LOW){
+    //풀업방식에서 버튼2이 눌려진것!
+    char c = '1';
+    radio.write(&c,sizeof(c));
+  }
+  delay(100);
+}

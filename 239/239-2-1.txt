@@ -1,0 +1,16 @@
+/*
+  239-2-1 블루투스 마스터모드(HC05)
+ */
+#include <SoftwareSerial.h>
+
+SoftwareSerial HC05(2, 3); // RX, TX
+
+void setup() {
+  Serial.begin(9600); //PC-아두이노간
+  HC05.begin(38400); //아두이노-블루투스모듈간
+}
+
+void loop() { // run over and over
+  HC05.println("NOCKANDA!!");
+  delay(1000);
+}

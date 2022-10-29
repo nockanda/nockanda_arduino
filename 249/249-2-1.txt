@@ -1,0 +1,55 @@
+/*
+  예제 249-2-1 2.4G RF모듈(nRF24L01)을 이용한 리시버예제!
+ */
+#include <SPI.h>
+#include "RF24.h"
+//
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK1 2 //dp1
+#define DIO1 3 //dp1
+#define CLK2 4 //dp2
+#define DIO2 5 //dp2
+
+TM1637Display display1(CLK1, DIO1);
+TM1637Display display2(CLK2, DIO2);
+//
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address1[6] = "00001";
+uint8_t address2[6] = "10002";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  display1.setBrightness(0x0f);
+  display2.setBrightness(0x0f);
+  display1.showNumberDec(0, false);
+  display2.showNumberDec(0, false);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address1);
+  radio.openReadingPipe(1, address2);
+  radio.startListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  byte pipe;
+  if (radio.available(&pipe)){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    int recv;
+    radio.read(&recv,sizeof(recv));
+    if(pipe == 0){
+      Serial.println(recv);
+      display1.showNumberDec(recv, false);
+ 
+    }else if(pipe == 1){
+      Serial.print("\t\t\t");
+      Serial.println(recv);
+      display2.showNumberDec(recv, false);
+    }
+  }
+}
