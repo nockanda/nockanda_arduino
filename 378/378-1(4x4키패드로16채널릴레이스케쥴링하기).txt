@@ -1,0 +1,416 @@
+#include <Keypad.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2); //1602LCD
+
+const byte ROWS = 4;
+const byte COLS = 4;
+
+char hexaKeys[ROWS][COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+byte rowPins[ROWS] = {13, 12, 11, 10}; //connect to the row pinouts of the keypad
+byte colPins[COLS] = {9, 8, 7, 6}; //connect to the column pinouts of the keypad
+
+//initialize an instance of class NewKeypad
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+
+int mode = 0;
+int submode = 0;
+String cmd = "";
+
+//파라미터값을 입력받는 변수세트
+String input_channel="";
+String input_ontime="";
+String input_offtime="";
+String input_count="";
+
+bool buzzer_run = false;
+unsigned long buzzer_on_time = 0;
+
+////////////////////////////////
+#define DS 2
+#define LATCH 3
+#define CLK 4
+
+//구조체를 정의할것이다!
+//하나의 채널에 대해서 스케쥴링하기위한 구조체이다!
+struct Nockanda{
+  bool is_run = false; //현재 채널이 활성화중인가?
+  long ontime = 1; //켜져있는 상태가 유지되는 시간(초)
+  long offtime = 1; //꺼져있는 상태가 유지되는 시간(초)
+  long nowtime = 0; //현재 채널이 보유하고 있는 타이머(초)
+  bool state = false; //TRUE: 현재 켜져있는중, FALSE: 현재 꺼져있는중
+  int total_count = 1; //전체 반복해야하는 카운트//무한히반복할때는 -1
+  int now_count = 1; //현재카운트
+};
+
+Nockanda Relay[16]; //릴레이가 16채널이니까 16개가 필요하다!
+unsigned long t = 0;
+
+byte data1 = 0b11111111; //255
+byte data2 = 0b11111111; //255
+/////////////////////////////////////////
+
+void setup(){
+  Serial.begin(9600);
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+  //LCD초기화
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("NOCKANDA!!");
+  lcd.setCursor(0,1);
+  lcd.print("FOREVER!!!");
+  //초기 릴레이의 상태를 지정하는데 모두OFF
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data2);
+  shiftOut(DS,CLK,MSBFIRST,data1);
+  digitalWrite(LATCH,HIGH);
+}
+  
+void loop(){
+  if(buzzer_run){
+    //부저가 작동중인 상황이다..!
+    //시간을 보고 끈다..!
+    if(millis() - buzzer_on_time > 100){
+      noTone(5);
+      buzzer_run = false;
+    }
+  }
+  //////////////////입력부분의 시작/////////////////
+  if(mode == 0){
+    char customKey = customKeypad.getKey();
+
+    if (customKey == '#'){
+      //하나의 명령이 입력이 되어야하는 상황
+      //Serial.print("현재까지 입력한 명령어=");
+      //Serial.println(cmd);
+      run_buzzer();
+      if(cmd == "A0"){
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("CHANNEL NUM?");
+        Serial.println("파라미터 입력모드입니다!");
+        Serial.println("채널번호입력!");
+        mode = 1;
+        submode = 0;
+      }else if(cmd == "A1"){
+        Serial.println("특정한 채널을 활성화하는 모드입니다!");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("CHANNEL NUM?");
+        mode = 2;
+        submode = 0;
+      }else if(cmd == "A2"){
+        Serial.println("특정한 채널을 비활성화하는 모드입니다!");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("CHANNEL NUM?");
+        mode = 3;
+        submode = 0;
+      }else if(cmd == "A3"){
+        Serial.println("전체 채널을 활성화하는 모드입니다!");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("ALL CHANNEL ON!");
+        mode = 4;
+        submode = 0;
+      }else if(cmd == "A4"){
+        Serial.println("전체 채널을 비활성화하는 모드입니다!");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("ALL CHANNEL OFF!");
+        mode = 5;
+        submode = 0;
+      }
+      cmd = "";
+    }else if (customKey){
+      //유저가 키패드로 뭔가 눌렀을때~
+      cmd += customKey;
+      Serial.println(cmd);
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print(cmd);
+    }
+  }else if(mode == 1){
+    char customKey = customKeypad.getKey();
+    if(customKey == '*'){
+      Serial.println("초기 모드로 돌아갑니다!");
+      mode=0;
+    }else if(customKey == '#'){
+      //하나의 명령이 끝나는 부분
+      run_buzzer();
+      customKey = '\0';
+      submode++;
+      if(submode == 1){
+        Serial.println("켜지는 시간입력");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("ON TIME?");
+      }
+      if(submode == 2){
+        Serial.println("꺼지는 시간입력");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("OFF TIME?");
+      }
+      if(submode == 3){
+        Serial.println("반복횟수 시간입력");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("COUNT?");
+      }
+      if(submode == 4){
+        //하나의 명령이 다 입력이 된 지점!
+        Serial.println("A0입력이 끝이났습니다!");
+        Serial.println(input_channel);
+        Serial.println(input_ontime);
+        Serial.println(input_offtime);
+        Serial.println(input_count);
+        set_nockanda(input_channel.toInt(),input_ontime.toInt(),input_offtime.toInt(),input_count.toInt());
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print(input_channel + " SET OK!");
+        var_clear();
+        mode = 0;
+      }
+    }
+    if(submode == 0){
+      //채널번호 입력받는 루틴
+      if(customKey){
+        //submode;
+        input_channel+=customKey;
+        Serial.println(input_channel);
+        lcd.setCursor(0,1);
+        lcd.print(input_channel);
+      }
+    }else if(submode == 1){
+      //켜진상태가 유지되는시간 입력받는 루틴
+      if(customKey){
+        //submode;
+        input_ontime+=customKey;
+        Serial.println(input_ontime);
+        lcd.setCursor(0,1);
+        lcd.print(input_ontime);
+      }
+    }else if(submode == 2){
+      //꺼진상태가 유지되는시간 입력받는 루틴
+      if(customKey){
+        //submode;
+        input_offtime+=customKey;
+        Serial.println(input_offtime);
+        lcd.setCursor(0,1);
+        lcd.print(input_offtime);
+      }
+    }else if(submode == 3){
+      //반복횟수
+      //펑션키중에 A를 누르면 -1이 입력되도록 한다
+      if(customKey){
+        //submode;
+        if(customKey == 'A'){
+          input_count+= "-1";
+        }else{
+          input_count+=customKey;
+        }
+        Serial.println(input_count);
+        lcd.setCursor(0,1);
+        lcd.print(input_count);
+      }
+    }
+    
+  }else if(mode == 2){
+    //특정한 채널번호를 입력받아서 해당채널을 작동시킨다!
+    char customKey = customKeypad.getKey();
+    if(customKey == '*'){
+      Serial.println("초기 모드로 돌아갑니다!");
+      mode=0;
+    }else if(customKey == '#'){
+      //하나의 명령이 끝나는 부분
+      run_buzzer();
+      Serial.println("A1명령어 입력이 끝이났습니다!");
+      Serial.println(input_channel);
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print(input_channel + " SET ON!");
+      run_nockanda(input_channel.toInt());
+      var_clear();
+      mode = 0;
+    }else if(customKey){
+      input_channel+=customKey;
+      Serial.println(input_channel);
+      lcd.setCursor(0,1);
+      lcd.print(input_channel);
+    }
+  }else if(mode == 3){
+    //특정한 채널번호를 입력받아서 해당채널을 작동시킨다!
+    char customKey = customKeypad.getKey();
+    if(customKey == '*'){
+      Serial.println("초기 모드로 돌아갑니다!");
+      mode=0;
+    }else if(customKey == '#'){
+      //하나의 명령이 끝나는 부분
+      run_buzzer();
+      Serial.println("A2명령어 입력이 끝이났습니다!");
+      Serial.println(input_channel);
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print(input_channel + " SET OFF!");
+      stop_nockanda(input_channel.toInt());
+      var_clear();
+      mode = 0;
+    }else if(customKey){
+      input_channel+=customKey;
+      Serial.println(input_channel);
+      lcd.setCursor(0,1);
+      lcd.print(input_channel);
+    }
+  }else if(mode == 4){
+    //모든채널을 활성화
+    Serial.println("모든채널을 활성화했습니다!");
+    all_run();
+    mode=0;
+  }else if(mode == 5){
+    //모든채널을 비활성화
+    
+    Serial.println("모든채널을 비활성화했습니다!");
+    all_stop();
+    mode=0;
+  }
+  //////////////////입력부분의 끝/////////////////
+
+  //is_run이 true인 상태에서 nowtime을 체크한다!(1초에 한번)
+  if(millis() - t > 1000){
+    t = millis();
+    //1초에 한번마다 실행이 되는 부분이다!
+    for(int i = 0;i<16;i++){
+      if(Relay[i].is_run){
+        //0번 채널이 작동중이면 계산을 시도하겠다!
+        Relay[i].nowtime--;
+        if(Relay[i].nowtime <= 0){
+          //일단 타이머가 작동을 했다!
+          //그때 현재 채널의 상태를 확인한다!
+          if(Relay[i].state){
+            //현재 켜져있음->꺼지는 쪽으로 변경
+            //Serial.print(i);
+            //Serial.print("채널 켜져있음->꺼져있음 ");
+            //Serial.println(millis());
+            Relay[i].nowtime = Relay[i].offtime;
+            Relay[i].state = false;
+
+            //0 -> 1
+            if(i < 8){
+              //data1(0~7)
+              bitSet(data1,i);
+            }else{
+              //data2(8~15)
+              bitSet(data2,i-8);
+            }
+
+            //1회 사이클이 회전하는 부분
+            //여기서 카운트를 1회 뺸다
+            if(Relay[i].total_count != -1){
+              Relay[i].now_count--;
+              if(Relay[i].now_count == 0){
+                //Serial.print(i);
+                //Serial.println("채널의 작동이 종료되었습니다!");
+                stop_nockanda(i); //현재 채널의 작동을 멈추어라!
+              }
+            }
+          }else{
+            //현재 꺼져있음->켜지는 쪽으로 변경
+            //Serial.print(i);
+            //Serial.print("채널 꺼져있음->켜져있음 ");
+            //Serial.println(millis());
+            Relay[i].nowtime = Relay[i].ontime;
+            Relay[i].state = true;
+
+            //1 -> 0
+            if(i < 8){
+              //data1(0~7)
+              bitClear(data1,i);
+            }else{
+              //data2(8~15)
+              bitClear(data2,i-8);
+            }
+          }
+        }
+      }
+    }//for
+    //1초마다 업데이트된 릴레이의 정보를 갱신한다!
+    digitalWrite(LATCH,LOW);
+    shiftOut(DS,CLK,MSBFIRST,data2);
+    shiftOut(DS,CLK,MSBFIRST,data1);
+    digitalWrite(LATCH,HIGH);
+  }
+}
+//1번 N채널 릴레이에 파라미터를 입력하는 함수
+void set_nockanda(byte channel, long ontime, long offtime,int total_count){
+  //Relay[channel]
+  Relay[channel].ontime = ontime;
+  Relay[channel].offtime = offtime;
+  Relay[channel].total_count = total_count;
+}
+//2번 N채널 릴레이중 1개를 작동시키는 함수
+void run_nockanda(byte channel){
+  Relay[channel].is_run = true;
+  Relay[channel].nowtime = 0;
+  Relay[channel].state = false;
+  Relay[channel].now_count = Relay[channel].total_count;
+
+  
+}
+//3번 N채널 릴레이중 1개를 멈추는 함수
+void stop_nockanda(byte channel){
+  Relay[channel].is_run = false;
+
+  //원래 작동되고 있던 내용과 관계없이 해당 채널의 릴레이를 OFF한다!
+  if(channel < 8){
+     bitSet(data1,channel);
+  }else{
+     bitSet(data2,channel-8);
+  }
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data2);
+  shiftOut(DS,CLK,MSBFIRST,data1);
+  digitalWrite(LATCH,HIGH);
+}
+
+void all_run(){
+  for(int i = 0;i<16;i++){
+    Relay[i].is_run = true;
+    Relay[i].nowtime = 0;
+    Relay[i].state = false;
+    Relay[i].now_count = Relay[i].total_count;
+  }
+}
+void all_stop(){
+  for(int i = 0;i<16;i++){
+    Relay[i].is_run = false;
+  }
+  data1 = 0b11111111;
+  data2 = 0b11111111;
+  
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data2);
+  shiftOut(DS,CLK,MSBFIRST,data1);
+  digitalWrite(LATCH,HIGH);
+}
+void var_clear(){
+  input_channel="";
+  input_ontime="";
+  input_offtime="";
+  input_count="";
+}
+
+void run_buzzer(){
+  tone(5,2794);
+  buzzer_run = true;
+  buzzer_on_time = millis();
+}

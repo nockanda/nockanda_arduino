@@ -1,0 +1,37 @@
+//아두이노용코드
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#define ONE_WIRE_BUS 2
+#define TEMPERATURE_PRECISION 12
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+DeviceAddress tempDeviceAddress;
+
+#define cds_pin A0
+#define humi_pin A1
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  sensors.begin();
+  sensors.getAddress(tempDeviceAddress, 0);
+  sensors.setResolution(tempDeviceAddress, TEMPERATURE_PRECISION);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  sensors.requestTemperatures(); 
+  float tempC = sensors.getTempCByIndex(0);
+  //if(tempC != DEVICE_DISCONNECTED_C) 
+  //{
+  //  tempC = -99.99;
+  //}
+  int cds = analogRead(cds_pin); //0~1023
+  int soil = analogRead(humi_pin);
+  Serial.print(cds);
+  Serial.print(",");
+  Serial.print(soil);
+  Serial.print(",");
+  Serial.println(tempC);
+  delay(1000);
+}

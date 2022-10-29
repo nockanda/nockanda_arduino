@@ -1,0 +1,65 @@
+#include "FS.h" //SPIFFFS(ESP8266)를 사용가능하게 하는 라이브러리!
+
+int temp = 26;
+int humi = 44;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //컴퓨터하고 시리얼통신 할꺼야!
+  if (!SPIFFS.begin())
+  {
+    Serial.println("Failed to mount file system");
+    return;
+  }
+
+  String data = readFile("/main.html");
+  data.replace("{TEMP}", String(temp));
+  data.replace("{HUMI}", String(humi));
+  Serial.println(data);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  
+}
+
+void deleteFile(const char * path){
+  Serial.printf("Deleting file: %s\r\n", path);
+  if(SPIFFS.remove(path)){
+    Serial.println("file deleted");
+  } else {
+    Serial.println("delete failed");
+  }
+}
+
+String readFile(const char * path){
+  Serial.printf("Reading file: %s\r\n", path);
+  File file = SPIFFS.open(path, "r");
+
+  if(!file || file.isDirectory()){
+    //Serial.println("- failed to open file for reading");
+    return "";
+  }
+    //Serial.println("read from file:");
+    String output;
+    while(file.available()){
+      char c = file.read();
+      output += c;
+      //Serial.write(c);
+      
+    }
+    return output;
+}
+  
+void writeFile(const char * path, const char * message){
+  Serial.printf("Writing file: %s\r\n", path);
+  File file = SPIFFS.open(path, "w");
+  if(!file){
+    Serial.println("failed to open file for writing");
+    return;
+  } if(file.print(message)){
+      Serial.println("file written");
+  } else {
+    Serial.println("frite failed");
+  }
+}

@@ -1,0 +1,80 @@
+#include "FS.h" //SPIFFFS(ESP8266)를 사용가능하게 하는 라이브러리!
+
+String login_id = "";
+String login_pw = "";
+String device_id = "";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //컴퓨터하고 시리얼통신 할꺼야!
+  if (!SPIFFS.begin())
+  {
+    Serial.println("Failed to mount file system");
+    return;
+  }
+
+  //데이터를 Iot보드에 입력하는 과정
+  //writeFile("/login_id.txt","nockanda");
+  //writeFile("/login_pw.txt","12341234");
+  //writeFile("/device_id.txt","ESP8266-1234");
+  //Serial.println("입력이 완료되었습니다!");
+
+  Serial.println("환경변수를 읽어옵니다!!");
+  login_id = readFile("/login_id.txt");
+  login_pw = readFile("/login_pw.txt");
+  device_id = readFile("/device_id.txt");
+
+  Serial.print("ID=");
+  Serial.println(login_id);
+  Serial.print("PW=");
+  Serial.println(login_pw);
+  Serial.print("DEVICE_ID=");
+  Serial.println(device_id);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //2초마다 한번씩 nockanda.txt를 읽어서 출력한다!
+  
+}
+
+void deleteFile(const char * path){
+  Serial.printf("Deleting file: %s\r\n", path);
+  if(SPIFFS.remove(path)){
+    Serial.println("file deleted");
+  } else {
+    Serial.println("delete failed");
+  }
+}
+
+String readFile(const char * path){
+  Serial.printf("Reading file: %s\r\n", path);
+  File file = SPIFFS.open(path, "r");
+
+  if(!file || file.isDirectory()){
+    //Serial.println("- failed to open file for reading");
+    return "";
+  }
+    //Serial.println("read from file:");
+    String output;
+    while(file.available()){
+      char c = file.read();
+      output += c;
+      //Serial.write(c);
+      
+    }
+    return output;
+}
+  
+void writeFile(const char * path, const char * message){
+  Serial.printf("Writing file: %s\r\n", path);
+  File file = SPIFFS.open(path, "w");
+  if(!file){
+    Serial.println("failed to open file for writing");
+    return;
+  } if(file.print(message)){
+      Serial.println("file written");
+  } else {
+    Serial.println("frite failed");
+  }
+}

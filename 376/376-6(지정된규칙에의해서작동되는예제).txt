@@ -1,0 +1,66 @@
+/*
+ (주의사항1) 아두이노쪽 시리얼모니터가 닫혀있을것!
+ (주의사항2) 스마트폰쪽 블루투스시리얼모니터가 종료문자가 CR일것('\r')
+ (향후 이코드는 앱인벤터용으로 변환될 예정임)
+ */
+
+#define DS 2 //데이터핀
+#define LATCH 3 //래치핀
+#define CLK 4 //클락핀
+
+//(0000 0000) (0000 0000)
+unsigned int seq1 = 0b0000000000000000; //(16bit)
+unsigned int seq2 = 0b1010101010101010; //짝수만켜짐
+unsigned int seq3 = 0b0101010101010101; //홀수만켜짐
+unsigned int seq4 = 0b1111111111111111; //다켜짐
+unsigned int seq5 = 0b1111111100000000; //(16bit)
+unsigned int seq6 = 0b0000000011111111; //(16bit)
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 컴퓨터랑 시리얼통신 할꺼야~
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+
+  //초기설정 모든 릴레이를 OFF한다
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,(byte)(seq1 & 0xFF));
+  shiftOut(DS,CLK,MSBFIRST,(byte)(seq1 >> 8));
+  digitalWrite(LATCH,HIGH);
+}
+
+void loop() {
+  
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,seq1 & 0xFF);
+  shiftOut(DS,CLK,MSBFIRST,seq1 >> 8);
+  digitalWrite(LATCH,HIGH);
+  delay(2000);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,seq2 & 0xFF);
+  shiftOut(DS,CLK,MSBFIRST,seq2 >> 8);
+  digitalWrite(LATCH,HIGH);
+  delay(2000);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,seq3 & 0xFF);
+  shiftOut(DS,CLK,MSBFIRST,seq3 >> 8);
+  digitalWrite(LATCH,HIGH);
+  delay(2000);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,seq4 & 0xFF);
+  shiftOut(DS,CLK,MSBFIRST,seq4 >> 8);
+  digitalWrite(LATCH,HIGH);
+  delay(2000);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,seq5 & 0xFF);
+  shiftOut(DS,CLK,MSBFIRST,seq5 >> 8);
+  digitalWrite(LATCH,HIGH);
+  delay(2000);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,seq6 & 0xFF);
+  shiftOut(DS,CLK,MSBFIRST,seq6 >> 8);
+  digitalWrite(LATCH,HIGH);
+  delay(2000);
+  
+}

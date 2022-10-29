@@ -1,0 +1,201 @@
+#include <ArduinoJson.h>
+
+#define DS 2
+#define LATCH 3
+#define CLK 4
+
+//구조체를 정의할것이다!
+//하나의 채널에 대해서 스케쥴링하기위한 구조체이다!
+struct Nockanda{
+  bool is_run = false; //현재 채널이 활성화중인가?
+  long ontime = 1; //켜져있는 상태가 유지되는 시간(초)
+  long offtime = 1; //꺼져있는 상태가 유지되는 시간(초)
+  long nowtime = 0; //현재 채널이 보유하고 있는 타이머(초)
+  bool state = false; //TRUE: 현재 켜져있는중, FALSE: 현재 꺼져있는중
+  int total_count = 1; //전체 반복해야하는 카운트//무한히반복할때는 -1
+  int now_count = 1; //현재카운트
+};
+
+Nockanda Relay[16]; //릴레이가 16채널이니까 16개가 필요하다!
+unsigned long t = 0;
+
+byte data1 = 0b11111111; //255
+byte data2 = 0b11111111; //255
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 결과를 PC에 출력할거야~
+  Serial.setTimeout(100);
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+
+  //초기 릴레이의 상태를 지정하는데 모두OFF
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data2);
+  shiftOut(DS,CLK,MSBFIRST,data1);
+  digitalWrite(LATCH,HIGH);
+  /*
+  //채널0번에대한 시작설정을 해준다!
+  Serial.println("릴레이 작동 시작!");
+  set_nockanda(0,3,3,-1);
+  run_nockanda(0);
+  set_nockanda(1,2,2,2);
+  run_nockanda(1);
+  set_nockanda(2,1,1,3);
+  run_nockanda(2);
+  */
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //유저에게 시리얼입력을 받아서 16채널 릴레이의 매크로를 작동시킨다!
+  if(Serial.available()){
+    String query = Serial.readStringUntil('\n'); //0x0A
+    
+    StaticJsonDocument<128> doc;
+
+    deserializeJson(doc, query);
+    String CMD = doc["CMD"]; // "SET"
+    int CHANNEL = doc["CHANNEL"]; // 0
+    int ONTIME = doc["ONTIME"]; // 1
+    int OFFTIME = doc["OFFTIME"]; // 2
+    int COUNT = doc["COUNT"]; // -1
+
+    if(CMD == "SET"){
+      Serial.print(CHANNEL);
+      Serial.println("채널의 파라미터 설정이 완료되었습니다!");
+      set_nockanda(CHANNEL,ONTIME,OFFTIME,COUNT);
+    }else if(CMD == "RUN"){
+      Serial.print(CHANNEL);
+      Serial.println("채널을 작동시킵니다!");
+      run_nockanda(CHANNEL);
+    }else if(CMD == "STOP"){
+      Serial.print(CHANNEL);
+      Serial.println("채널을 멈춥니다!");
+      stop_nockanda(CHANNEL);
+    }else if(CMD == "ALLRUN"){
+      all_run();
+    }else if(CMD == "ALLSTOP"){
+      all_stop();
+    }
+  }
+  
+  //is_run이 true인 상태에서 nowtime을 체크한다!(1초에 한번)
+  if(millis() - t > 1000){
+    t = millis();
+    //1초에 한번마다 실행이 되는 부분이다!
+    for(int i = 0;i<16;i++){
+      if(Relay[i].is_run){
+        //0번 채널이 작동중이면 계산을 시도하겠다!
+        Relay[i].nowtime--;
+        if(Relay[i].nowtime <= 0){
+          //일단 타이머가 작동을 했다!
+          //그때 현재 채널의 상태를 확인한다!
+          if(Relay[i].state){
+            //현재 켜져있음->꺼지는 쪽으로 변경
+            Serial.print(i);
+            Serial.print("채널 켜져있음->꺼져있음 ");
+            Serial.println(millis());
+            Relay[i].nowtime = Relay[i].offtime;
+            Relay[i].state = false;
+
+            //0 -> 1
+            if(i < 8){
+              //data1(0~7)
+              bitSet(data1,i);
+            }else{
+              //data2(8~15)
+              bitSet(data2,i-8);
+            }
+
+            //1회 사이클이 회전하는 부분
+            //여기서 카운트를 1회 뺸다
+            if(Relay[i].total_count != -1){
+              Relay[i].now_count--;
+              if(Relay[i].now_count == 0){
+                Serial.print(i);
+                Serial.println("채널의 작동이 종료되었습니다!");
+                stop_nockanda(i); //현재 채널의 작동을 멈추어라!
+              }
+            }
+          }else{
+            //현재 꺼져있음->켜지는 쪽으로 변경
+            Serial.print(i);
+            Serial.print("채널 꺼져있음->켜져있음 ");
+            Serial.println(millis());
+            Relay[i].nowtime = Relay[i].ontime;
+            Relay[i].state = true;
+
+            //1 -> 0
+            if(i < 8){
+              //data1(0~7)
+              bitClear(data1,i);
+            }else{
+              //data2(8~15)
+              bitClear(data2,i-8);
+            }
+          }
+        }
+      }
+    }//for
+    //1초마다 업데이트된 릴레이의 정보를 갱신한다!
+    digitalWrite(LATCH,LOW);
+    shiftOut(DS,CLK,MSBFIRST,data2);
+    shiftOut(DS,CLK,MSBFIRST,data1);
+    digitalWrite(LATCH,HIGH);
+  }
+}
+
+//1번 N채널 릴레이에 파라미터를 입력하는 함수
+void set_nockanda(byte channel, long ontime, long offtime,int total_count){
+  //Relay[channel]
+  Relay[channel].ontime = ontime;
+  Relay[channel].offtime = offtime;
+  Relay[channel].total_count = total_count;
+}
+//2번 N채널 릴레이중 1개를 작동시키는 함수
+void run_nockanda(byte channel){
+  Relay[channel].is_run = true;
+  Relay[channel].nowtime = 0;
+  Relay[channel].state = false;
+  Relay[channel].now_count = Relay[channel].total_count;
+
+  
+}
+//3번 N채널 릴레이중 1개를 멈추는 함수
+void stop_nockanda(byte channel){
+  Relay[channel].is_run = false;
+
+  //원래 작동되고 있던 내용과 관계없이 해당 채널의 릴레이를 OFF한다!
+  if(channel < 8){
+     bitSet(data1,channel);
+  }else{
+     bitSet(data2,channel-8);
+  }
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data2);
+  shiftOut(DS,CLK,MSBFIRST,data1);
+  digitalWrite(LATCH,HIGH);
+}
+
+void all_run(){
+  for(int i = 0;i<16;i++){
+    Relay[i].is_run = true;
+    Relay[i].nowtime = 0;
+    Relay[i].state = false;
+    Relay[i].now_count = Relay[i].total_count;
+  }
+}
+void all_stop(){
+  for(int i = 0;i<16;i++){
+    Relay[i].is_run = false;
+  }
+  data1 = 0b11111111;
+  data2 = 0b11111111;
+  
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data2);
+  shiftOut(DS,CLK,MSBFIRST,data1);
+  digitalWrite(LATCH,HIGH);
+}

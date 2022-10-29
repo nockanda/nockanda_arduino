@@ -1,0 +1,204 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+#include "FS.h"
+#include "DHT.h"
+
+#define DHTPIN D6
+#define DHTTYPE DHT11
+
+DHT dht(DHTPIN, DHTTYPE);
+
+#define led1 D3
+#define led2 D4
+#define relay D5
+
+#ifndef STASSID
+#define STASSID "popcorn"
+#define STAPSK  "11213144"
+#endif
+
+const char* ssid     = STASSID;
+const char* password = STAPSK;
+
+ESP8266WebServer server(80);
+
+const int led = LED_BUILTIN;
+
+void handleRoot() {
+  //유저가 루트경로로 서버에다가 요청을 하면..
+  //SPIFFS에서 해당되는 파일을 읽어와서 string변수에 집어넣어서
+  //클라이언트쪽으로 응답하는 내용에 포함해서 전송한다!
+  String data = readFile("/main.txt");
+  
+  digitalWrite(led, 1);
+  server.send(200, "text/html", data);
+  digitalWrite(led, 0);
+}
+
+void handlePage1() {
+  String data = readFile("/page1.html");
+
+  //파라미터를 가지고 와보자!
+  //예시   ?led1=0
+  //server.args() : 넘어온 파라미터의 갯수 = 1
+  //server.argName(0) : led1
+  //server.arg(0) : 0
+
+  if(server.argName(0) == "led1"){
+    if(server.arg(0) == "0"){
+      digitalWrite(led1,LOW);
+    }else if(server.arg(0) == "1"){
+      digitalWrite(led1,HIGH);
+    }
+  }else if(server.argName(0) == "led2"){
+    if(server.arg(0) == "0"){
+      digitalWrite(led2,LOW);
+    }else if(server.arg(0) == "1"){
+      digitalWrite(led2,HIGH);
+    }
+  }
+
+  bool led1_state = digitalRead(led1);
+  bool led2_state = digitalRead(led2);
+
+  data.replace("{LED1}",led1_state?"켜짐!!":"꺼짐..");
+  data.replace("{LED2}",led2_state?"켜짐!!":"꺼짐..");
+  
+  digitalWrite(led, 1);
+  server.send(200, "text/html", data);
+  digitalWrite(led, 0);
+}
+
+void handlePage2() {
+  String data = readFile("/page2.html");
+
+  if(server.argName(0) == "relay"){
+    if(server.arg(0) == "0"){
+      digitalWrite(relay,LOW);
+    }else if(server.arg(0) == "1"){
+      digitalWrite(relay,HIGH);
+    }
+  }
+
+  bool relay_state = digitalRead(relay);
+
+  data.replace("{RELAY}",relay_state?"켜짐!!":"꺼짐..");
+  
+  digitalWrite(led, 1);
+  server.send(200, "text/html", data);
+  digitalWrite(led, 0);
+}
+
+void handlePage3() {
+  String data = readFile("/page3.html");
+
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+
+  data.replace("{TEMP}",String(t));
+  data.replace("{HUMI}",String(h));
+  
+  digitalWrite(led, 1);
+  server.send(200, "text/html", data);
+  digitalWrite(led, 0);
+}
+
+void handlePage4() {
+  String data = readFile("/page4.html");
+
+  int cds = analogRead(A0);
+
+  data.replace("{CDS}",String(cds));
+  
+  digitalWrite(led, 1);
+  server.send(200, "text/html", data);
+  digitalWrite(led, 0);
+}
+
+void handleNotFound() {
+  digitalWrite(led, 1);
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i = 0; i < server.args(); i++) {
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+  }
+  server.send(404, "text/plain", message);
+  digitalWrite(led, 0);
+}
+
+void setup(void) {
+  pinMode(led, OUTPUT);
+  digitalWrite(led, 0);
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  pinMode(relay,OUTPUT);
+  Serial.begin(115200);
+  dht.begin();
+  
+  if (!SPIFFS.begin())
+  {
+    Serial.println("Failed to mount file system");
+    return;
+  }
+  
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  if (MDNS.begin("esp8266")) {
+    Serial.println("MDNS responder started");
+  }
+
+  server.on("/", handleRoot);
+
+  server.on("/page1", handlePage1);
+  server.on("/page2", handlePage2);
+  server.on("/page3", handlePage3);
+  server.on("/page4", handlePage4);
+  server.onNotFound(handleNotFound);
+
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop(void) {
+  server.handleClient();
+}
+
+String readFile(const char * path){
+  Serial.printf("Reading file: %s\r\n", path);
+  File file = SPIFFS.open(path, "r");
+
+  if(!file || file.isDirectory()){
+    //Serial.println("- failed to open file for reading");
+    return "";
+  }
+    //Serial.println("read from file:");
+    String output;
+    while(file.available()){
+      char c = file.read();
+      output += c;
+      //Serial.write(c);
+      
+    }
+    return output;
+}
+

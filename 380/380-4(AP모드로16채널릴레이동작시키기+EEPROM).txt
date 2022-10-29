@@ -1,0 +1,488 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ArduinoJson.h>
+#include <EEPROM.h>
+
+union{
+  long input;
+  byte output[4];
+}byte4;
+
+
+#define DS D5
+#define LATCH D6
+#define CLK D7
+
+//구조체를 정의할것이다!
+//하나의 채널에 대해서 스케쥴링하기위한 구조체이다!
+struct Nockanda{
+  bool is_run = false; //현재 채널이 활성화중인가?
+  long ontime = 1; //켜져있는 상태가 유지되는 시간(초)
+  long offtime = 1; //꺼져있는 상태가 유지되는 시간(초)
+  long nowtime = 0; //현재 채널이 보유하고 있는 타이머(초)
+  bool state = false; //TRUE: 현재 켜져있는중, FALSE: 현재 꺼져있는중
+  int total_count = 1; //전체 반복해야하는 카운트//무한히반복할때는 -1
+  int now_count = 1; //현재카운트
+};
+
+Nockanda Relay[16]; //릴레이가 16채널이니까 16개가 필요하다!
+unsigned long t = 0;
+
+byte data1 = 0b11111111; //255
+byte data2 = 0b11111111; //255
+/////////////////////////////////////////
+
+//스마트폰으로 WIFI검색을 했을때 뭐라고 보여줄거냐?
+#ifndef APSSID
+#define APSSID "NOCKANDA-ESP8266"
+#define APPSK  "12341234"
+#endif
+
+/* Set these to your desired credentials. */
+const char *ssid = APSSID;
+const char *password = APPSK;
+
+ESP8266WebServer server(80);
+
+String html = "<html>\
+ <meta charset=\"utf-8\">\
+ <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0\">\
+ <form method=post action=/setting>\
+ <input type=hidden name=CMD value=A0>\
+ <table border=1 width=100%>\
+   <tr>\
+     <td>채널번호:</td>\
+     <td><input type=text name=CH></td>\
+   </tr>\
+   <tr>\
+     <td>켜지는시간:</td>\
+     <td><input type=text name=ONTIME></td>\
+   </tr>\
+   <tr>\
+     <td>꺼지는시간:</td>\
+     <td><input type=text name=OFFTIME></td>\
+   </tr>\
+   <tr>\
+     <td>반복횟수:</td>\
+     <td><input type=text name=COUNT></td>\
+   </tr>\
+   <tr><td colspan=2 align=center><input type=submit value=파라미터설정하기></td></tr>\
+ </table>\
+ </form>\
+ <form method=post action=/run>\
+ <input type=hidden name=CMD value=A1>\
+ <table border=1  width=100%>\
+   <tr>\
+      <td>채널번호:</td>\
+      <td><input type=text name=CH></td>\
+   </tr>\
+   <tr><td colspan=2 align=center><input type=submit value=채널활성화></td></tr>\
+ </table>\
+ </form>\
+ <form method=post action=/stop>\
+ <input type=hidden name=CMD value=A2>\
+ <table border=1  width=100%>\
+   <tr>\
+      <td>채널번호:</td>\
+      <td><input type=text name=CH></td>\
+   </tr>\
+   <tr><td colspan=2 align=center><input type=submit value=채널비활성화></td></tr>\
+ </table>\
+ </form>\
+ <form method=post action=/allrun>\
+ <input type=hidden name=CMD value=A3>\
+ <table border=1  width=100%>\
+   <tr><td align=center><input type=submit value=전체활성화></td></tr>\
+ </table>\
+ </form>\
+ <form method=post action=/allstop>\
+ <input type=hidden name=CMD value=A4>\
+ <table border=1  width=100%>\
+   <tr><td align=center><input type=submit value=전체비활성화></td></tr>\
+ </table>\
+ </form>\
+ <form method=post action=/print>\
+ <input type=hidden name=CMD value=A5>\
+ <table border=1  width=100%>\
+   <tr><td align=center><input type=submit value=채널정보출력하기></td></tr>\
+ </table>\
+ </form>\
+ <form method=post action=/save>\
+ <table border=1  width=100%>\
+   <tr><td align=center><input type=submit value=저장하기></td></tr>\
+ </table>\
+ </form>\
+ <form method=post action=/load>\
+ <table border=1  width=100%>\
+   <tr><td align=center><input type=submit value=불러오기></td></tr>\
+ </table>\
+ </form>\
+</html>";
+
+void handleRoot() {
+  server.send(200, "text/html", html);
+}
+
+void handleSetting(){
+  Serial.println("파라미터 설정모드입니다!");
+  //스마트폰에서 입력한 정보를 시리얼모니터에 출력해보자!
+  //server.argName :변수명
+  //server.arg :값
+  //server.args : 넘어온 변수의 갯수
+  for(int i = 0;i<server.args()-1 ;i++){
+    Serial.print(server.argName(i));
+    Serial.print(",");
+    Serial.println(server.arg(i));
+  }
+  //유저가 항상 정확한 값만 입력한다고 가정!
+  set_nockanda(server.arg(1).toInt(),server.arg(2).toInt(),server.arg(3).toInt(),server.arg(4).toInt());
+  server.send(200, "text/html", F("<html><meta charse<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0\">성공적으로 업데이트 되었습니다!<BR><a href=/>[메인페이지로 이동하기]</a></html>"));
+}
+
+void handleRun(){
+  Serial.println("특정한 채널을 활성화 하는 곳이다!");
+  run_nockanda(server.arg(1).toInt());
+  server.send(200, "text/html", F("<html><meta charse<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0\">성공적으로 활성화 되었습니다!<BR><a href=/>[메인페이지로 이동하기]</a></html>"));
+}
+
+void handleStop(){
+  Serial.println("특정한 채널을 비활성화 하는 곳이다!");
+  stop_nockanda(server.arg(1).toInt());
+  server.send(200, "text/html", F("<html><meta charse<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0\">성공적으로 비활성화 되었습니다!<BR><a href=/>[메인페이지로 이동하기]</a></html>"));
+}
+
+void handleAllrun(){
+  all_run();
+  server.send(200, "text/html", F("<html><meta charse<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0\">성공적으로 활성화 되었습니다!<BR><a href=/>[메인페이지로 이동하기]</a></html>"));
+}
+void handleAllstop(){
+  all_stop();
+  server.send(200, "text/html", F("<html><meta charse<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0\">성공적으로 비활성화 되었습니다!<BR><a href=/>[메인페이지로 이동하기]</a></html>"));
+}
+void handlePrint(){
+  //16채널 정보를 가지고온다!
+  //response한다!
+  String response = "<html>\
+ <meta charset=\"utf-8\">\
+ <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0\">\
+ <table border =1>\
+  <tr>\
+    <th>채널번호</th><th>활성상태</th><th>켜지는시간</th>\
+    <th>꺼지는시간</th><th>현재시간</th><th>릴레이상태</th>\
+    <th>반복횟수</th><th>현재횟수</th>\
+  </tr>";
+
+  for(int i = 0;i<16;i++){
+    response += "<tr>";
+    response += "<td>"+ String(i) + "</td>";
+    response += "<td>"+ String(Relay[i].is_run) + "</td>";
+    response += "<td>"+ String(Relay[i].ontime) + "</td>";
+    response += "<td>"+ String(Relay[i].offtime) + "</td>";
+    response += "<td>"+ String(Relay[i].nowtime) + "</td>";
+    response += "<td>"+ String(Relay[i].state) + "</td>";
+    response += "<td>"+ String(Relay[i].total_count) + "</td>";
+    response += "<td>"+ String(Relay[i].now_count) + "</td>";
+    response += "</tr>";
+  }
+ response += "</table><a href=/>[메인페이지로 이동하기]</a></html>";
+  
+  server.send(200, "text/html", response);
+}
+
+void handleSave(){
+  save_data();
+  server.send(200, "text/html", F("<html><meta charse<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0\">성공적으로 저장 되었습니다!<BR><a href=/>[메인페이지로 이동하기]</a></html>"));
+}
+void handleLoad(){
+  load_data();
+  server.send(200, "text/html", F("<html><meta charse<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0\">성공적으로 로드 되었습니다!<BR><a href=/>[메인페이지로 이동하기]</a></html>"));
+}
+
+void setup() {
+  delay(1000);
+  Serial.begin(115200);
+
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+  
+  //초기 릴레이의 상태를 지정하는데 모두OFF
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data2);
+  shiftOut(DS,CLK,MSBFIRST,data1);
+  digitalWrite(LATCH,HIGH);
+  
+  Serial.println();
+  Serial.print("Configuring access point...");
+  /* You can remove the password parameter if you want the AP to be open. */
+  WiFi.softAP(ssid, password);
+
+  IPAddress myIP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(myIP);
+  server.on("/", handleRoot);
+  server.on("/setting", handleSetting);
+  server.on("/run", handleRun);
+  server.on("/stop", handleStop);
+  server.on("/allrun", handleAllrun);
+  server.on("/allstop", handleAllstop);
+  server.on("/print", handlePrint);
+  server.on("/save", handleSave);
+  server.on("/load", handleLoad);
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop() {
+  server.handleClient();
+
+
+  //is_run이 true인 상태에서 nowtime을 체크한다!(1초에 한번)
+  if(millis() - t > 1000){
+    t = millis();
+    //1초에 한번마다 실행이 되는 부분이다!
+    for(int i = 0;i<16;i++){
+      if(Relay[i].is_run){
+        //0번 채널이 작동중이면 계산을 시도하겠다!
+        Relay[i].nowtime--;
+        if(Relay[i].nowtime <= 0){
+          //일단 타이머가 작동을 했다!
+          //그때 현재 채널의 상태를 확인한다!
+          if(Relay[i].state){
+            //현재 켜져있음->꺼지는 쪽으로 변경
+            //Serial.print(i);
+            //Serial.print("채널 켜져있음->꺼져있음 ");
+            //Serial.println(millis());
+            Relay[i].nowtime = Relay[i].offtime;
+            Relay[i].state = false;
+
+            //0 -> 1
+            if(i < 8){
+              //data1(0~7)
+              bitSet(data1,i);
+            }else{
+              //data2(8~15)
+              bitSet(data2,i-8);
+            }
+
+            //1회 사이클이 회전하는 부분
+            //여기서 카운트를 1회 뺸다
+            if(Relay[i].total_count != -1){
+              Relay[i].now_count--;
+              if(Relay[i].now_count == 0){
+                //Serial.print(i);
+                //Serial.println("채널의 작동이 종료되었습니다!");
+                stop_nockanda(i); //현재 채널의 작동을 멈추어라!
+              }
+            }
+          }else{
+            //현재 꺼져있음->켜지는 쪽으로 변경
+            //Serial.print(i);
+            //Serial.print("채널 꺼져있음->켜져있음 ");
+            //Serial.println(millis());
+            Relay[i].nowtime = Relay[i].ontime;
+            Relay[i].state = true;
+
+            //1 -> 0
+            if(i < 8){
+              //data1(0~7)
+              bitClear(data1,i);
+            }else{
+              //data2(8~15)
+              bitClear(data2,i-8);
+            }
+          }
+        }
+      }
+    }//for
+    //1초마다 업데이트된 릴레이의 정보를 갱신한다!
+    digitalWrite(LATCH,LOW);
+    shiftOut(DS,CLK,MSBFIRST,data2);
+    shiftOut(DS,CLK,MSBFIRST,data1);
+    digitalWrite(LATCH,HIGH);
+  }
+  
+}
+
+
+//1번 N채널 릴레이에 파라미터를 입력하는 함수
+void set_nockanda(byte channel, long ontime, long offtime,int total_count){
+  //Relay[channel]
+  Relay[channel].ontime = ontime;
+  Relay[channel].offtime = offtime;
+  Relay[channel].total_count = total_count;
+}
+//2번 N채널 릴레이중 1개를 작동시키는 함수
+void run_nockanda(byte channel){
+  Relay[channel].is_run = true;
+  Relay[channel].nowtime = 0;
+  Relay[channel].state = false;
+  Relay[channel].now_count = Relay[channel].total_count;
+
+  
+}
+//3번 N채널 릴레이중 1개를 멈추는 함수
+void stop_nockanda(byte channel){
+  Relay[channel].is_run = false;
+
+  //원래 작동되고 있던 내용과 관계없이 해당 채널의 릴레이를 OFF한다!
+  if(channel < 8){
+     bitSet(data1,channel);
+  }else{
+     bitSet(data2,channel-8);
+  }
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data2);
+  shiftOut(DS,CLK,MSBFIRST,data1);
+  digitalWrite(LATCH,HIGH);
+}
+
+void all_run(){
+  for(int i = 0;i<16;i++){
+    Relay[i].is_run = true;
+    Relay[i].nowtime = 0;
+    Relay[i].state = false;
+    Relay[i].now_count = Relay[i].total_count;
+  }
+}
+void all_stop(){
+  for(int i = 0;i<16;i++){
+    Relay[i].is_run = false;
+  }
+  data1 = 0b11111111;
+  data2 = 0b11111111;
+  
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data2);
+  shiftOut(DS,CLK,MSBFIRST,data1);
+  digitalWrite(LATCH,HIGH);
+}
+void save_data(){
+  EEPROM.begin(512);
+  for(int i = 0;i<16;i++){
+    //구조체 하나당 22bytes i*18
+    //EEPROM.write(addr);
+    //bool is_run = false;  1byte
+    //long ontime = 1;  4bytes
+    //long offtime = 1;  4bytes
+    //long nowtime = 0; 4bytes
+    //bool state = false; 1byte
+    //int total_count = 1; 4bytes
+    //int now_count = 1; 4bytes
+    EEPROM.write(i*22,Relay[i].is_run);
+    byte4.input = Relay[i].ontime;
+    EEPROM.write(i*22+1,byte4.output[0]);
+    EEPROM.write(i*22+2,byte4.output[1]);
+    EEPROM.write(i*22+3,byte4.output[2]);
+    EEPROM.write(i*22+4,byte4.output[3]);
+    byte4.input = Relay[i].offtime;
+    EEPROM.write(i*22+5,byte4.output[0]);
+    EEPROM.write(i*22+6,byte4.output[1]);
+    EEPROM.write(i*22+7,byte4.output[2]);
+    EEPROM.write(i*22+8,byte4.output[3]);
+    byte4.input = Relay[i].nowtime;
+    EEPROM.write(i*22+9,byte4.output[0]);
+    EEPROM.write(i*22+10,byte4.output[1]);
+    EEPROM.write(i*22+11,byte4.output[2]);
+    EEPROM.write(i*22+12,byte4.output[3]);
+
+    EEPROM.write(i*22+13,Relay[i].state);
+    byte4.input = Relay[i].total_count; //4
+    EEPROM.write(i*22+14,byte4.output[0]);
+    EEPROM.write(i*22+15,byte4.output[1]);
+    EEPROM.write(i*22+16,byte4.output[2]);
+    EEPROM.write(i*22+17,byte4.output[3]);
+    byte4.input = Relay[i].now_count; //4
+    EEPROM.write(i*22+18,byte4.output[0]);
+    EEPROM.write(i*22+19,byte4.output[1]);
+    EEPROM.write(i*22+20,byte4.output[2]);
+    EEPROM.write(i*22+21,byte4.output[3]);
+  }
+  EEPROM.end();
+  
+  Serial.println(F("저장이 완료 되었습니다!"));
+}
+void load_data(){
+  EEPROM.begin(512);
+  for(int i = 0;i<16;i++){
+    Relay[i].is_run = EEPROM.read(i*22);
+    byte4.output[0] = EEPROM.read(i*22+1);
+    byte4.output[1] = EEPROM.read(i*22+2);
+    byte4.output[2] = EEPROM.read(i*22+3);
+    byte4.output[3] = EEPROM.read(i*22+4);
+    Relay[i].ontime = byte4.input;
+    byte4.output[0] = EEPROM.read(i*22+5);
+    byte4.output[1] = EEPROM.read(i*22+6);
+    byte4.output[2] = EEPROM.read(i*22+7);
+    byte4.output[3] = EEPROM.read(i*22+8);
+    Relay[i].offtime = byte4.input;
+    byte4.output[0] = EEPROM.read(i*22+9);
+    byte4.output[1] = EEPROM.read(i*22+10);
+    byte4.output[2] = EEPROM.read(i*22+11);
+    byte4.output[3] = EEPROM.read(i*22+12);
+    Relay[i].nowtime = byte4.input;
+    Relay[i].state = EEPROM.read(i*22+13);
+    byte4.output[0] = EEPROM.read(i*22+14);
+    byte4.output[1] = EEPROM.read(i*22+15);
+    byte4.output[2] = EEPROM.read(i*22+16);
+    byte4.output[3] = EEPROM.read(i*22+17);
+    Relay[i].total_count = byte4.input;
+    byte4.output[0] = EEPROM.read(i*22+18);
+    byte4.output[1] = EEPROM.read(i*22+19);
+    byte4.output[2] = EEPROM.read(i*22+20);
+    byte4.output[3] = EEPROM.read(i*22+21);
+    Relay[i].now_count = byte4.input;
+
+    Serial.print(i);
+    Serial.print("\t");
+    Serial.print(Relay[i].is_run);
+    Serial.print("\t");
+    Serial.print(Relay[i].ontime);
+    Serial.print("\t");
+    Serial.print(Relay[i].offtime);
+    Serial.print("\t");
+    Serial.print(Relay[i].nowtime);
+    Serial.print("\t");
+    Serial.print(Relay[i].state);
+    Serial.print("\t");
+    Serial.print(Relay[i].total_count);
+    Serial.print("\t");
+    Serial.println(Relay[i].now_count);
+  }
+  EEPROM.end();
+}
+void factory_reset(){
+  EEPROM.begin(512);
+  for(int i = 0;i<16;i++){
+    EEPROM.write(i*22,0);
+    byte4.input = 1;
+    EEPROM.write(i*22+1,byte4.output[0]);
+    EEPROM.write(i*22+2,byte4.output[1]);
+    EEPROM.write(i*22+3,byte4.output[2]);
+    EEPROM.write(i*22+4,byte4.output[3]);
+    byte4.input = 1;
+    EEPROM.write(i*22+5,byte4.output[0]);
+    EEPROM.write(i*22+6,byte4.output[1]);
+    EEPROM.write(i*22+7,byte4.output[2]);
+    EEPROM.write(i*22+8,byte4.output[3]);
+    byte4.input = 1;
+    EEPROM.write(i*22+9,byte4.output[0]);
+    EEPROM.write(i*22+10,byte4.output[1]);
+    EEPROM.write(i*22+11,byte4.output[2]);
+    EEPROM.write(i*22+12,byte4.output[3]);
+
+    EEPROM.write(i*22+13,Relay[i].state);
+    byte4.input = 1;
+    EEPROM.write(i*22+14,byte4.output[0]);
+    EEPROM.write(i*22+15,byte4.output[1]);
+    EEPROM.write(i*22+16,byte4.output[2]);
+    EEPROM.write(i*22+17,byte4.output[3]);
+    byte4.input = 1;
+    EEPROM.write(i*22+18,byte4.output[0]);
+    EEPROM.write(i*22+19,byte4.output[1]);
+    EEPROM.write(i*22+20,byte4.output[2]);
+    EEPROM.write(i*22+21,byte4.output[3]);
+  }
+  EEPROM.end();
+}

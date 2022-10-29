@@ -1,0 +1,215 @@
+#include <Keypad.h>
+
+//74HC595에서
+//DS핀이 2
+//LATCH핀이 3
+//CLK 4
+#define DS 2
+#define LATCH 3
+#define CLK 4
+
+const byte ROWS = 4;
+const byte COLS = 4; 
+char hexaKeys[ROWS][COLS] = {
+  {'0','1','2','3'},
+  {'4','5','6','7'},
+  {'8','9','A','B'},
+  {'C','D','E','F'}
+};
+// {12 11 10 9} {8 7 6 5}
+byte rowPins[ROWS] = {12, 11, 10, 9};
+byte colPins[COLS] = {8, 7, 6, 5};
+
+//initialize an instance of class NewKeypad
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+
+//16채널 릴레의 상태를 저장하기 위한 변수
+byte relay1 = 0b11111111; //릴레이가 HIGH일때 OFF인것이다..!
+byte relay2 = 0b11111111;
+
+void setup(){
+  Serial.begin(9600);
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+
+  //초기상태는 모두 끄는걸로 하겠다!
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay2);
+  shiftOut(DS,CLK,MSBFIRST,relay1);
+  digitalWrite(LATCH,HIGH);
+}
+  
+void loop(){
+  char customKey = customKeypad.getKey();
+  
+  if (customKey){
+    if(customKey == '0'){
+      //1호차의 1번손님의 값을 토글
+      //현재 상태에서 반대되는 값을 설정해야한다!
+      byte pos = 0;
+      bool state = bitRead(relay1,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay1,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay1,pos);
+      }
+    }else if(customKey == '1'){
+      byte pos = 1;
+      bool state = bitRead(relay1,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay1,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay1,pos);
+      }
+    }else if(customKey == '2'){
+      byte pos = 2;
+      bool state = bitRead(relay1,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay1,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay1,pos);
+      }
+    }else if(customKey == '3'){
+      byte pos = 3;
+      bool state = bitRead(relay1,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay1,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay1,pos);
+      }
+    }else if(customKey == '4'){
+      byte pos = 4;
+      bool state = bitRead(relay1,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay1,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay1,pos);
+      }
+    }else if(customKey == '5'){
+      byte pos = 5;
+      bool state = bitRead(relay1,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay1,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay1,pos);
+      }
+    }else if(customKey == '6'){
+      byte pos = 6;
+      bool state = bitRead(relay1,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay1,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay1,pos);
+      }
+    }else if(customKey == '7'){
+      byte pos = 7;
+      bool state = bitRead(relay1,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay1,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay1,pos);
+      }
+    }else if(customKey == '8'){
+      byte pos = 0;
+      bool state = bitRead(relay2,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay2,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay2,pos);
+      }
+    }else if(customKey == '9'){
+      byte pos = 1;
+      bool state = bitRead(relay2,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay2,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay2,pos);
+      }
+    }else if(customKey == 'A'){
+      byte pos = 2;
+      bool state = bitRead(relay2,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay2,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay2,pos);
+      }
+    }else if(customKey == 'B'){
+      byte pos = 3;
+      bool state = bitRead(relay2,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay2,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay2,pos);
+      }
+    }else if(customKey == 'C'){
+      byte pos = 4;
+      bool state = bitRead(relay2,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay2,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay2,pos);
+      }
+    }else if(customKey == 'D'){
+      byte pos = 5;
+      bool state = bitRead(relay2,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay2,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay2,pos);
+      }
+    }else if(customKey == 'E'){
+      byte pos = 6;
+      bool state = bitRead(relay2,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay2,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay2,pos);
+      }
+    }else if(customKey == 'F'){
+      byte pos = 7;
+      bool state = bitRead(relay2,pos);
+      if(state == 0){
+        //ON->OFF(0->1)
+        bitSet(relay2,pos);
+      }else{
+        //OFF->ON(1->0)
+        bitClear(relay2,pos);
+      }
+    }
+    digitalWrite(LATCH,LOW);
+    shiftOut(DS,CLK,MSBFIRST,relay2);
+    shiftOut(DS,CLK,MSBFIRST,relay1);
+    digitalWrite(LATCH,HIGH);
+  }
+}

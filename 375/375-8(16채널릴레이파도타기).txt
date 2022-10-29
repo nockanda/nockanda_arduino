@@ -1,0 +1,47 @@
+#define DS 2 //데이터핀
+#define LATCH 3 //래치핀
+#define CLK 4 //클락핀
+
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 컴퓨터랑 시리얼통신 할꺼야~
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+
+}
+
+void loop() {
+  
+  //1~8까지 파도타기
+  for(int i = 0;i<8;i++){
+    byte data1 = 0b11111111;
+    byte data2 = 0b11111111;
+    
+    bitClear(data1,i); 
+    
+  
+    //초기설정 모든 릴레이를 OFF한다
+    digitalWrite(LATCH,LOW);
+    shiftOut(DS,CLK,MSBFIRST,data2); //2호차
+    shiftOut(DS,CLK,MSBFIRST,data1); //1호차
+    digitalWrite(LATCH,HIGH);
+    delay(1000);
+  }
+  //9~16까지 파도타기
+  for(int i = 0;i<8;i++){
+    byte data1 = 0b11111111;
+    byte data2 = 0b11111111;
+    
+    bitClear(data2,i); 
+    
+  
+    //초기설정 모든 릴레이를 OFF한다
+    digitalWrite(LATCH,LOW);
+    shiftOut(DS,CLK,MSBFIRST,data2); //2호차
+    shiftOut(DS,CLK,MSBFIRST,data1); //1호차
+    digitalWrite(LATCH,HIGH);
+    delay(1000);
+  }
+}

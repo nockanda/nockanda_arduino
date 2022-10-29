@@ -1,0 +1,26 @@
+#define DS 2 //데이터핀
+#define LATCH 3 //래치핀
+#define CLK 4 //클락핀
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+
+  //1번 LED만 켜려면 나는 어떻게 해야하나요?
+  //bitSet(데이터,인덱스); //해당인덱스의 값을 1로 치환
+  //bitClear(데이터,인덱스); //해당인덱스의 값을 0으로 치환
+  byte data = 0; //초심자분들은 비트연산을 해야한다..
+  bitSet(data,0); //제일 첫 LED를 켜기위한 세팅!
+
+  //74HC595쪽으로 전송
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data);
+  digitalWrite(LATCH,HIGH);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}

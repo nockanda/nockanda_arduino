@@ -1,0 +1,107 @@
+/*
+  녹칸다 노드레드 파일 서버와 찰떡같이 동작하는 OTA코드
+ */
+#include <Arduino.h>
+
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
+
+#include <ESP8266HTTPClient.h>
+#include <ESP8266httpUpdate.h>
+
+#ifndef APSSID
+#define APSSID "popcorn" //와이파이ID
+#define APPSK  "11213144"  //와이파이PW
+#endif
+
+String my_version = "0.1";
+String my_code = "123456"; //인증키
+String Serial_number = "nockanda02";
+
+void setup() {
+
+  Serial.begin(115200);
+  // Serial.setDebugOutput(true);
+
+  Serial.println();
+  Serial.println();
+  Serial.println();
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(APSSID, APPSK);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("인터넷에 연결되었습니다!");
+  //와이파이공유기와 연결한 직후 업데이트 체크를 한다
+  Serial.println("업데이트 체크를 합니다");
+  nockanda_update();
+  Serial.println("업데이트 체크를 완료했습니다!");
+
+}
+
+void update_started() {
+  Serial.println("CALLBACK:  HTTP update process started");
+}
+
+void update_finished() {
+  Serial.println("CALLBACK:  HTTP update process finished");
+}
+
+void update_progress(int cur, int total) {
+  Serial.printf("CALLBACK:  HTTP update process at %d of %d bytes...\n", cur, total);
+}
+
+void update_error(int err) {
+  Serial.printf("CALLBACK:  HTTP update fatal error code %d\n", err);
+}
+
+
+void loop() {
+  // wait for WiFi connection
+  Serial.print("안녕하세요 녹칸다입니다! 현재버전은 =");
+  Serial.print(my_version);
+  Serial.println("입니다!");
+  delay(2000);
+}
+
+void nockanda_update(){
+    WiFiClient client;
+
+    // The line below is optional. It can be used to blink the LED on the board during flashing
+    // The LED will be on during download of one buffer of data from the network. The LED will
+    // be off during writing that buffer to flash
+    // On a good connection the LED should flash regularly. On a bad connection the LED will be
+    // on much longer than it will be off. Other pins than LED_BUILTIN may be used. The second
+    // value is used to put the LED on. If the LED is on with HIGH, that value should be passed
+    ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
+
+    // Add optional callback notifiers
+    ESPhttpUpdate.onStart(update_started);
+    ESPhttpUpdate.onEnd(update_finished);
+    ESPhttpUpdate.onProgress(update_progress);
+    ESPhttpUpdate.onError(update_error);
+
+    t_httpUpdate_return ret = ESPhttpUpdate.update(client, "http://192.168.0.8:1880/update?code="+my_code+"&serial="+Serial_number,my_version);
+
+    switch (ret) {
+      case HTTP_UPDATE_FAILED:
+      //404
+        Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+        break;
+
+      case HTTP_UPDATE_NO_UPDATES:
+      //304
+        Serial.println("이미 최신버전입니다!");
+        break;
+
+      case HTTP_UPDATE_OK:
+      //200
+        Serial.println("HTTP_UPDATE_OK");
+        break;
+    }
+}

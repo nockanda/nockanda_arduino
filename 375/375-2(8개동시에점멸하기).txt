@@ -1,0 +1,32 @@
+#define DS 2 //데이터핀
+#define LATCH 3 //래치핀
+#define CLK 4 //클락핀
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+
+}
+
+void loop() {
+  byte data = 0;
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data);
+  digitalWrite(LATCH,HIGH);
+  delay(1000);
+  //data = 0xFF;
+  bitSet(data,0);
+  bitSet(data,1);
+  bitSet(data,2);
+  bitSet(data,3);
+  bitSet(data,4);
+  bitSet(data,5);
+  bitSet(data,6);
+  bitSet(data,7);
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data);
+  digitalWrite(LATCH,HIGH);
+  delay(1000);
+}

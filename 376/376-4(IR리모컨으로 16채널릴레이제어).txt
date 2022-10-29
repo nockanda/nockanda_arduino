@@ -1,0 +1,148 @@
+#include <Arduino.h>
+#include <TM1637Display.h>
+#include <IRremote.h>
+int RECV_PIN = 5;
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+
+//74HC595에서
+//DS핀이 2
+//LATCH핀이 3
+//CLK 4
+#define DS 2
+#define LATCH 3
+#define CLK 4
+
+//TM1637
+#define CLK1 A0
+#define DIO1 A1
+TM1637Display display(CLK1, DIO1);
+
+//16채널 릴레의 상태를 저장하기 위한 변수
+byte relay1 = 0b11111111; //릴레이가 HIGH일때 OFF인것이다..!
+byte relay2 = 0b11111111;
+
+String num="";
+
+void setup(){
+  Serial.begin(9600);
+  display.setBrightness(0x0f);
+  display.showNumberDec(0, false);
+  irrecv.enableIRIn();
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+
+  //초기상태는 모두 끄는걸로 하겠다!
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,relay2);
+  shiftOut(DS,CLK,MSBFIRST,relay1);
+  digitalWrite(LATCH,HIGH);
+}
+  
+void loop(){
+  if (irrecv.decode(&results)) {
+    if(results.value == 0xFF6897){
+      //0
+      //Serial.println("0");
+      //입력한대로 쓸어담겠다!
+      num += '0';
+      Serial.println(num);
+      display.showNumberDec(num.toInt(), false);
+    }else if(results.value == 0xFF30CF){
+      //1
+      //Serial.println("1");
+      num += '1';
+      Serial.println(num);
+      display.showNumberDec(num.toInt(), false);
+    }else if(results.value == 0xFF18E7){
+      //2
+      //Serial.println("2");
+      num += '2';
+      Serial.println(num);
+      display.showNumberDec(num.toInt(), false);
+    }else if(results.value == 0xFF7A85){
+      //3
+      //Serial.println("3");
+      num += '3';
+      Serial.println(num);
+      display.showNumberDec(num.toInt(), false);
+    }else if(results.value == 0xFF10EF){
+      //4
+      //Serial.println("4");
+      num += '4';
+      Serial.println(num);
+      display.showNumberDec(num.toInt(), false);
+    }else if(results.value == 0xFF38C7){
+      //5
+      //Serial.println("5");
+      num += '5';
+      Serial.println(num);
+      display.showNumberDec(num.toInt(), false);
+    }else if(results.value == 0xFF5AA5){
+      //6
+      //Serial.println("6");
+      num += '6';
+      Serial.println(num);
+      display.showNumberDec(num.toInt(), false);
+    }else if(results.value == 0xFF42BD){
+      //7
+      //Serial.println("7");
+      num += '7';
+      Serial.println(num);
+      display.showNumberDec(num.toInt(), false);
+    }else if(results.value == 0xFF4AB5){
+      //8
+      //Serial.println("8");
+      num += '8';
+      Serial.println(num);
+      display.showNumberDec(num.toInt(), false);
+    }else if(results.value == 0xFF52AD){
+      //9
+      //Serial.println("9");
+      num += '9';
+      Serial.println(num);
+      display.showNumberDec(num.toInt(), false);
+    }else if(results.value == 0xFFA857){
+      //+
+      //Serial.println("+");
+      //릴레이를 ON
+      int index = num.toInt()-1; //0~15
+      if(index < 8){
+        bitClear(relay1,index); //? -> 0(ON)
+      }else{
+        bitClear(relay2,index-8);
+      }
+      digitalWrite(LATCH,LOW);
+      shiftOut(DS,CLK,MSBFIRST,relay2);
+      shiftOut(DS,CLK,MSBFIRST,relay1);
+      digitalWrite(LATCH,HIGH);
+      num = "";
+      display.showNumberDec(0, false);
+    }else if(results.value == 0xFFE01F){
+      //-
+      //Serial.println("-");
+      //릴레이를 OFF
+      int index = num.toInt()-1; //0~15
+      if(index < 8){
+        bitSet(relay1,index); //? -> 1(OFF)
+      }else{
+        bitSet(relay2,index-8);
+      }
+      digitalWrite(LATCH,LOW);
+      shiftOut(DS,CLK,MSBFIRST,relay2);
+      shiftOut(DS,CLK,MSBFIRST,relay1);
+      digitalWrite(LATCH,HIGH);
+      num = "";
+      display.showNumberDec(0, false);
+    }else if(results.value == 0xFF906F){
+      //EQ
+      //Serial.println("EQ");
+      //지금까지 입력한것을 초기화한다!
+      num = "";
+      Serial.println("클리어");
+      display.showNumberDec(0, false);
+    }
+    irrecv.resume(); // Receive the next value
+  }
+}

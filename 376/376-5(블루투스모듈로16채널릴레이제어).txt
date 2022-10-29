@@ -1,0 +1,72 @@
+/*
+ (주의사항1) 아두이노쪽 시리얼모니터가 닫혀있을것!
+ (주의사항2) 스마트폰쪽 블루투스시리얼모니터가 종료문자가 CR일것('\r')
+ (향후 이코드는 앱인벤터용으로 변환될 예정임)
+ */
+
+#define DS 2 //데이터핀
+#define LATCH 3 //래치핀
+#define CLK 4 //클락핀
+
+byte data1 = 0xFF; //릴레이 모두다 OFF
+byte data2 = 0xFF; //릴레이 모두다 OFF
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //나 컴퓨터랑 시리얼통신 할꺼야~
+  pinMode(DS,OUTPUT);
+  pinMode(LATCH,OUTPUT);
+  pinMode(CLK,OUTPUT);
+
+  //초기설정 모든 릴레이를 OFF한다
+  digitalWrite(LATCH,LOW);
+  shiftOut(DS,CLK,MSBFIRST,data2);
+  shiftOut(DS,CLK,MSBFIRST,data1);
+  digitalWrite(LATCH,HIGH);
+}
+
+void loop() {
+  //유저에게 시리얼 입력을 받는다!
+  if(Serial.available()){
+    //int num = Serial.parseInt();
+    String num = Serial.readStringUntil('\r');
+    //num.toInt() //1~16
+    //원래 설정되어 있던 비트값에서 비트를 플립한다!
+    //bitRead(x, n)
+    int index = num.toInt()-1;
+    //16채널은 구간이 2개가 된다 0~7 8~15
+    if(index < 8){
+      //0~7
+      bool state = bitRead(data1, index);
+      if(state){
+        //릴레이OFF
+        //->ON(1->0)
+        bitClear(data1,index);
+      }else{
+        //릴레이ON
+        //->OFF(0->1)
+        bitSet(data1,index);
+      }
+    }else{
+      //8~15
+      bool state = bitRead(data2, index-8); //0~7
+      if(state){
+        //릴레이OFF
+        //->ON(1->0)
+        bitClear(data2,index-8);
+      }else{
+        //릴레이ON
+        //->OFF(0->1)
+        bitSet(data2,index-8);
+      }
+    }
+    
+
+    //갱신한다
+    digitalWrite(LATCH,LOW);
+    shiftOut(DS,CLK,MSBFIRST,data2);
+    shiftOut(DS,CLK,MSBFIRST,data1);
+    digitalWrite(LATCH,HIGH);
+    
+  }
+}
