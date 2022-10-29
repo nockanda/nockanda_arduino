@@ -1,0 +1,32 @@
+#define anemometer 2
+
+unsigned long anemo_t = 0;
+unsigned long t2 = 0;
+bool pre_anemo_state = HIGH;
+int count = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(anemometer,INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //미션 폴링엣지를 찾아라!
+  bool now_anome_state = digitalRead(anemometer);
+  if(pre_anemo_state == HIGH && now_anome_state == LOW && millis() - anemo_t > 10){
+    //폴링엣지 발생
+    anemo_t = millis();
+    count++;
+  }
+  pre_anemo_state = now_anome_state;
+
+  if(millis() - t2 > 1000){
+    t2 = millis();
+    float wind_speed = count * 2.4 * 1000 / 3600; //(m/s)
+    Serial.print(wind_speed);
+    Serial.println("m/s");
+    count = 0;
+  }
+}

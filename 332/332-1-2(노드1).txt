@@ -1,0 +1,96 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+
+byte myid = 0xAA;
+
+//920.9Mhz
+const long frequency = 9209E5;
+
+void setup() {
+  Serial.begin(9600);                   // initialize serial
+
+  if (!LoRa.begin(frequency)) {
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+  Serial.println();
+  Serial.println("LoRa Simple Node");
+  Serial.println("Only receive messages from gateways");
+  Serial.println("Tx: invertIQ disable");
+  Serial.println("Rx: invertIQ enable");
+  Serial.println();
+
+  LoRa.onReceive(onReceive);
+  LoRa.onTxDone(onTxDone);
+  LoRa_rxMode();
+}
+
+void loop() {
+
+  //node쪽은 1초에 한번 뭔가 전송하려고 한다~
+  if (runEvery(5000+random(0,1000))) { // repeat every 1000 millis
+
+    //센서값을 여기서 측정!
+    float temp = random(0,10000)/100.0; //0.00 ~99.99
+    float humi = random(0,10000)/100.0;
+
+    //node에서 gateway로 전송할때는 온도, 습도
+    //첫바이트는 노드의 id를 전송한다
+    //두번쨰 바이트 부터는~ 온도, 습도 형태로 char array로 전송한다!
+    LoRa_txMode(); 
+    LoRa.beginPacket();
+    LoRa.write(myid);
+    LoRa.print(String(temp)+","+String(humi));
+    LoRa.endPacket(true); 
+    
+
+    Serial.println("Send Message!");
+  }
+}
+
+void LoRa_rxMode(){
+  LoRa.enableInvertIQ();                // active invert I and Q signals
+  LoRa.receive();                       // set receive mode
+}
+
+void LoRa_txMode(){
+  LoRa.idle();                          // set standby mode
+  LoRa.disableInvertIQ();               // normal mode
+}
+
+void LoRa_sendMessage(String message) {
+  LoRa_txMode();                        // set tx mode
+  LoRa.beginPacket();                   // start packet
+  LoRa.print(message);                  // add payload
+  LoRa.endPacket(true);                 // finish packet and send it
+}
+
+void onReceive(int packetSize) {
+  String message = "";
+
+  while (LoRa.available()) {
+    message += (char)LoRa.read();
+  }
+
+  Serial.print("Node Receive: ");
+  Serial.println(message);
+}
+
+void onTxDone() {
+  Serial.println("TxDone");
+  LoRa_rxMode();
+}
+
+boolean runEvery(unsigned long interval)
+{
+  static unsigned long previousMillis = 0;
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval)
+  {
+    previousMillis = currentMillis;
+    return true;
+  }
+  return false;
+}

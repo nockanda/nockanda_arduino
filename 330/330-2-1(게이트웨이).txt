@@ -1,0 +1,106 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+
+//920.9Mhz
+const long frequency = 9209E5;
+
+void setup() {
+  Serial.begin(9600);                   // initialize serial
+  
+  if (!LoRa.begin(frequency)) {
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+  Serial.println();
+  Serial.println("LoRa Simple Gateway");
+  Serial.println("Only receive messages from nodes");
+  Serial.println("Tx: invertIQ enable");
+  Serial.println("Rx: invertIQ disable");
+  Serial.println();
+
+  LoRa.onReceive(onReceive); //메시지가 수신되었을때
+  LoRa.onTxDone(onTxDone);
+  LoRa_rxMode();
+}
+
+void loop() {
+
+  //5초에 한번 실행된다~
+  if (runEvery(5000)) { // repeat every 5000 millis
+
+    String message = "HeLoRa World! ";
+    message += "I'm a Gateway! ";
+    message += millis();
+
+    
+    LoRa_sendMessage(message); // send a message
+    //1.TX모드로 전환한다
+    //2.메시지를 LoRa로 전송한다
+    //3.Rx모드로 전환한다
+
+    Serial.println("Send Message!");
+  }
+}
+
+//수신모드
+void LoRa_rxMode(){
+  LoRa.disableInvertIQ();               // normal mode
+  LoRa.receive();                       // set receive mode
+}
+
+//송신모드
+void LoRa_txMode(){
+  LoRa.idle();                          // set standby mode
+  LoRa.enableInvertIQ();                // active invert I and Q signals
+}
+
+void LoRa_sendMessage(String message) {
+  LoRa_txMode();                        // set tx mode
+  LoRa.beginPacket();                   // start packet
+  LoRa.print(message);                  // add payload
+  LoRa.endPacket(true);                 // finish packet and send it
+}
+
+void onReceive(int packetSize) {
+  String message = "";
+
+  byte yourid = LoRa.read(); //ID값 1바이트를 읽는다!
+
+  if(yourid == 0xA0){
+    //노드1번
+    Serial.println("노드 1번에서 데이터가 수신되었다!");
+  }else if(yourid == 0xB0){
+    //노드2번
+    Serial.println("노드 2번에서 데이터가 수신되었다!");
+  }else if(yourid == 0xC0){
+    //노드3번
+    Serial.println("노드 3번에서 데이터가 수신되었다!");
+  }
+
+  //수신받은 데이터 시작지점부터 끝까지 모두 읽어서 string변수에 집어넣어라!
+  while (LoRa.available()) {
+    message += (char)LoRa.read();
+  }
+
+  Serial.print("Gateway Receive: ");
+  Serial.println(message);
+}
+
+void onTxDone() {
+  Serial.println("TxDone");
+  LoRa_rxMode();
+}
+
+boolean runEvery(unsigned long interval)
+{
+  static unsigned long previousMillis = 0;
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval)
+  {
+    previousMillis = currentMillis;
+    return true;
+  }
+  return false;
+}

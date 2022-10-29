@@ -1,0 +1,132 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK 5
+#define DIO 6
+TM1637Display display(CLK, DIO);
+
+#define button1 3
+#define button2 4
+
+//920.9Mhz
+const long frequency = 9209E5;
+
+void setup() {
+  Serial.begin(9600);                   // initialize serial
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+  display.setBrightness(0x0f);
+  display.showNumberDec(0, false); //초기값 0
+  if (!LoRa.begin(frequency)) {
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+  Serial.println();
+  Serial.println("LoRa Simple Gateway");
+  Serial.println("Only receive messages from nodes");
+  Serial.println("Tx: invertIQ enable");
+  Serial.println("Rx: invertIQ disable");
+  Serial.println();
+
+  LoRa.onReceive(onReceive);
+  LoRa.onTxDone(onTxDone);
+  LoRa_rxMode();
+}
+
+void loop() {
+  
+  //유저가 'U'라는 명령을 노드에게 전송하면 서보의 각도가 10도 증가
+  //'D'라는 명령을 보내면 10도 감소
+  if(digitalRead(button1) == LOW){
+    //버튼 1이 눌려진것!
+    LoRa_txMode();  
+    LoRa.beginPacket(); 
+    LoRa.write('O'); 
+    LoRa.endPacket(true);
+    delay(200);
+  }
+  if(digitalRead(button2) == LOW){
+    //버튼 2가 눌려진것!
+    LoRa_txMode();  
+    LoRa.beginPacket(); 
+    LoRa.write('F'); 
+    LoRa.endPacket(true);
+    delay(200);
+  }
+  
+  
+  /*
+  //5초에 한번 실행된다~
+  if (runEvery(5000)) { // repeat every 5000 millis
+    int data = 30;
+    LoRa_txMode();  
+    LoRa.beginPacket(); 
+    LoRa.write((byte)data); 
+    LoRa.endPacket(true);
+  }
+  */
+}
+
+//수신모드
+void LoRa_rxMode(){
+  LoRa.disableInvertIQ();               // normal mode
+  LoRa.receive();                       // set receive mode
+}
+
+//송신모드
+void LoRa_txMode(){
+  LoRa.idle();                          // set standby mode
+  LoRa.enableInvertIQ();                // active invert I and Q signals
+}
+
+void LoRa_sendMessage(String message) {
+  LoRa_txMode();                        // set tx mode
+  LoRa.beginPacket();                   // start packet
+  LoRa.print(message);                  // add payload
+  LoRa.endPacket(true);                 // finish packet and send it
+}
+
+void onReceive(int packetSize) {
+  //문자열로 각도값이 날라온다
+  //예를들어 22.55도 {'2','2','.','5','5'}
+  char c = LoRa.read();
+
+  if(c == 'O'){
+    //ON(=FND모듈에 1111출력)
+    display.showNumberDec(1111, false);
+  }else{
+    //OFF(=FND모듈에 0000출력)
+    display.showNumberDec(0, true);
+  }
+  /*
+  String message = "";
+
+  while (LoRa.available()) {
+    message += (char)LoRa.read();
+  }
+
+  Serial.print("Gateway Receive: ");
+  Serial.println(message);
+  */
+}
+
+void onTxDone() {
+  Serial.println("TxDone");
+  LoRa_rxMode();
+}
+
+boolean runEvery(unsigned long interval)
+{
+  static unsigned long previousMillis = 0;
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval)
+  {
+    previousMillis = currentMillis;
+    return true;
+  }
+  return false;
+}

@@ -1,0 +1,118 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+/*
+#include <Stepper.h>
+
+const int stepsPerRevolution = 2048;
+
+//IN{1,2,3,4} = {6,5,4,3}
+                                  //IN 4 2 3 1            
+Stepper myStepper(stepsPerRevolution, 3, 5, 4, 6);
+*/
+float degree = 0;
+
+//920.9Mhz
+const long frequency = 9209E5;
+
+void setup() {
+  Serial.begin(9600);                   // initialize serial
+  //myStepper.setSpeed(15);
+  
+  if (!LoRa.begin(frequency)) {
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+  Serial.println();
+  Serial.println("LoRa Simple Node");
+  Serial.println("Only receive messages from gateways");
+  Serial.println("Tx: invertIQ disable");
+  Serial.println("Rx: invertIQ enable");
+  Serial.println();
+
+  LoRa.onReceive(onReceive);
+  LoRa.onTxDone(onTxDone);
+  LoRa_rxMode();
+}
+
+void loop() {
+
+  //node쪽은 1초에 한번 뭔가 전송하려고 한다~
+  if (runEvery(1000)) { // repeat every 1000 millis
+
+    String message = String(degree);
+
+    LoRa_sendMessage(message); // send a message
+
+    Serial.println("Send Message!");
+  }
+}
+
+void LoRa_rxMode(){
+  LoRa.enableInvertIQ();                // active invert I and Q signals
+  LoRa.receive();                       // set receive mode
+}
+
+void LoRa_txMode(){
+  LoRa.idle();                          // set standby mode
+  LoRa.disableInvertIQ();               // normal mode
+}
+
+void LoRa_sendMessage(String message) {
+  LoRa_txMode();                        // set tx mode
+  LoRa.beginPacket();                   // start packet
+  LoRa.print(message);                  // add payload
+  LoRa.endPacket(true);                 // finish packet and send it
+}
+
+void onReceive(int packetSize) {
+  char c = LoRa.read();
+
+  if(c == 'U'){
+    //스탭모터의 각도를 올려라
+    
+    //myStepper.step(32);
+    degree += 5.625;
+
+    if(degree >= 360) degree=degree-360;
+    
+    Serial.println(degree);
+  }else if(c == 'D'){
+    //스탭모터의 각도를 내려라
+    
+    //myStepper.step(-32);
+    degree -= 5.625;
+
+    if(degree < 0) degree = degree+360;
+    
+    Serial.println(degree);
+  }
+  /*
+  String message = "";
+
+  while (LoRa.available()) {
+    message += (char)LoRa.read();
+  }
+
+  Serial.print("Node Receive: ");
+  Serial.println(message);
+  */
+}
+
+void onTxDone() {
+  Serial.println("TxDone");
+  LoRa_rxMode();
+}
+
+boolean runEvery(unsigned long interval)
+{
+  static unsigned long previousMillis = 0;
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval)
+  {
+    previousMillis = currentMillis;
+    return true;
+  }
+  return false;
+}

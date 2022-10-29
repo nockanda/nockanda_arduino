@@ -1,0 +1,30 @@
+const byte interruptPin = 2;
+volatile int count = 0;
+volatile unsigned long anemo_t = 0;
+unsigned long t2 = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(interruptPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), counter, FALLING);
+}
+
+void loop() {
+  if(millis() - t2 > 1000){
+    t2 = millis();
+    //km/h => m/s*1000/3600 
+    float wind_speed = count*2.4*1000/3600;
+    Serial.print(wind_speed);
+    Serial.println("m/s");
+    count = 0;
+  }
+}
+
+void counter() {
+  //1초 = 1000ms  (=66.66m/s)
+  if(millis() - anemo_t > 10){
+    anemo_t = millis();
+    //인터발 간격으로 한번씩 실행이 되는 부분
+    count++;
+  }
+}

@@ -1,0 +1,23 @@
+const byte interruptPin = 2;
+volatile int count = 0;
+volatile unsigned long t = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(interruptPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), counter, FALLING);
+}
+
+void loop() {
+  Serial.println(count);
+  delay(100);
+}
+
+void counter() {
+  //1초 = 1000ms  (=66.66m/s)
+  if(millis() - t > 10){
+    t = millis();
+    //인터발 간격으로 한번씩 실행이 되는 부분
+    count++;
+  }
+}

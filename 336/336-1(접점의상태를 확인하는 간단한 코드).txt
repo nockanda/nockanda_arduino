@@ -1,0 +1,17 @@
+#define anemometer 2
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //결과를 시리얼 모니터에 출력하고자 한다!
+  pinMode(anemometer,INPUT_PULLUP); //내부저항을 사용하는 풀업방식!
+  //풀업방식은 버튼을 누르지 않은 상태일때 1(=HIGH)
+  //버튼을 누르고 있는 상태 0(=LOW)
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  bool state = digitalRead(anemometer);
+
+  Serial.println(state);
+  delay(100);
+}

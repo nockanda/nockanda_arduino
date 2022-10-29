@@ -1,0 +1,23 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial HC06(2, 3);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //PC-아두이노간
+  HC06.begin(9600);//아두이노-블루투스모듈간 통신
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int cds = analogRead(A0);
+  HC06.print(cds);
+  /*
+  if(cds > 150){
+    Serial.println("둥근해가 떳습니다!");
+  }else{
+    Serial.println("해가 졌습니다..");
+  }*/
+  delay(1000);
+}

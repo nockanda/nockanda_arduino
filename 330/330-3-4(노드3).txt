@@ -1,0 +1,105 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+
+#define led 3
+
+byte myid = 0xC0;
+
+//920.9Mhz
+const long frequency = 9209E5;
+
+void setup() {
+  Serial.begin(9600);                   // initialize serial
+
+  pinMode(led,OUTPUT);
+
+  if (!LoRa.begin(frequency)) {
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+
+  Serial.println("LoRa init succeeded.");
+  Serial.println();
+  Serial.println("LoRa Simple Node");
+  Serial.println("Only receive messages from gateways");
+  Serial.println("Tx: invertIQ disable");
+  Serial.println("Rx: invertIQ enable");
+  Serial.println();
+
+  LoRa.onReceive(onReceive);
+  LoRa.onTxDone(onTxDone);
+  LoRa_rxMode();
+}
+
+void loop() {
+
+  //node쪽은 1초에 한번 뭔가 전송하려고 한다~
+  if (runEvery(5000+random(0,1000))) { // repeat every 1000 millis
+
+    //led상태를 읽는다
+    bool state = digitalRead(led); //HIGH, LOW
+
+    String message;
+    if(state == HIGH){
+      //LED가 켜져있다
+      message = "LED가 켜져있습니다!!";
+    }else{
+      //LED가 꺼져있다
+      message = "LED가 꺼져있습니다..";
+    }
+    LoRa_sendMessage(myid,message); // send a message
+
+    Serial.println("Send Message!");
+  }
+}
+
+void LoRa_rxMode(){
+  LoRa.enableInvertIQ();                // active invert I and Q signals
+  LoRa.receive();                       // set receive mode
+}
+
+void LoRa_txMode(){
+  LoRa.idle();                          // set standby mode
+  LoRa.disableInvertIQ();               // normal mode
+}
+
+void LoRa_sendMessage(byte id, String message) {
+  LoRa_txMode();                        // set tx mode
+  LoRa.beginPacket();                   // start packet
+  LoRa.write(id);
+  LoRa.print(message);                  // add payload
+  LoRa.endPacket(true);                 // finish packet and send it
+}
+
+void onReceive(int packetSize) {
+  //2바이트로 읽는다!
+  byte id = LoRa.read();
+  byte state = LoRa.read();
+  //나한테 보낸게 아니라면 무시한다~
+  if(id != myid) return; 
+  //LED를 제어한다!
+  if(state == '0'){
+    //LED 끈다
+    digitalWrite(led,LOW);
+  }else if(state == '1'){
+    //LED를 켠다
+    digitalWrite(led,HIGH);
+  }
+}
+
+void onTxDone() {
+  Serial.println("TxDone");
+  LoRa_rxMode();
+}
+
+boolean runEvery(unsigned long interval)
+{
+  static unsigned long previousMillis = 0;
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval)
+  {
+    previousMillis = currentMillis;
+    return true;
+  }
+  return false;
+}

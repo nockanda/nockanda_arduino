@@ -1,0 +1,118 @@
+#include <SPI.h>              // include libraries
+#include <LoRa.h>
+
+//920.9Mhz
+const long frequency = 9209E5;
+
+byte gateway_id = 255; //0xFF;
+
+void setup() {
+  Serial.begin(9600);                   // initialize serial
+  
+  if (!LoRa.begin(frequency)) {
+    Serial.println("LoRa init failed. Check your connections.");
+    while (true);                       // if failed, do nothing
+  }
+/*
+  Serial.println("LoRa init succeeded.");
+  Serial.println();
+  Serial.println("LoRa Simple Gateway");
+  Serial.println("Only receive messages from nodes");
+  Serial.println("Tx: invertIQ enable");
+  Serial.println("Rx: invertIQ disable");
+  Serial.println();
+*/
+  LoRa.onReceive(onReceive); //메시지가 수신되었을때
+  LoRa.onTxDone(onTxDone);
+  LoRa_rxMode();
+}
+
+void loop() {
+/*
+  //5초에 한번 실행된다~
+  if (runEvery(5000)) { // repeat every 5000 millis
+
+    String message = "HeLoRa World! ";
+    message += "I'm a Gateway! ";
+    message += millis();
+
+    
+    LoRa_sendMessage(message); // send a message
+    //1.TX모드로 전환한다
+    //2.메시지를 LoRa로 전송한다
+    //3.Rx모드로 전환한다
+
+    Serial.println("Send Message!");
+  }
+  */
+}
+
+//수신모드
+void LoRa_rxMode(){
+  LoRa.disableInvertIQ();               // normal mode
+  LoRa.receive();                       // set receive mode
+}
+
+//송신모드
+void LoRa_txMode(){
+  LoRa.idle();                          // set standby mode
+  LoRa.enableInvertIQ();                // active invert I and Q signals
+}
+
+void LoRa_sendMessage(String message) {
+  LoRa_txMode();                        // set tx mode
+  LoRa.beginPacket();                   // start packet
+  LoRa.print(message);                  // add payload
+  LoRa.endPacket(true);                 // finish packet and send it
+}
+
+void onReceive(int packetSize) {
+  //[받는놈id][보내는놈id][온도1][온도2][습도1][습도2]
+  byte recv_id = LoRa.read();
+  byte send_id = LoRa.read();
+  byte a = LoRa.read();
+  byte b = LoRa.read();
+  byte c = LoRa.read();
+  byte d = LoRa.read();
+
+  if(recv_id != gateway_id){
+    //나한테 온게 아닌데?
+    return;
+  }
+
+  //수신게이트웨이가 내가 맞다면~
+  float temp = ((a * 256) + b) / 100.0;
+  float humi = ((c << 8) | b) /100.0;
+
+  //{"gateway_id":255,"node_id":11,"temp":22.44,"humi":50.22}
+  String json = "{\"gateway_id\":255,\"node_id\":"+String(send_id)+",\"temp\":"+String(temp)+",\"humi\":"+String(humi)+"}";
+
+  Serial.println(json);
+
+  /*
+  Serial.print(recv_id);
+  Serial.print("\t");
+  Serial.print(send_id);
+  Serial.print("\t");
+  Serial.print(temp);
+  Serial.print("\t");
+  Serial.println(humi);
+  */
+}
+
+void onTxDone() {
+  Serial.println("TxDone");
+  LoRa_rxMode();
+}
+
+boolean runEvery(unsigned long interval)
+{
+  static unsigned long previousMillis = 0;
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval)
+  {
+    previousMillis = currentMillis;
+    return true;
+  }
+  return false;
+}
