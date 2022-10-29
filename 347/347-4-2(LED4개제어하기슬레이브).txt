@@ -1,0 +1,114 @@
+#include <SoftwareSerial.h>
+#include "CRC16.h"
+#include "CRC.h"
+
+#define led1 D6
+#define led2 D7
+#define led3 D8
+#define led4 D9
+
+byte myid = 0x01;
+
+CRC16 crc;
+
+#define mode D13
+SoftwareSerial modbus(D3, D4); //모듈tx, rx @아두이노 입장 rx, tx
+
+byte buff[50];
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  pinMode(led3,OUTPUT);
+  pinMode(led4,OUTPUT);
+  Serial.begin(9600); //아두이노-PC 통신라인(결과출력용)
+  modbus.begin(9600); //사용하는 제품마다 숫자가 다름!
+  pinMode(mode,OUTPUT);
+  //시작은 수신모드이다!
+  recv_mode();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //두목이 뭔가 보내줄때까지 기다려야한다!
+  if(modbus.available()){
+    delay(100);
+    Serial.println(modbus.available());
+    //두목이 뭔가 전송했다!
+    //받는 데이터 길이가 정해져있지않다!
+    int len = 0;
+    while(true){
+      if(!modbus.available()) break;
+      buff[len] = modbus.read();
+      len++;
+    }
+    //나한테 온게 맞냐?
+    if(buff[0] != myid){
+      return;
+    }
+    
+    //받아온 데이터에서 CRC를 제외한 부분만 추려낸다!
+    if(len < 2) return;
+    byte req[len-2];
+
+    for(int i = 0;i<len-2;i++){
+      req[i] = buff[i];
+    }
+    
+    //받은 데이터가 적합한지 CRC계산을 해야한다!
+    uint16_t request_crc = crc16(req, len-2, 0x8005, 0xFFFF, 0, true, true);
+    byte request_crc_high = request_crc >> 8;
+    byte request_crc_low = request_crc & 0xFF;
+    //마스터에서 받은 CRC buff[len-1] buff[len-2]
+    if(buff[len-2] != request_crc_low || buff[len-1] != request_crc_high){
+      return;
+    }
+
+    if(buff[3] == 0x00){
+      //LED1
+      if(buff[4] == 0xFF){
+        digitalWrite(led1,HIGH);
+      }else if(buff[4] == 0x00){
+        digitalWrite(led1,LOW);
+      }
+    }if(buff[3] == 0x01){
+      //LED2
+      if(buff[4] == 0xFF){
+        digitalWrite(led2,HIGH);
+      }else if(buff[4] == 0x00){
+        digitalWrite(led2,LOW);
+      }
+    }if(buff[3] == 0x02){
+      //LED3
+      if(buff[4] == 0xFF){
+        digitalWrite(led3,HIGH);
+      }else if(buff[4] == 0x00){
+        digitalWrite(led3,LOW);
+      }
+    }if(buff[3] == 0x03){
+      //LED4
+      if(buff[4] == 0xFF){
+        digitalWrite(led4,HIGH);
+      }else if(buff[4] == 0x00){
+        digitalWrite(led4,LOW);
+      }
+    }
+
+    //내가 해야할일을 해야하는 부분!
+    
+    
+    //받은데이터를 그대로 마스터쪽으로 echo한다!
+    send_mode();
+    for(int i = 0;i<len;i++){
+      modbus.write(buff[i]);
+    }
+    recv_mode();
+  }
+}
+void send_mode(){
+  digitalWrite(mode,HIGH);
+}
+void recv_mode(){
+  digitalWrite(mode,LOW);
+}
