@@ -1,0 +1,22 @@
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int raw_data = analogRead(A0);
+  //0~1023 = 0~5V
+  //v = raw_data/1023 * 5
+
+  float volt = raw_data/1023.0 * 5; //4.84
+
+  float ratio = volt/5; // 10k/r1+10k
+
+  if(ratio != 0){
+    float ohm = 10000/ratio - 10000;
+    Serial.println(ohm);
+  }
+  
+  delay(100);
+}

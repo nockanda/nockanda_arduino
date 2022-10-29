@@ -1,0 +1,35 @@
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK 2
+#define DIO 3
+
+TM1637Display display(CLK, DIO);
+
+float direct[] = {3.84,1.98,2.25,0.41,0.45,0.32,0.90,0.62,1.40,1.19,3.08,2.93,4.62,4.04,4.33,3.43};
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  display.setBrightness(0x0f);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int raw_data = analogRead(A0);
+  float volt = 5 * raw_data/1023.0;
+
+  
+
+  for(int i =0;i<16;i++){
+    if(abs(direct[i] - volt) < 0.02){
+       float degree = i * 22.5;
+       display.showNumberDec(degree, false);
+       Serial.println(degree);
+       break;
+    }
+  }
+
+  //Serial.println(volt);
+  delay(100);
+}

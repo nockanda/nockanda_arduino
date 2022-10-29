@@ -1,0 +1,29 @@
+#define fainfall 3
+
+bool pre_state = HIGH;
+int count = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //결과를 시리얼 모니터에 출력할꺼야~
+  pinMode(fainfall,INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //평소에는 HIGH신호가 나온다!
+  //버킷이 클릭이 되었을때 순간적으로 LOW신호가 나온다
+  bool state = digitalRead(fainfall);
+  
+  if(pre_state == HIGH && state == LOW){
+    //폴링엣지(하강엣지)
+    count++;
+  }
+
+  Serial.println(count);
+  delay(100);
+
+  //할거다해~~~
+
+  pre_state = state;
+}

@@ -1,0 +1,141 @@
+//풍향센서
+float direct[] = {3.84,1.98,2.25,0.41,0.45,0.32,0.90,0.62,1.40,1.19,3.08,2.93,4.62,4.04,4.33,3.43};
+
+//풍속센서
+const byte anemo_pin = 2;
+volatile int anemo_count = 0;
+volatile unsigned long anemo_t = 0;
+unsigned long nockanda_time = 0;
+
+//우량센서(측우기)
+const byte rain_pin = 3;
+volatile int rain_count = 0;
+volatile unsigned long rain_time = 0;
+
+//온습도(dht-11)
+#include "DHT.h"
+#define DHTPIN 4
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+//미세먼지센서(PMS7003)
+#include "PMS.h"
+#include <SoftwareSerial.h>
+
+SoftwareSerial nockanda(5, 6); //tx=5, rx=6
+
+PMS pms(nockanda);
+PMS::DATA data;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  //풍속
+  pinMode(anemo_pin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(anemo_pin), anemo_counter, FALLING);
+  //우량
+  pinMode(rain_pin, INPUT_PULLUP); //rainfall
+  attachInterrupt(digitalPinToInterrupt(rain_pin), rain_counter, FALLING);
+  //온습도
+  dht.begin();
+
+  //미세먼지
+  nockanda.begin(9600);  //미세먼지-아두이노간
+  pms.passiveMode();    // Switch to passive mode
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  //1000ms에 한번씩 모든 센서의 값을 읽어온다!
+  if(millis() - nockanda_time > 1000){
+    nockanda_time = millis();
+
+    //풍향센서 부분
+    int vane_raw_data = analogRead(A0);
+    float vane_volt = 5 * vane_raw_data/1023.0;
+
+    float degree = 0;
+    for(int i =0;i<16;i++){
+      if(i == 3 || i == 4){
+        if(abs(direct[i] - vane_volt) < 0.02){
+           degree = i * 22.5;
+           //Serial.println(degree);
+           break;
+        }
+      }else{
+        if(abs(direct[i] - vane_volt) < 0.05){
+           degree = i * 22.5;
+           //Serial.println(degree);
+           break;
+        }
+      }
+    }
+
+    
+    //km/h => m/s*1000/3600
+    //풍속센서 
+    float wind_speed = anemo_count*2.4*1000/3600;
+    anemo_count = 0;
+
+    //우량값
+    float rain_amount = rain_count*0.2794;
+
+    //온도와 습도
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+
+    //미세먼지
+    int pm1_1 = 0;
+    int pm2_5 = 0;
+    int pm10_0 = 0;
+    pms.requestRead();
+    if (pms.readUntil(data))
+    {
+      pm1_1 = data.PM_AE_UG_1_0;
+      pm2_5 = data.PM_AE_UG_2_5;
+      pm10_0 = data.PM_AE_UG_10_0;
+    }else{
+      pm1_1 = -999;
+      pm2_5 = -999;
+      pm10_0 = -999;
+    }
+    
+    //degree
+    //wind_speed
+    Serial.print(degree);
+    Serial.print(',');
+    Serial.print(wind_speed);
+    Serial.print(',');
+    Serial.print(rain_amount);
+    Serial.print(',');
+    Serial.print(h);
+    Serial.print(',');
+    Serial.print(t);
+    Serial.print(',');
+    Serial.print(pm1_1);
+    Serial.print(',');
+    Serial.print(pm2_5);
+    Serial.print(',');
+    Serial.print(pm10_0);
+    Serial.println();
+  }
+
+}
+
+void anemo_counter() {
+  //1초 = 1000ms  (=66.66m/s)
+  if(millis() - anemo_t > 10){
+    anemo_t = millis();
+    //인터발 간격으로 한번씩 실행이 되는 부분
+    anemo_count++;
+  }
+}
+
+void rain_counter() {
+  //채터링 
+  if(millis() - rain_time > 10){
+    rain_time = millis();
+    rain_count++;
+  }
+}

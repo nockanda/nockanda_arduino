@@ -1,0 +1,38 @@
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK 4
+#define DIO 5
+
+TM1637Display display(CLK, DIO);
+
+const byte interruptPin = 3;
+volatile int count = 0;
+volatile unsigned long rainfall_time = 0;
+unsigned long t = 0;
+
+void setup() {
+  Serial.begin(9600);
+  display.setBrightness(0x0f);
+  display.showNumberDec(0, false);
+  pinMode(interruptPin, INPUT_PULLUP); //rainfall
+  attachInterrupt(digitalPinToInterrupt(interruptPin), counter, FALLING);
+}
+
+void loop() {
+  if(millis() - t > 100){
+     t = millis();
+     display.showNumberDec(count*0.2794*100, false);
+     Serial.print(count*0.2794);
+     Serial.println("mm");
+  }
+ 
+}
+
+void counter() {
+  //채터링 
+  if(millis() - rainfall_time > 10){
+    rainfall_time = millis();
+    count++;
+  }
+}

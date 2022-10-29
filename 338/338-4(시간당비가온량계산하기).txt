@@ -1,0 +1,30 @@
+const byte interruptPin = 3;
+volatile int count = 0;
+volatile unsigned long rainfall_time = 0;
+unsigned long t = 0;
+
+float rain_amount = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(interruptPin, INPUT_PULLUP); //rainfall
+  attachInterrupt(digitalPinToInterrupt(interruptPin), counter, FALLING);
+}
+
+void loop() {
+  if(millis() - t > 10000){
+     t = millis();
+     rain_amount = count*0.2794*360;
+     Serial.print(rain_amount);
+     Serial.println("mm/h");
+  }
+ 
+}
+
+void counter() {
+  //채터링 
+  if(millis() - rainfall_time > 10){
+    rainfall_time = millis();
+    count++;
+  }
+}

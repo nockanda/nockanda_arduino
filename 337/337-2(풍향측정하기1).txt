@@ -1,0 +1,47 @@
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int raw_data = analogRead(A0);
+  float volt = 5 * raw_data/1023.0;
+
+  if(volt > 3.82 && volt < 3.86){
+    Serial.println("0도입니다!");
+  }else if(volt > 1.96 && volt < 2.00){
+    Serial.println("22.5도입니다!");
+  }else if(volt > 2.23 && volt < 2.27){
+    Serial.println("45도입니다!");
+  }else if(volt > 0.39 && volt < 0.43){
+    Serial.println("67.5도입니다!");
+  }else if(volt > 0.43 && volt < 0.47){
+    Serial.println("90도입니다!");
+  }else if(volt > 0.30 && volt < 0.34){
+    Serial.println("112.5도입니다!");
+  }else if(volt > 0.88 && volt < 0.92){
+    Serial.println("132도입니다!");
+  }else if(volt > 0.60 && volt < 0.64){
+    Serial.println("157.5도입니다!");
+  }else if(volt > 1.38 && volt < 1.42){
+    Serial.println("180도입니다!");
+  }else if(volt > 1.17 && volt < 1.21){
+    Serial.println("202.5도입니다!");
+  }else if(volt > 3.06 && volt < 3.10){
+    Serial.println("225도입니다!");
+  }else if(volt > 2.91 && volt < 2.95){
+    Serial.println("247.5도입니다!");
+  }else if(volt > 4.60 && volt < 4.64){
+    Serial.println("270도입니다!");
+  }else if(volt > 4.02 && volt < 4.06){
+    Serial.println("292.5도입니다!");
+  }else if(volt > 4.31 && volt < 4.35){
+    Serial.println("315도입니다!");
+  }else if(volt > 3.41 && volt < 3.45){
+    Serial.println("337.5도입니다!");
+  }
+
+  Serial.println(volt);
+  delay(100);
+}

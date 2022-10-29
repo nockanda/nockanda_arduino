@@ -1,0 +1,370 @@
+#include <SoftwareSerial.h>
+#include "CRC16.h"
+#include "CRC.h"
+
+CRC16 crc;
+
+#define mode 13 //데이터 입출력핀! //LOW(0):수신모드 HIGH(1):송신모드
+#define slave1 0x01
+                   //rx, tx
+SoftwareSerial modbus(2, 3); //모듈tx, rx @아두이노 입장 rx, tx
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //아두이노-PC 통신라인(결과출력용)
+  modbus.begin(9600); //사용하는 제품마다 숫자가 다름!
+  //데이터 입출력핀을 출력모드로 설정한다!
+  pinMode(mode,OUTPUT);
+  //시작은 수신모드이다!
+  recv_mode();
+
+  //만약에 버퍼에 뭔가 있으면 클리어한다!
+  while(modbus.available()){
+    modbus.read();
+  }
+
+  Serial.println("녹칸다의 modbus 시작!");
+
+  
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  float data[2];
+  request_both(data,slave1);
+  Serial.print("온도=");
+  Serial.print(data[0]);
+  Serial.print(",습도=");
+  Serial.println(data[1]);
+  delay(1000);
+
+/*
+  Serial.println(request_humi(slave1));
+  delay(1000);
+*/
+/*
+  Serial.println(request_temp(slave1));
+  delay(1000);
+*/
+/*
+  request_id_change(slave1,0xAA);
+  delay(1000);
+*/
+}
+
+
+float request_temp(byte slave_id){
+  //sht20에게 보내줘야할 데이터이다!
+  
+  byte request[] = {slave_id, 0x04, 0x00, 0x01, 0x00, 0x01};
+  int response_length = 7;
+  
+  //request의 CRC를 계산한다!
+  //CRC체크
+  uint16_t request_crc = crc16(request, sizeof(request), 0x8005, 0xFFFF, 0, true, true);
+
+  //2바이트로 표현된 result값을 1byte씩 쪼개서 2byte로 나눠담는 과정~!
+  byte request_crc_high = request_crc >> 8;
+  byte request_crc_low = request_crc & 0xFF;
+  
+  //byte request[] = {0x01,0x04,0x00,0x02,0x00,0x01,0x90,0x0A};
+  
+  //송신모드로 전환!
+  send_mode();
+  //request 송신!
+  modbus.write(request, sizeof(request));
+  modbus.write(request_crc_low);
+  modbus.write(request_crc_high);
+  //request가 완료됨을 확인할 필요가 있다!
+  modbus.flush();
+  recv_mode();
+
+  Serial.println("전송완료!");
+
+  //두목이 쫄병한데 물어봤으면 대답할 여유를 줘야한다!
+  //(기존코드)
+  //while(!modbus.available());
+  //(스트리밍후 개선 코드) 수신할 데이터 길이만큼 기다린다
+  while(!(modbus.available()==response_length));
+
+  
+  //받아야 한다!
+  byte response[50];
+  int len = 0;
+  while(modbus.available()){
+    response[len] = modbus.read();
+    len++;
+  }
+
+  //수신완료지점
+  if(len != response_length){
+    Serial.println("데이터가 잘못 왔다!");
+    //delay(1000);
+    
+    return -99;
+  }
+
+  //response안에 들어있는 값을 길이 맞는 byte array에 담는 과정!
+  byte data[len-2];
+  for(int i = 0;i<len-2;i++){
+    data[i] = response[i];
+  }
+
+  //CRC체크
+  uint16_t result = crc16(data, len-2, 0x8005, 0xFFFF, 0, true, true);
+
+  //2바이트로 표현된 result값을 1byte씩 쪼개서 2byte로 나눠담는 과정~!
+  byte crc_high = result >> 8;
+  byte crc_low = result & 0xFF;
+
+  if(crc_low != response[len-2] || crc_high != response[len-1]){
+    //에러의조건
+    Serial.println("CRC가 안맞다..!");
+    //delay(1000);
+    return -99;
+  }
+
+  float temp = (response[3] *256+response[4])/10.0;
+  //Serial.println(temp);
+  return temp;
+}
+
+float request_humi(byte slave_id){
+  //sht20에게 보내줘야할 데이터이다!
+  
+  byte request[] = {slave_id,0x04,0x00,0x02,0x00,0x01};
+  int response_length = 7;
+  
+  //request의 CRC를 계산한다!
+  //CRC체크
+  uint16_t request_crc = crc16(request, sizeof(request), 0x8005, 0xFFFF, 0, true, true);
+
+  //2바이트로 표현된 result값을 1byte씩 쪼개서 2byte로 나눠담는 과정~!
+  byte request_crc_high = request_crc >> 8;
+  byte request_crc_low = request_crc & 0xFF;
+  
+  
+  //송신모드로 전환!
+  send_mode();
+  //request 송신!
+  modbus.write(request, sizeof(request));
+  modbus.write(request_crc_low);
+  modbus.write(request_crc_high);
+  //request가 완료됨을 확인할 필요가 있다!
+  modbus.flush();
+  recv_mode();
+
+  Serial.println("전송완료!");
+
+  //두목이 쫄병한데 물어봤으면 대답할 여유를 줘야한다!
+  //(기존코드)
+  //while(!modbus.available());
+  //(스트리밍후 개선 코드) 수신할 데이터 길이만큼 기다린다
+  while(!(modbus.available()==response_length));
+
+  
+  //받아야 한다!
+  byte response[50];
+  int len = 0;
+  while(modbus.available()){
+    response[len] = modbus.read();
+    len++;
+  }
+
+  //수신완료지점
+  if(len != response_length){
+    Serial.println("데이터가 잘못 왔다!");
+    //delay(1000);
+    
+    return -99;
+  }
+
+  //response안에 들어있는 값을 길이 맞는 byte array에 담는 과정!
+  byte data[len-2];
+  for(int i = 0;i<len-2;i++){
+    data[i] = response[i];
+  }
+
+  //CRC체크
+  uint16_t result = crc16(data, len-2, 0x8005, 0xFFFF, 0, true, true);
+
+  //2바이트로 표현된 result값을 1byte씩 쪼개서 2byte로 나눠담는 과정~!
+  byte crc_high = result >> 8;
+  byte crc_low = result & 0xFF;
+
+  if(crc_low != response[len-2] || crc_high != response[len-1]){
+    //에러의조건
+    Serial.println("CRC가 안맞다..!");
+    //delay(1000);
+    return -99;
+  }
+
+  float temp = (response[3] *256+response[4])/10.0;
+  //Serial.println(temp);
+  return temp;
+}
+
+void request_both(float output[],byte slave_id){
+  //sht20에게 보내줘야할 데이터이다!
+
+  //byte request[] = {0x01, 0x04, 0x00, 0x01, 0x00, 0x01, 0x60, 0x0a};
+  byte request[] = {slave_id, 0x04, 0x00, 0x01, 0x00, 0x02};
+  int response_length = 9;
+  
+  //request의 CRC를 계산한다!
+  //CRC체크
+  uint16_t request_crc = crc16(request, sizeof(request), 0x8005, 0xFFFF, 0, true, true);
+
+  //2바이트로 표현된 result값을 1byte씩 쪼개서 2byte로 나눠담는 과정~!
+  byte request_crc_high = request_crc >> 8;
+  byte request_crc_low = request_crc & 0xFF;
+  
+  //송신모드로 전환!
+  send_mode();
+  //request 송신!
+  modbus.write(request, sizeof(request));
+  modbus.write(request_crc_low);
+  modbus.write(request_crc_high);
+  //request가 완료됨을 확인할 필요가 있다!
+  modbus.flush();
+  recv_mode();
+
+  Serial.println("전송완료!");
+
+  //두목이 쫄병한데 물어봤으면 대답할 여유를 줘야한다!
+  //(기존코드)
+  //while(!modbus.available());
+  //(스트리밍후 개선 코드) 수신할 데이터 길이만큼 기다린다
+  while(!(modbus.available()==response_length));
+
+  
+  //받아야 한다!
+  byte response[50];
+  int len = 0;
+  while(modbus.available()){
+    response[len] = modbus.read();
+    len++;
+  }
+
+  //수신완료지점
+  if(len != response_length){
+    Serial.println("데이터가 잘못 왔다!");
+    //delay(1000);
+    
+    return -99;
+  }
+
+  //response안에 들어있는 값을 길이 맞는 byte array에 담는 과정!
+  byte data[len-2];
+  for(int i = 0;i<len-2;i++){
+    data[i] = response[i];
+  }
+
+  //CRC체크
+  uint16_t result = crc16(data, len-2, 0x8005, 0xFFFF, 0, true, true);
+
+  //2바이트로 표현된 result값을 1byte씩 쪼개서 2byte로 나눠담는 과정~!
+  byte crc_high = result >> 8;
+  byte crc_low = result & 0xFF;
+
+  if(crc_low != response[len-2] || crc_high != response[len-1]){
+    //에러의조건
+    Serial.println("CRC가 안맞다..!");
+    //delay(1000);
+    return -99;
+  }
+
+  output[0] = (response[3] *256+response[4])/10.0;
+  output[1] = (response[5] *256+response[6])/10.0;
+
+}
+
+
+//슬레이브 id를 바꿀때는 해당 슬레이브에게 response받은다음
+//해당 슬레이브의 전원을 껏다 켜야 변수에 있던 슬레이브 id가 rom에 있는걸로 교체가 된다!
+//결론:껏다켜야함!
+void request_id_change(byte slave_id,byte newid){
+  //sht20에게 보내줘야할 데이터이다!
+  
+  byte request[] = {slave_id, 0x06,0x01,0x01,0x00,newid};
+
+  //request의 CRC를 계산한다!
+  //CRC체크
+  uint16_t request_crc = crc16(request, 6, 0x8005, 0xFFFF, 0, true, true);
+
+  //2바이트로 표현된 result값을 1byte씩 쪼개서 2byte로 나눠담는 과정~!
+  byte request_crc_high = request_crc >> 8;
+  byte request_crc_low = request_crc & 0xFF;
+  
+  //byte request[] = {0x01,0x04,0x00,0x02,0x00,0x01,0x90,0x0A};
+  int response_length = 8;
+  //송신모드로 전환!
+  send_mode();
+  //request 송신!
+  modbus.write(request, 6);
+  modbus.write(request_crc_low);
+  modbus.write(request_crc_high);
+  //request가 완료됨을 확인할 필요가 있다!
+  modbus.flush();
+  recv_mode();
+
+  Serial.println("전송완료!");
+
+  //두목이 쫄병한데 물어봤으면 대답할 여유를 줘야한다!
+  //(기존코드)
+  //while(!modbus.available());
+  //(스트리밍후 개선 코드) 수신할 데이터 길이만큼 기다린다
+  while(!(modbus.available()==response_length));
+
+  
+  //받아야 한다!
+  byte response[50];
+  int len = 0;
+  while(modbus.available()){
+    response[len] = modbus.read();
+    len++;
+  }
+
+  //수신완료지점
+  if(len != response_length){
+    Serial.println("데이터가 잘못 왔다!");
+    //delay(1000);
+    
+    return -99;
+  }
+
+  //response안에 들어있는 값을 길이 맞는 byte array에 담는 과정!
+  byte data[len-2];
+  for(int i = 0;i<len-2;i++){
+    data[i] = response[i];
+  }
+
+  //CRC체크
+  uint16_t result = crc16(data, len-2, 0x8005, 0xFFFF, 0, true, true);
+
+  //2바이트로 표현된 result값을 1byte씩 쪼개서 2byte로 나눠담는 과정~!
+  byte crc_high = result >> 8;
+  byte crc_low = result & 0xFF;
+
+  if(crc_low != response[len-2] || crc_high != response[len-1]){
+    //에러의조건
+    Serial.println("CRC가 안맞다..!");
+    //delay(1000);
+    return -99;
+  }
+
+  for(int i = 0;i<len;i++){
+    Serial.print(response[i],HEX);
+    Serial.print(",");
+  }
+  Serial.println();
+}
+
+void send_mode(){
+  digitalWrite(mode,HIGH);
+}
+void recv_mode(){
+  digitalWrite(mode,LOW);
+}
